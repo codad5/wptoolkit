@@ -1,6 +1,6 @@
 <?php
 
-require_once './src/Utils/Autoloader.php';
+require_once __DIR__.'/src/Utils/Autoloader.php';
 
 use Codad5\WPToolkit\Utils\Autoloader;
 
