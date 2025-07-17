@@ -10,9 +10,10 @@
 
 declare(strict_types=1);
 
+namespace Codad5\WPToolkit\Utils;
+
 require_once __DIR__ . '/Config.php';
 
-namespace Codad5\WPToolkit\Utils;
 
 
 /**
