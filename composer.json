@@ -1,0 +1,18 @@
+{
+    "name": "codad5/wptoolkit",
+    "description": "Your go to WP lib",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "codad5",
+            "email": "aniezeoformic@gmail.com"
+        }
+    ],
+    "require": {}
+}
