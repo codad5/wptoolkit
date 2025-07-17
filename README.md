@@ -71,6 +71,7 @@ Notification::init();
 ### Core Utilities
 
 #### Config
+
 Immutable configuration management for your plugin.
 
 ```php
@@ -88,6 +89,7 @@ $plugin_slug = Config::get('slug');
 ```
 
 #### Requirements
+
 Check plugin requirements before activation.
 
 ```php
@@ -107,6 +109,7 @@ if (!$is_compatible) {
 ### Settings Management
 
 #### Settings
+
 Comprehensive WordPress settings API wrapper with validation and sanitization.
 
 ```php
@@ -147,6 +150,7 @@ echo Settings::render_field('api_key');
 ### Page Management
 
 #### Page
+
 Create admin and frontend pages with ease.
 
 ```php
@@ -187,6 +191,7 @@ $frontend_url = Page::get_frontend_url('my-custom-page');
 ### Notifications
 
 #### Notification
+
 Display admin notices with automatic dismissal and targeting.
 
 ```php
@@ -210,6 +215,7 @@ if ($operation_success) {
 ### REST API
 
 #### RestRoute
+
 Multi-version REST API management with deprecation support.
 
 ```php
@@ -255,6 +261,7 @@ $api_url = RestRoute::get_route_url('v1', '/users');
 ### File Operations
 
 #### Filesystem
+
 WordPress filesystem wrapper with media library integration.
 
 ```php
@@ -288,6 +295,7 @@ $mime_type = Filesystem::get_mime_type('/path/to/image.jpg');
 ### Development Tools
 
 #### Debugger
+
 Comprehensive debugging tools for development.
 
 ```php
@@ -319,6 +327,7 @@ Debugger::notification('Debug info displayed'); // Admin notice
 ```
 
 #### Autoloader
+
 PSR-4 compatible autoloader with WordPress optimizations.
 
 ```php
@@ -347,13 +356,14 @@ if (Autoloader::can_load_class('MyPlugin\\SomeClass')) {
 ### API Integration
 
 #### APIHelper
+
 Abstract base class for creating API integrations with caching and error handling.
 
 ```php
 class MyAPIHelper extends APIHelper {
     protected static string $name = 'MyAPI';
     const HOST = 'https://api.example.com';
-    
+
     protected static function get_endpoints(): array {
         return [
             'get_user' => [
@@ -386,16 +396,16 @@ class MyAPIHelper extends APIHelper {
 try {
     // Get user with ID substitution
     $user = MyAPIHelper::make_request('get_user', [], ['id' => '123']);
-    
+
     // Create new user
     $new_user = MyAPIHelper::make_request('create_user', [
         'name' => 'John Doe',
         'email' => 'john@example.com'
     ]);
-    
+
     // List posts with custom parameters
     $posts = MyAPIHelper::make_request('list_posts', ['per_page' => 20]);
-    
+
 } catch (Exception $e) {
     Notification::error('API Error: ' . $e->getMessage());
 }
@@ -427,13 +437,13 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification, RestRoute, Debugger};
 
 class MyAwesomePlugin {
-    
+
     public function __construct() {
         $this->init_config();
         $this->init_components();
         $this->setup_hooks();
     }
-    
+
     private function init_config(): void {
         Config::init([
             'name' => 'My Awesome Plugin',
@@ -442,7 +452,7 @@ class MyAwesomePlugin {
             'file' => __FILE__
         ]);
     }
-    
+
     private function init_components(): void {
         // Initialize settings
         Settings::init([
@@ -458,7 +468,7 @@ class MyAwesomePlugin {
                 'group' => 'performance'
             ]
         ]);
-        
+
         // Initialize pages
         Page::init();
         Page::add_menu_page('my-awesome-plugin', [
@@ -466,25 +476,25 @@ class MyAwesomePlugin {
             'menu_title' => 'Awesome Plugin',
             'callback' => [$this, 'render_dashboard']
         ]);
-        
+
         // Initialize notifications
         Notification::init();
-        
+
         // Initialize REST API
         RestRoute::init('my-awesome-plugin');
         RestRoute::get('v1', '/status', [$this, 'get_status']);
-        
+
         // Initialize debugger in development
         if (defined('WP_DEBUG') && WP_DEBUG) {
             Debugger::init(true);
         }
     }
-    
+
     private function setup_hooks(): void {
         add_action('admin_init', [$this, 'admin_init']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_scripts']);
     }
-    
+
     public function admin_init(): void {
         // Check if settings are configured
         $api_key = Settings::get('api_key');
@@ -492,13 +502,13 @@ class MyAwesomePlugin {
             Notification::warning('Please configure your API key in the settings.');
         }
     }
-    
+
     public function render_dashboard(): void {
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(Config::get('name')); ?></h1>
             <p>Welcome to your awesome plugin dashboard!</p>
-            
+
             <div class="card">
                 <h2>Settings</h2>
                 <form method="post" action="options.php">
@@ -510,7 +520,7 @@ class MyAwesomePlugin {
         </div>
         <?php
     }
-    
+
     public function get_status(): array {
         return [
             'plugin' => Config::get('name'),
@@ -518,7 +528,7 @@ class MyAwesomePlugin {
             'status' => 'active'
         ];
     }
-    
+
     public function enqueue_scripts(): void {
         wp_enqueue_style(
             Config::get('slug') . '-style',
@@ -536,6 +546,7 @@ new MyAwesomePlugin();
 ## Best Practices
 
 ### Configuration
+
 Always initialize the Config class first with your plugin details:
 
 ```php
@@ -548,6 +559,7 @@ Config::init([
 ```
 
 ### Error Handling
+
 Use try-catch blocks with API calls and provide user feedback:
 
 ```php
@@ -561,6 +573,7 @@ try {
 ```
 
 ### Settings Organization
+
 Group related settings together:
 
 ```php
@@ -573,6 +586,7 @@ Settings::init([
 ```
 
 ### Development vs Production
+
 Use conditional debugging:
 
 ```php
