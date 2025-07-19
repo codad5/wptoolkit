@@ -201,11 +201,13 @@ abstract class APIHelper
         $request_args = array_merge([
             'method' => $method,
             'timeout' => 30,
+
+        ], $args, [
             'headers' => array_merge(
                 static::get_headers(),
                 $args['headers'] ?? []
             ),
-        ], $args);
+        ]);
 
         // Add body for non-GET requests
         if ($method !== 'GET' && !empty($params)) {
