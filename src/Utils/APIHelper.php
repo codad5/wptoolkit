@@ -38,6 +38,14 @@ abstract class APIHelper
      * }>
      */
     abstract protected static function get_endpoints(): array;
+    /**
+     * Get the plugin slug for cache and option key generation.
+     *
+     * Child classes must implement this.
+     *
+     * @return string Plugin slug
+     */
+    abstract protected static function get_slug(): string;
 
     /**
      * Base API host URL - should be overridden in child classes.
@@ -425,7 +433,7 @@ abstract class APIHelper
     {
         return sprintf(
             '%s_%s_%s',
-            Config::get('slug') ?? 'wp_plugin',
+            static::get_slug(),
             static::get_name(),
             md5($key)
         );
@@ -440,7 +448,7 @@ abstract class APIHelper
     {
         return sprintf(
             '%s_%s_cache_keys',
-            Config::get('slug') ?? 'wp_plugin',
+            static::get_slug(),
             static::get_name()
         );
     }
@@ -455,7 +463,7 @@ abstract class APIHelper
     {
         return sprintf(
             '%s_%s_%s',
-            Config::get('slug') ?? 'wp_plugin',
+            static::get_slug(),
             static::get_name(),
             sanitize_key($key)
         );

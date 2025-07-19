@@ -511,7 +511,7 @@ class Page
             $parent_slug = $config['parent_slug'];
 
             // If parent_slug doesn't include app prefix, add it
-            if (!str_contains($parent_slug, $this->app_slug . '_')) {
+            if (!str_contains($parent_slug ?? '', $this->app_slug . '_')) {
                 $parent_slug = $this->app_slug . '_' . $parent_slug;
             }
 
