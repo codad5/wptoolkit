@@ -532,14 +532,5 @@ final class Config
         return implode("\n", $lines);
     }
 
-    /**
-     * Convert array data to JSON, handling the array parameter.
-     *
-     * @param array<string, mixed> $data Data to convert
-     * @return string JSON representation
-     */
-    private function toJson(array $data): string
-    {
-        return json_encode($data, JSON_THROW_ON_ERROR);
-    }
+
 }
