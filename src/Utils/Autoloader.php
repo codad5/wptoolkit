@@ -62,14 +62,6 @@ class Autoloader
             return true;
         }
 
-        // Add default plugin namespace if config is available
-        $plugin_namespace = self::get_plugin_namespace();
-        $plugin_src_dir = self::get_plugin_src_dir();
-
-        if ($plugin_namespace && $plugin_src_dir) {
-            $namespace_map[$plugin_namespace] = $plugin_src_dir;
-        }
-
         // Set initial mappings
         self::$namespace_map = $namespace_map;
         self::$class_map = $class_map;
@@ -512,55 +504,6 @@ class Autoloader
         return false;
     }
 
-    /**
-     * Get the plugin namespace from config.
-     *
-     * @return string|null Plugin namespace
-     */
-    protected static function get_plugin_namespace(): ?string
-    {
-        $plugin_namespace = Config::get('namespace');
-
-        if ($plugin_namespace) {
-            return rtrim($plugin_namespace, '\\') . '\\';
-        }
-
-        // Try to derive from plugin slug
-        $slug = Config::get('slug');
-        if ($slug) {
-            $namespace_parts = array_map('ucfirst', explode('-', $slug));
-            return 'Company\\WordPress\\' . implode('', $namespace_parts) . '\\';
-        }
-
-        return null;
-    }
-
-    /**
-     * Get the plugin source directory from config.
-     *
-     * @return string|null Plugin source directory
-     */
-    protected static function get_plugin_src_dir(): ?string
-    {
-        // Try explicit src directory from config
-        $src_dir = Config::get('src_dir');
-        if ($src_dir && is_dir($src_dir)) {
-            return self::normalize_directory($src_dir);
-        }
-
-        // Try to derive from plugin file path
-        $plugin_file = Config::get('filePath');
-        if ($plugin_file) {
-            $plugin_dir = dirname($plugin_file);
-            $src_dir = $plugin_dir . DIRECTORY_SEPARATOR . 'src';
-
-            if (is_dir($src_dir)) {
-                return self::normalize_directory($src_dir);
-            }
-        }
-
-        return null;
-    }
 
     /**
      * Dump autoloader information for debugging.
@@ -575,8 +518,7 @@ class Autoloader
             'class_map' => self::$class_map,
             'loaded_classes' => self::$loaded_classes,
             'file_extensions' => self::$file_extensions,
-            'plugin_namespace' => self::get_plugin_namespace(),
-            'plugin_src_dir' => self::get_plugin_src_dir(),
+            
         ];
     }
 }
