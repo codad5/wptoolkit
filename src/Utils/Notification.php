@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
-
+use Codad5\WPToolkit\Registry;
 use function is_admin;
 use function get_current_user_id;
 use function wp_kses_post;
