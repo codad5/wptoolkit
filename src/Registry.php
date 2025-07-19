@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit;
 
+use Codad5\WPToolkit\Utils\Config;
 use InvalidArgumentException;
 use RuntimeException;
 
