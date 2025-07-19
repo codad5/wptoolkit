@@ -48,9 +48,13 @@ abstract class APIHelper
     abstract protected static function get_slug(): string;
 
     /**
-     * Base API host URL - should be overridden in child classes.
+     * Get the base API host URL.
+     *
+     * Child classes must implement this.
+     *
+     * @return string Base API host URL
      */
-    const HOST = '';
+    abstract protected static function get_base_url(): string;
 
     /**
      * Prepare a complete request URL with query parameters.
@@ -196,6 +200,7 @@ abstract class APIHelper
         if ($method !== 'GET' && !empty($params)) {
             $request_args['body'] = $params;
         }
+
 
         $response = wp_remote_request($url, $request_args);
 
@@ -374,7 +379,7 @@ abstract class APIHelper
         }
 
         $method = $endpoint['method'] ?? 'GET';
-        $url = static::HOST . $route;
+        $url = rtrim(static::get_base_url(), '/') . '/' . ltrim($route, '/');
 
         // Check cache for GET requests
         if (strtoupper($method) === 'GET') {
