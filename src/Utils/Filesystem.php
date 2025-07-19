@@ -12,65 +12,81 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
+use InvalidArgumentException;
+
 /**
  * Filesystem Helper class for file operations and media management.
  *
  * Provides a clean API for file operations, uploads, media library management,
  * and file metadata handling using WordPress filesystem functions.
+ * Now fully object-based with dependency injection support.
  */
 class Filesystem
 {
     /**
      * WordPress filesystem instance.
      */
-    protected static $wp_filesystem = null;
+    protected $wp_filesystem = null;
 
     /**
      * Allowed file types for uploads.
+     *
+     * @var array<string>
      */
-    protected static array $allowed_types = [];
+    protected array $allowed_types = [];
 
     /**
      * Upload directory information.
+     *
+     * @var array<string, string>
      */
-    protected static array $upload_dir = [];
+    protected array $upload_dir = [];
 
     /**
-     * Initialize the filesystem helper.
-     *
-     * @param array<string> $allowed_types Additional allowed file types
-     * @return bool Success status
+     * Application slug for identification.
      */
-    public static function init(array $allowed_types = []): bool
+    protected string $app_slug;
+
+    /**
+     * Text domain for translations.
+     */
+    protected string $text_domain;
+
+    /**
+     * Config instance (optional dependency).
+     */
+    protected ?Config $config = null;
+
+    /**
+     * Base upload directory for this app.
+     */
+    protected string $app_upload_dir;
+
+    /**
+     * Constructor for creating a new Filesystem instance.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @param array<string> $allowed_types Additional allowed file types
+     * @throws InvalidArgumentException If parameters are invalid
+     */
+    public function __construct(Config|string $config_or_slug, array $allowed_types = [])
     {
-        if (!self::init_wp_filesystem()) {
-            return false;
-        }
+        $this->parseConfigOrSlug($config_or_slug);
+        $this->initializeFilesystem();
+        $this->setupAllowedTypes($allowed_types);
+        $this->setupUploadDirectory();
+    }
 
-        self::$allowed_types = array_merge([
-            'jpg',
-            'jpeg',
-            'png',
-            'gif',
-            'webp',
-            'svg',
-            'pdf',
-            'doc',
-            'docx',
-            'xls',
-            'xlsx',
-            'ppt',
-            'pptx',
-            'txt',
-            'csv',
-            'zip',
-            'tar',
-            'gz'
-        ], $allowed_types);
-
-        self::$upload_dir = wp_upload_dir();
-
-        return true;
+    /**
+     * Static factory method for creating Filesystem instances.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @param array<string> $allowed_types Additional allowed file types
+     * @return static New Filesystem instance
+     */
+    public static function create(Config|string $config_or_slug, array $allowed_types = []): static
+    {
+        return new static($config_or_slug, $allowed_types);
     }
 
     /**
@@ -79,19 +95,19 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return string|false File contents or false on failure
      */
-    public static function get_contents(string $file_path)
+    public function getContents(string $file_path)
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return false;
         }
 
-        return self::$wp_filesystem->get_contents($file_path);
+        return $this->wp_filesystem->get_contents($file_path);
     }
 
     /**
@@ -102,23 +118,23 @@ class Filesystem
      * @param int $mode File permissions mode
      * @return bool Success status
      */
-    public static function put_contents(string $file_path, string $contents, int $mode = 0644): bool
+    public function putContents(string $file_path, string $contents, int $mode = 0644): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
         // Create directory if it doesn't exist
         $dir = dirname($file_path);
-        if (!self::$wp_filesystem->is_dir($dir)) {
-            if (!self::create_directory($dir)) {
+        if (!$this->wp_filesystem->is_dir($dir)) {
+            if (!$this->createDirectory($dir)) {
                 return false;
             }
         }
 
-        $result = self::$wp_filesystem->put_contents($file_path, $contents, $mode);
+        $result = $this->wp_filesystem->put_contents($file_path, $contents, $mode);
         return $result !== false;
     }
 
@@ -128,14 +144,14 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return bool Whether the file exists
      */
-    public static function file_exists(string $file_path): bool
+    public function fileExists(string $file_path): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return file_exists($file_path);
         }
 
-        $file_path = self::sanitize_file_path($file_path);
-        return self::$wp_filesystem->exists($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
+        return $this->wp_filesystem->exists($file_path);
     }
 
     /**
@@ -144,19 +160,19 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return bool Success status
      */
-    public static function delete_file(string $file_path): bool
+    public function deleteFile(string $file_path): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return true; // Already deleted
         }
 
-        return self::$wp_filesystem->delete($file_path);
+        return $this->wp_filesystem->delete($file_path);
     }
 
     /**
@@ -167,32 +183,32 @@ class Filesystem
      * @param bool $overwrite Whether to overwrite existing file
      * @return bool Success status
      */
-    public static function copy_file(string $source, string $destination, bool $overwrite = false): bool
+    public function copyFile(string $source, string $destination, bool $overwrite = false): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $source = self::sanitize_file_path($source);
-        $destination = self::sanitize_file_path($destination);
+        $source = $this->sanitizeFilePath($source);
+        $destination = $this->sanitizeFilePath($destination);
 
-        if (!self::file_exists($source)) {
+        if (!$this->fileExists($source)) {
             return false;
         }
 
-        if (!$overwrite && self::file_exists($destination)) {
+        if (!$overwrite && $this->fileExists($destination)) {
             return false;
         }
 
         // Create destination directory if needed
         $dest_dir = dirname($destination);
-        if (!self::$wp_filesystem->is_dir($dest_dir)) {
-            if (!self::create_directory($dest_dir)) {
+        if (!$this->wp_filesystem->is_dir($dest_dir)) {
+            if (!$this->createDirectory($dest_dir)) {
                 return false;
             }
         }
 
-        return self::$wp_filesystem->copy($source, $destination, $overwrite);
+        return $this->wp_filesystem->copy($source, $destination, $overwrite);
     }
 
     /**
@@ -203,32 +219,32 @@ class Filesystem
      * @param bool $overwrite Whether to overwrite existing file
      * @return bool Success status
      */
-    public static function move_file(string $source, string $destination, bool $overwrite = false): bool
+    public function moveFile(string $source, string $destination, bool $overwrite = false): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $source = self::sanitize_file_path($source);
-        $destination = self::sanitize_file_path($destination);
+        $source = $this->sanitizeFilePath($source);
+        $destination = $this->sanitizeFilePath($destination);
 
-        if (!self::file_exists($source)) {
+        if (!$this->fileExists($source)) {
             return false;
         }
 
-        if (!$overwrite && self::file_exists($destination)) {
+        if (!$overwrite && $this->fileExists($destination)) {
             return false;
         }
 
         // Create destination directory if needed
         $dest_dir = dirname($destination);
-        if (!self::$wp_filesystem->is_dir($dest_dir)) {
-            if (!self::create_directory($dest_dir)) {
+        if (!$this->wp_filesystem->is_dir($dest_dir)) {
+            if (!$this->createDirectory($dest_dir)) {
                 return false;
             }
         }
 
-        return self::$wp_filesystem->move($source, $destination, $overwrite);
+        return $this->wp_filesystem->move($source, $destination, $overwrite);
     }
 
     /**
@@ -239,19 +255,19 @@ class Filesystem
      * @param bool $recursive Create parent directories
      * @return bool Success status
      */
-    public static function create_directory(string $dir_path, int $mode = 0755, bool $recursive = true): bool
+    public function createDirectory(string $dir_path, int $mode = 0755, bool $recursive = true): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $dir_path = self::sanitize_file_path($dir_path);
+        $dir_path = $this->sanitizeFilePath($dir_path);
 
-        if (self::$wp_filesystem->is_dir($dir_path)) {
+        if ($this->wp_filesystem->is_dir($dir_path)) {
             return true;
         }
 
-        return self::$wp_filesystem->mkdir($dir_path, $mode, $recursive);
+        return $this->wp_filesystem->mkdir($dir_path, $mode, $recursive);
     }
 
     /**
@@ -261,19 +277,19 @@ class Filesystem
      * @param bool $recursive Delete recursively
      * @return bool Success status
      */
-    public static function delete_directory(string $dir_path, bool $recursive = false): bool
+    public function deleteDirectory(string $dir_path, bool $recursive = false): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $dir_path = self::sanitize_file_path($dir_path);
+        $dir_path = $this->sanitizeFilePath($dir_path);
 
-        if (!self::$wp_filesystem->is_dir($dir_path)) {
+        if (!$this->wp_filesystem->is_dir($dir_path)) {
             return true;
         }
 
-        return self::$wp_filesystem->rmdir($dir_path, $recursive);
+        return $this->wp_filesystem->rmdir($dir_path, $recursive);
     }
 
     /**
@@ -282,19 +298,19 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return int|false File size in bytes or false on failure
      */
-    public static function get_file_size(string $file_path)
+    public function getFileSize(string $file_path)
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return false;
         }
 
-        return self::$wp_filesystem->size($file_path);
+        return $this->wp_filesystem->size($file_path);
     }
 
     /**
@@ -303,19 +319,19 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return int|false Modification timestamp or false on failure
      */
-    public static function get_modification_time(string $file_path)
+    public function getModificationTime(string $file_path)
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return false;
         }
 
-        return self::$wp_filesystem->mtime($file_path);
+        return $this->wp_filesystem->mtime($file_path);
     }
 
     /**
@@ -324,19 +340,19 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return string|false File permissions or false on failure
      */
-    public static function get_file_permissions(string $file_path)
+    public function getFilePermissions(string $file_path)
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return false;
         }
 
-        return self::$wp_filesystem->getchmod($file_path);
+        return $this->wp_filesystem->getchmod($file_path);
     }
 
     /**
@@ -347,19 +363,19 @@ class Filesystem
      * @param bool $recursive Apply recursively for directories
      * @return bool Success status
      */
-    public static function set_file_permissions(string $file_path, int $mode, bool $recursive = false): bool
+    public function setFilePermissions(string $file_path, int $mode, bool $recursive = false): bool
     {
-        if (!self::init_wp_filesystem()) {
+        if (!$this->wp_filesystem) {
             return false;
         }
 
-        $file_path = self::sanitize_file_path($file_path);
+        $file_path = $this->sanitizeFilePath($file_path);
 
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return false;
         }
 
-        return self::$wp_filesystem->chmod($file_path, $mode, $recursive);
+        return $this->wp_filesystem->chmod($file_path, $mode, $recursive);
     }
 
     /**
@@ -371,7 +387,7 @@ class Filesystem
      * @param int $parent_post_id Optional parent post ID
      * @return int|false Attachment ID or false on failure
      */
-    public static function upload_to_media_library(array $file_data, string $title = '', string $description = '', int $parent_post_id = 0)
+    public function uploadToMediaLibrary(array $file_data, string $title = '', string $description = '', int $parent_post_id = 0)
     {
         if (!function_exists('wp_handle_upload')) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -387,14 +403,14 @@ class Filesystem
 
         // Validate file type
         $file_extension = strtolower(pathinfo($file_data['name'], PATHINFO_EXTENSION));
-        if (!self::is_allowed_file_type($file_extension)) {
+        if (!$this->isAllowedFileType($file_extension)) {
             return false;
         }
 
         // Handle the upload
         $upload_overrides = [
             'test_form' => false,
-            'mimes' => self::get_allowed_mime_types(),
+            'mimes' => $this->getAllowedMimeTypes(),
         ];
 
         $uploaded_file = wp_handle_upload($file_data, $upload_overrides);
@@ -430,7 +446,7 @@ class Filesystem
      * @param int $attachment_id Attachment ID
      * @return array<string, mixed>|false File information or false if not found
      */
-    public static function get_media_file_info(int $attachment_id)
+    public function getMediaFileInfo(int $attachment_id)
     {
         $attachment = get_post($attachment_id);
 
@@ -450,7 +466,7 @@ class Filesystem
             'file_path' => $file_path,
             'url' => $file_url,
             'mime_type' => $attachment->post_mime_type,
-            'file_size' => self::get_file_size($file_path),
+            'file_size' => $this->getFileSize($file_path),
             'upload_date' => $attachment->post_date,
             'metadata' => $metadata,
         ];
@@ -463,7 +479,7 @@ class Filesystem
      * @param bool $force_delete Whether to bypass trash
      * @return bool Success status
      */
-    public static function delete_media_file(int $attachment_id, bool $force_delete = true): bool
+    public function deleteMediaFile(int $attachment_id, bool $force_delete = true): bool
     {
         $result = wp_delete_attachment($attachment_id, $force_delete);
         return $result !== false;
@@ -476,9 +492,9 @@ class Filesystem
      * @param string $subdirectory Optional subdirectory
      * @return string Unique filename
      */
-    public static function get_unique_filename(string $filename, string $subdirectory = ''): string
+    public function getUniqueFilename(string $filename, string $subdirectory = ''): string
     {
-        $upload_dir = self::get_upload_dir($subdirectory);
+        $upload_dir = $this->getUploadDir($subdirectory);
         $filename = sanitize_file_name($filename);
 
         return wp_unique_filename($upload_dir['path'], $filename);
@@ -490,9 +506,9 @@ class Filesystem
      * @param string $subdirectory Optional subdirectory
      * @return array<string, string> Upload directory information
      */
-    public static function get_upload_dir(string $subdirectory = ''): array
+    public function getUploadDir(string $subdirectory = ''): array
     {
-        $upload_dir = wp_upload_dir();
+        $upload_dir = $this->upload_dir;
 
         if (!empty($subdirectory)) {
             $subdirectory = trim($subdirectory, '/');
@@ -504,27 +520,25 @@ class Filesystem
     }
 
     /**
-     * Create plugin-specific upload directory.
+     * Create app-specific upload directory.
      *
      * @param string $subdirectory Optional subdirectory name
      * @return array<string, string>|false Directory info or false on failure
      */
-    public static function create_plugin_upload_dir(string $subdirectory = ''): array|false
+    public function createAppUploadDir(string $subdirectory = ''): array|false
     {
-        $plugin_slug = Config::get('slug') ?? 'wp-plugin';
-        $dir_name = $plugin_slug . (!empty($subdirectory) ? '/' . $subdirectory : '');
+        $dir_name = $this->app_slug . (!empty($subdirectory) ? '/' . $subdirectory : '');
+        $upload_dir = $this->getUploadDir($dir_name);
 
-        $upload_dir = self::get_upload_dir($dir_name);
-
-        if (!self::create_directory($upload_dir['path'])) {
+        if (!$this->createDirectory($upload_dir['path'])) {
             return false;
         }
 
         // Create .htaccess for security if needed
         $htaccess_path = $upload_dir['path'] . '/.htaccess';
-        if (!self::file_exists($htaccess_path)) {
+        if (!$this->fileExists($htaccess_path)) {
             $htaccess_content = "Options -Indexes\nDeny from all\n";
-            self::put_contents($htaccess_path, $htaccess_content);
+            $this->putContents($htaccess_path, $htaccess_content);
         }
 
         return $upload_dir;
@@ -536,9 +550,9 @@ class Filesystem
      * @param string $file_path Path to the file
      * @return string|false MIME type or false on failure
      */
-    public static function get_mime_type(string $file_path)
+    public function getMimeType(string $file_path)
     {
-        if (!self::file_exists($file_path)) {
+        if (!$this->fileExists($file_path)) {
             return false;
         }
 
@@ -562,26 +576,27 @@ class Filesystem
      * @param string $file_extension File extension
      * @return bool Whether the file type is allowed
      */
-    public static function is_allowed_file_type(string $file_extension): bool
+    public function isAllowedFileType(string $file_extension): bool
     {
         $file_extension = strtolower(ltrim($file_extension, '.'));
-        return in_array($file_extension, self::$allowed_types, true);
+        return in_array($file_extension, $this->allowed_types, true);
     }
 
     /**
      * Add allowed file types.
      *
      * @param array<string> $types File extensions to allow
-     * @return void
+     * @return static For method chaining
      */
-    public static function add_allowed_file_types(array $types): void
+    public function addAllowedFileTypes(array $types): static
     {
         foreach ($types as $type) {
             $type = strtolower(ltrim($type, '.'));
-            if (!in_array($type, self::$allowed_types, true)) {
-                self::$allowed_types[] = $type;
+            if (!in_array($type, $this->allowed_types, true)) {
+                $this->allowed_types[] = $type;
             }
         }
+        return $this;
     }
 
     /**
@@ -589,11 +604,11 @@ class Filesystem
      *
      * @return array<string, string> MIME types mapping
      */
-    public static function get_allowed_mime_types(): array
+    public function getAllowedMimeTypes(): array
     {
         $mime_types = [];
 
-        foreach (self::$allowed_types as $extension) {
+        foreach ($this->allowed_types as $extension) {
             $file_info = wp_check_filetype('file.' . $extension);
             if ($file_info['type']) {
                 $mime_types[$extension] = $file_info['type'];
@@ -610,7 +625,7 @@ class Filesystem
      * @param int $precision Number of decimal places
      * @return string Formatted file size
      */
-    public static function format_file_size(int $size, int $precision = 2): string
+    public function formatFileSize(int $size, int $precision = 2): string
     {
         if ($size === 0) {
             return '0 B';
@@ -624,16 +639,153 @@ class Filesystem
     }
 
     /**
-     * Initialize WordPress filesystem.
+     * Get file information.
      *
-     * @return bool Success status
+     * @param string $file_path Path to the file
+     * @return array<string, mixed>|false File information or false on failure
      */
-    protected static function init_wp_filesystem(): bool
+    public function getFileInfo(string $file_path)
     {
-        if (self::$wp_filesystem !== null) {
-            return true;
+        if (!$this->fileExists($file_path)) {
+            return false;
         }
 
+        $size = $this->getFileSize($file_path);
+        $mtime = $this->getModificationTime($file_path);
+
+        return [
+            'path' => $file_path,
+            'filename' => basename($file_path),
+            'extension' => strtolower(pathinfo($file_path, PATHINFO_EXTENSION)),
+            'size' => $size,
+            'size_formatted' => $size !== false ? $this->formatFileSize($size) : 'Unknown',
+            'mime_type' => $this->getMimeType($file_path),
+            'modified' => $mtime,
+            'modified_formatted' => $mtime !== false ? wp_date(get_option('date_format') . ' ' . get_option('time_format'), $mtime) : 'Unknown',
+            'permissions' => $this->getFilePermissions($file_path),
+            'is_allowed' => $this->isAllowedFileType(pathinfo($file_path, PATHINFO_EXTENSION)),
+        ];
+    }
+
+    /**
+     * Scan directory for files.
+     *
+     * @param string $directory Directory to scan
+     * @param bool $recursive Whether to scan recursively
+     * @param array<string> $allowed_extensions Filter by extensions (empty = all allowed types)
+     * @return array<string> List of found files
+     */
+    public function scanDirectory(string $directory, bool $recursive = false, array $allowed_extensions = []): array
+    {
+        $directory = $this->sanitizeFilePath($directory);
+
+        if (!$this->wp_filesystem->is_dir($directory)) {
+            return [];
+        }
+
+        $files = [];
+        $extensions = !empty($allowed_extensions) ? $allowed_extensions : $this->allowed_types;
+
+        $iterator = $recursive
+            ? new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory))
+            : new \DirectoryIterator($directory);
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $extension = strtolower($file->getExtension());
+                if (in_array($extension, $extensions, true)) {
+                    $files[] = $file->getPathname();
+                }
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * Get the application slug.
+     *
+     * @return string Application slug
+     */
+    public function getAppSlug(): string
+    {
+        return $this->app_slug;
+    }
+
+    /**
+     * Get the text domain.
+     *
+     * @return string Text domain
+     */
+    public function getTextDomain(): string
+    {
+        return $this->text_domain;
+    }
+
+    /**
+     * Get allowed file types.
+     *
+     * @return array<string> Allowed file extensions
+     */
+    public function getAllowedFileTypes(): array
+    {
+        return $this->allowed_types;
+    }
+
+    /**
+     * Get the config instance if available.
+     *
+     * @return Config|null Config instance or null
+     */
+    public function getConfig(): ?Config
+    {
+        return $this->config;
+    }
+
+    /**
+     * Get the app upload directory path.
+     *
+     * @return string App upload directory
+     */
+    public function getAppUploadDir(): string
+    {
+        return $this->app_upload_dir;
+    }
+
+    /**
+     * Parse config or slug parameter and set instance properties.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @return void
+     * @throws InvalidArgumentException If parameters are invalid
+     */
+    protected function parseConfigOrSlug(Config|string $config_or_slug): void
+    {
+        if ($config_or_slug instanceof Config) {
+            $this->config = $config_or_slug;
+            $this->app_slug = $config_or_slug->slug;
+            $this->text_domain = $config_or_slug->get('text_domain', $config_or_slug->slug);
+        } elseif (is_string($config_or_slug)) {
+            $this->config = null;
+            $this->app_slug = sanitize_key($config_or_slug);
+            $this->text_domain = $this->app_slug;
+        } else {
+            throw new InvalidArgumentException('First parameter must be Config instance or string');
+        }
+
+        if (empty($this->app_slug)) {
+            throw new InvalidArgumentException('App slug cannot be empty');
+        }
+    }
+
+    /**
+     * Initialize WordPress filesystem.
+     *
+     * @return void
+     * @throws \RuntimeException If filesystem cannot be initialized
+     */
+    protected function initializeFilesystem(): void
+    {
         global $wp_filesystem;
 
         if (empty($wp_filesystem)) {
@@ -641,8 +793,55 @@ class Filesystem
             WP_Filesystem();
         }
 
-        self::$wp_filesystem = $wp_filesystem;
-        return self::$wp_filesystem !== null;
+        $this->wp_filesystem = $wp_filesystem;
+
+        if (!$this->wp_filesystem) {
+            throw new \RuntimeException('Failed to initialize WordPress filesystem');
+        }
+    }
+
+    /**
+     * Setup allowed file types.
+     *
+     * @param array<string> $additional_types Additional file types to allow
+     * @return void
+     */
+    protected function setupAllowedTypes(array $additional_types): void
+    {
+        $default_types = [
+            'jpg',
+            'jpeg',
+            'png',
+            'gif',
+            'webp',
+            'svg',
+            'pdf',
+            'doc',
+            'docx',
+            'xls',
+            'xlsx',
+            'ppt',
+            'pptx',
+            'txt',
+            'csv',
+            'zip',
+            'tar',
+            'gz'
+        ];
+
+        $this->allowed_types = array_merge($default_types, $additional_types);
+        $this->allowed_types = array_unique($this->allowed_types);
+    }
+
+    /**
+     * Setup upload directory.
+     *
+     * @return void
+     */
+    protected function setupUploadDirectory(): void
+    {
+        $this->upload_dir = wp_upload_dir();
+        $this->app_upload_dir = $this->upload_dir['path'] . '/' . $this->app_slug;
     }
 
     /**
@@ -651,7 +850,7 @@ class Filesystem
      * @param string $file_path File path to sanitize
      * @return string Sanitized file path
      */
-    protected static function sanitize_file_path(string $file_path): string
+    protected function sanitizeFilePath(string $file_path): string
     {
         // Remove any null bytes
         $file_path = str_replace("\0", '', $file_path);

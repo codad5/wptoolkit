@@ -12,46 +12,99 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
+use InvalidArgumentException;
+
 /**
  * Page Helper class for managing WordPress admin pages and frontend pages.
  *
  * Provides a clean API for creating admin menu pages, submenu pages,
  * and frontend page routes with automatic capability checking and routing.
+ * Now fully object-based with dependency injection support.
  */
 class Page
 {
     /**
      * Registered menu pages.
+     *
+     * @var array<string, array<string, mixed>>
      */
-    protected static array $menu_pages = [];
+    protected array $menu_pages = [];
 
     /**
      * Registered submenu pages.
+     *
+     * @var array<string, array<string, mixed>>
      */
-    protected static array $submenu_pages = [];
+    protected array $submenu_pages = [];
 
     /**
      * Registered frontend pages.
+     *
+     * @var array<string, array<string, mixed>>
      */
-    protected static array $frontend_pages = [];
+    protected array $frontend_pages = [];
 
     /**
      * Current page information.
+     *
+     * @var array<string, mixed>
      */
-    protected static array $current_page = [];
+    protected array $current_page = [];
 
     /**
-     * Initialize the page system.
-     *
-     * @return bool Success status
+     * Application slug for identification.
      */
-    public static function init(): bool
-    {
-        add_action('admin_menu', [self::class, 'register_admin_pages']);
-        add_action('init', [self::class, 'register_frontend_pages']);
-        add_action('template_redirect', [self::class, 'handle_frontend_routing']);
+    protected string $app_slug;
 
-        return true;
+    /**
+     * Text domain for translations.
+     */
+    protected string $text_domain;
+
+    /**
+     * App name for display.
+     */
+    protected string $app_name;
+
+    /**
+     * Config instance (optional dependency).
+     */
+    protected ?Config $config = null;
+
+    /**
+     * Whether hooks have been registered.
+     */
+    protected bool $hooks_registered = false;
+
+    /**
+     * Template directory path.
+     */
+    protected string $template_dir;
+
+    /**
+     * Constructor for creating a new Page instance.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @param string|null $template_dir Custom template directory
+     * @throws InvalidArgumentException If parameters are invalid
+     */
+    public function __construct(Config|string $config_or_slug, ?string $template_dir = null)
+    {
+        $this->parseConfigOrSlug($config_or_slug);
+        $this->template_dir = $template_dir ?? $this->getDefaultTemplateDir();
+        $this->registerHooks();
+    }
+
+    /**
+     * Static factory method for creating Page instances.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @param string|null $template_dir Custom template directory
+     * @return static New Page instance
+     */
+    public static function create(Config|string $config_or_slug, ?string $template_dir = null): static
+    {
+        return new static($config_or_slug, $template_dir);
     }
 
     /**
@@ -59,9 +112,9 @@ class Page
      *
      * @param string $slug Page slug
      * @param array<string, mixed> $config Page configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_menu_page(string $slug, array $config): bool
+    public function addMenuPage(string $slug, array $config): static
     {
         $defaults = [
             'page_title' => '',
@@ -73,9 +126,9 @@ class Page
         ];
 
         $slug = sanitize_key($slug);
-        self::$menu_pages[$slug] = array_merge($defaults, $config);
+        $this->menu_pages[$slug] = array_merge($defaults, $config);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -83,9 +136,9 @@ class Page
      *
      * @param string $slug Page slug
      * @param array<string, mixed> $config Page configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_submenu_page(string $slug, array $config): bool
+    public function addSubmenuPage(string $slug, array $config): static
     {
         $defaults = [
             'parent_slug' => '',
@@ -96,9 +149,9 @@ class Page
         ];
 
         $slug = sanitize_key($slug);
-        self::$submenu_pages[$slug] = array_merge($defaults, $config);
+        $this->submenu_pages[$slug] = array_merge($defaults, $config);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -106,9 +159,9 @@ class Page
      *
      * @param string $slug Page slug
      * @param array<string, mixed> $config Page configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_frontend_page(string $slug, array $config): bool
+    public function addFrontendPage(string $slug, array $config): static
     {
         $defaults = [
             'title' => '',
@@ -121,41 +174,41 @@ class Page
         ];
 
         $slug = sanitize_key($slug);
-        self::$frontend_pages[$slug] = array_merge($defaults, $config);
+        $this->frontend_pages[$slug] = array_merge($defaults, $config);
 
-        return true;
+        return $this;
     }
 
     /**
      * Register multiple admin pages at once.
      *
      * @param array<string, array<string, mixed>> $pages Pages configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_admin_pages(array $pages): bool
+    public function addAdminPages(array $pages): static
     {
         foreach ($pages as $slug => $config) {
             if (isset($config['parent_slug'])) {
-                self::add_submenu_page($slug, $config);
+                $this->addSubmenuPage($slug, $config);
             } else {
-                self::add_menu_page($slug, $config);
+                $this->addMenuPage($slug, $config);
             }
         }
-        return true;
+        return $this;
     }
 
     /**
      * Register multiple frontend pages at once.
      *
      * @param array<string, array<string, mixed>> $pages Pages configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_frontend_pages(array $pages): bool
+    public function addFrontendPages(array $pages): static
     {
         foreach ($pages as $slug => $config) {
-            self::add_frontend_page($slug, $config);
+            $this->addFrontendPage($slug, $config);
         }
-        return true;
+        return $this;
     }
 
     /**
@@ -165,7 +218,7 @@ class Page
      * @param array<string, mixed> $params Additional URL parameters
      * @return string Page URL
      */
-    public static function get_admin_url(string $slug, array $params = []): string
+    public function getAdminUrl(string $slug, array $params = []): string
     {
         $base_url = admin_url('admin.php?page=' . sanitize_key($slug));
 
@@ -183,15 +236,15 @@ class Page
      * @param array<string, mixed> $params Additional URL parameters
      * @return string Page URL
      */
-    public static function get_frontend_url(string $slug, array $params = []): string
+    public function getFrontendUrl(string $slug, array $params = []): string
     {
-        $page_config = self::$frontend_pages[$slug] ?? null;
+        $page_config = $this->frontend_pages[$slug] ?? null;
 
         if (!$page_config) {
             return home_url('/');
         }
 
-        $base_url = home_url('/' . $slug . '/');
+        $base_url = home_url('/' . $this->app_slug . '/' . $slug . '/');
 
         if (!empty($params)) {
             $base_url = add_query_arg($params, $base_url);
@@ -205,13 +258,13 @@ class Page
      *
      * @return array<string, mixed> Current page data
      */
-    public static function get_current_page(): array
+    public function getCurrentPage(): array
     {
-        if (empty(self::$current_page)) {
-            self::detect_current_page();
+        if (empty($this->current_page)) {
+            $this->detectCurrentPage();
         }
 
-        return self::$current_page;
+        return $this->current_page;
     }
 
     /**
@@ -219,9 +272,9 @@ class Page
      *
      * @return string Current page slug
      */
-    public static function get_current_page_slug(): string
+    public function getCurrentPageSlug(): string
     {
-        $current = self::get_current_page();
+        $current = $this->getCurrentPage();
         return $current['slug'] ?? '';
     }
 
@@ -231,15 +284,15 @@ class Page
      * @param string|null $slug Optional specific page slug to check
      * @return bool Whether current page is a plugin admin page
      */
-    public static function is_plugin_admin_page(?string $slug = null): bool
+    public function isPluginAdminPage(?string $slug = null): bool
     {
         if (!is_admin()) {
             return false;
         }
 
-        $current = self::get_current_page();
+        $current = $this->getCurrentPage();
         $is_plugin_page = ($current['type'] ?? '') === 'admin' &&
-            in_array($current['slug'] ?? '', array_keys(array_merge(self::$menu_pages, self::$submenu_pages)), true);
+            in_array($current['slug'] ?? '', array_keys(array_merge($this->menu_pages, $this->submenu_pages)), true);
 
         if ($slug !== null) {
             return $is_plugin_page && ($current['slug'] ?? '') === $slug;
@@ -254,11 +307,11 @@ class Page
      * @param string|null $slug Optional specific page slug to check
      * @return bool Whether current page is a plugin frontend page
      */
-    public static function is_plugin_frontend_page(?string $slug = null): bool
+    public function isPluginFrontendPage(?string $slug = null): bool
     {
-        $current = self::get_current_page();
+        $current = $this->getCurrentPage();
         $is_plugin_page = ($current['type'] ?? '') === 'frontend' &&
-            in_array($current['slug'] ?? '', array_keys(self::$frontend_pages), true);
+            in_array($current['slug'] ?? '', array_keys($this->frontend_pages), true);
 
         if ($slug !== null) {
             return $is_plugin_page && ($current['slug'] ?? '') === $slug;
@@ -272,11 +325,11 @@ class Page
      *
      * @return array<string> Admin page slugs
      */
-    public static function get_admin_page_slugs(): array
+    public function getAdminPageSlugs(): array
     {
         return array_merge(
-            array_keys(self::$menu_pages),
-            array_keys(self::$submenu_pages)
+            array_keys($this->menu_pages),
+            array_keys($this->submenu_pages)
         );
     }
 
@@ -285,9 +338,9 @@ class Page
      *
      * @return array<string> Frontend page slugs
      */
-    public static function get_frontend_page_slugs(): array
+    public function getFrontendPageSlugs(): array
     {
-        return array_keys(self::$frontend_pages);
+        return array_keys($this->frontend_pages);
     }
 
     /**
@@ -297,28 +350,28 @@ class Page
      * @param array<string, mixed> $data Data to pass to template
      * @return void
      */
-    public static function render_page(string $slug, array $data = []): void
+    public function renderPage(string $slug, array $data = []): void
     {
         // Check admin pages first
-        if (isset(self::$menu_pages[$slug])) {
-            self::render_admin_page($slug, self::$menu_pages[$slug], $data);
+        if (isset($this->menu_pages[$slug])) {
+            $this->renderAdminPage($slug, $this->menu_pages[$slug], $data);
             return;
         }
 
-        if (isset(self::$submenu_pages[$slug])) {
-            self::render_admin_page($slug, self::$submenu_pages[$slug], $data);
+        if (isset($this->submenu_pages[$slug])) {
+            $this->renderAdminPage($slug, $this->submenu_pages[$slug], $data);
             return;
         }
 
         // Check frontend pages
-        if (isset(self::$frontend_pages[$slug])) {
-            self::render_frontend_page($slug, self::$frontend_pages[$slug], $data);
+        if (isset($this->frontend_pages[$slug])) {
+            $this->renderFrontendPage($slug, $this->frontend_pages[$slug], $data);
             return;
         }
 
         // Page not found
         if (is_admin()) {
-            wp_die(esc_html__('Page not found', 'textdomain'));
+            wp_die(esc_html__('Page not found', $this->text_domain));
         } else {
             wp_safe_redirect(home_url('/'));
             exit;
@@ -332,25 +385,105 @@ class Page
      * @param string $widget_title Widget title
      * @param callable $callback Widget callback
      * @param string $capability Required capability
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_dashboard_widget(
+    public function addDashboardWidget(
         string $widget_id,
         string $widget_title,
         callable $callback,
         string $capability = 'read'
-    ): bool {
+    ): static {
         add_action('wp_dashboard_setup', function () use ($widget_id, $widget_title, $callback, $capability) {
             if (current_user_can($capability)) {
                 wp_add_dashboard_widget(
-                    sanitize_key($widget_id),
+                    sanitize_key($this->app_slug . '_' . $widget_id),
                     esc_html($widget_title),
                     $callback
                 );
             }
         });
 
-        return true;
+        return $this;
+    }
+
+    /**
+     * Set custom template directory.
+     *
+     * @param string $template_dir Template directory path
+     * @return static For method chaining
+     */
+    public function setTemplateDirectory(string $template_dir): static
+    {
+        $this->template_dir = $template_dir;
+        return $this;
+    }
+
+    /**
+     * Get the application slug.
+     *
+     * @return string Application slug
+     */
+    public function getAppSlug(): string
+    {
+        return $this->app_slug;
+    }
+
+    /**
+     * Get the text domain.
+     *
+     * @return string Text domain
+     */
+    public function getTextDomain(): string
+    {
+        return $this->text_domain;
+    }
+
+    /**
+     * Get the app name.
+     *
+     * @return string App name
+     */
+    public function getAppName(): string
+    {
+        return $this->app_name;
+    }
+
+    /**
+     * Get the template directory.
+     *
+     * @return string Template directory path
+     */
+    public function getTemplateDirectory(): string
+    {
+        return $this->template_dir;
+    }
+
+    /**
+     * Get the config instance if available.
+     *
+     * @return Config|null Config instance or null
+     */
+    public function getConfig(): ?Config
+    {
+        return $this->config;
+    }
+
+    /**
+     * Register WordPress hooks.
+     *
+     * @return void
+     */
+    protected function registerHooks(): void
+    {
+        if ($this->hooks_registered) {
+            return;
+        }
+
+        add_action('admin_menu', [$this, 'registerAdminPages']);
+        add_action('init', [$this, 'registerFrontendPages']);
+        add_action('template_redirect', [$this, 'handleFrontendRouting']);
+
+        $this->hooks_registered = true;
     }
 
     /**
@@ -358,30 +491,37 @@ class Page
      *
      * @return void
      */
-    public static function register_admin_pages(): void
+    public function registerAdminPages(): void
     {
         // Register main menu pages
-        foreach (self::$menu_pages as $slug => $config) {
+        foreach ($this->menu_pages as $slug => $config) {
             add_menu_page(
                 $config['page_title'],
                 $config['menu_title'],
                 $config['capability'],
-                $slug,
-                self::get_page_callback($slug, $config),
+                $this->app_slug . '_' . $slug,
+                $this->getPageCallback($slug, $config),
                 $config['icon'],
                 $config['position']
             );
         }
 
         // Register submenu pages
-        foreach (self::$submenu_pages as $slug => $config) {
+        foreach ($this->submenu_pages as $slug => $config) {
+            $parent_slug = $config['parent_slug'];
+
+            // If parent_slug doesn't include app prefix, add it
+            if (!str_contains($parent_slug, $this->app_slug . '_')) {
+                $parent_slug = $this->app_slug . '_' . $parent_slug;
+            }
+
             add_submenu_page(
-                $config['parent_slug'],
+                $parent_slug,
                 $config['page_title'],
                 $config['menu_title'],
                 $config['capability'],
-                $slug,
-                self::get_page_callback($slug, $config)
+                $this->app_slug . '_' . $slug,
+                $this->getPageCallback($slug, $config)
             );
         }
     }
@@ -391,22 +531,22 @@ class Page
      *
      * @return void
      */
-    public static function register_frontend_pages(): void
+    public function registerFrontendPages(): void
     {
-        foreach (self::$frontend_pages as $slug => $config) {
+        foreach ($this->frontend_pages as $slug => $config) {
             if ($config['rewrite']) {
-                //TODOLIST: Add rewrite rules for frontend pages
-                // add_rewrite_rule(
-                //     '^' . $slug . '/?,
-                //     'index.php?plugin_page=' . $slug,
-                //     'top'
-                // );
+                // Add rewrite rules for frontend pages
+                add_rewrite_rule(
+                    '^' . $this->app_slug . '/' . $slug . '/?$',
+                    'index.php?' . $this->app_slug . '_page=' . $slug,
+                    'top'
+                );
 
-                // add_rewrite_rule(
-                //     '^' . $slug . '/(.+)/?,
-                //     'index.php?plugin_page=' . $slug . '&plugin_path=$matches[1]',
-                //     'top'
-                // );
+                add_rewrite_rule(
+                    '^' . $this->app_slug . '/' . $slug . '/(.+)/?$',
+                    'index.php?' . $this->app_slug . '_page=' . $slug . '&' . $this->app_slug . '_path=$matches[1]',
+                    'top'
+                );
             }
 
             // Add custom query vars
@@ -420,15 +560,15 @@ class Page
 
         // Add our main query vars
         add_filter('query_vars', function ($vars) {
-            $vars[] = 'plugin_page';
-            $vars[] = 'plugin_path';
+            $vars[] = $this->app_slug . '_page';
+            $vars[] = $this->app_slug . '_path';
             return $vars;
         });
 
         // Flush rewrite rules if needed
-        if (get_option(self::get_flush_rules_option()) !== '1') {
+        if (get_option($this->getFlushRulesOption()) !== '1') {
             flush_rewrite_rules();
-            update_option(self::get_flush_rules_option(), '1');
+            update_option($this->getFlushRulesOption(), '1');
         }
     }
 
@@ -437,15 +577,15 @@ class Page
      *
      * @return void
      */
-    public static function handle_frontend_routing(): void
+    public function handleFrontendRouting(): void
     {
-        $plugin_page = get_query_var('plugin_page');
+        $plugin_page = get_query_var($this->app_slug . '_page');
 
-        if (empty($plugin_page) || !isset(self::$frontend_pages[$plugin_page])) {
+        if (empty($plugin_page) || !isset($this->frontend_pages[$plugin_page])) {
             return;
         }
 
-        $config = self::$frontend_pages[$plugin_page];
+        $config = $this->frontend_pages[$plugin_page];
 
         // Check capability if required
         if ($config['capability'] && !current_user_can($config['capability'])) {
@@ -454,14 +594,60 @@ class Page
         }
 
         // Set current page info
-        self::$current_page = [
+        $this->current_page = [
             'type' => 'frontend',
             'slug' => $plugin_page,
             'config' => $config,
         ];
 
         // Handle the request
-        self::render_frontend_page($plugin_page, $config);
+        $this->renderFrontendPage($plugin_page, $config);
+    }
+
+    /**
+     * Parse config or slug parameter and set instance properties.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @return void
+     * @throws InvalidArgumentException If parameters are invalid
+     */
+    protected function parseConfigOrSlug(Config|string $config_or_slug): void
+    {
+        if ($config_or_slug instanceof Config) {
+            $this->config = $config_or_slug;
+            $this->app_slug = $config_or_slug->slug;
+            $this->text_domain = $config_or_slug->get('text_domain', $config_or_slug->slug);
+            $this->app_name = $config_or_slug->get('name', ucfirst(str_replace(['-', '_'], ' ', $config_or_slug->slug)));
+        } elseif (is_string($config_or_slug)) {
+            $this->config = null;
+            $this->app_slug = sanitize_key($config_or_slug);
+            $this->text_domain = $this->app_slug;
+            $this->app_name = ucfirst(str_replace(['-', '_'], ' ', $this->app_slug));
+        } else {
+            throw new InvalidArgumentException('First parameter must be Config instance or string');
+        }
+
+        if (empty($this->app_slug)) {
+            throw new InvalidArgumentException('App slug cannot be empty');
+        }
+    }
+
+    /**
+     * Get default template directory.
+     *
+     * @return string Default template directory path
+     */
+    protected function getDefaultTemplateDir(): string
+    {
+        if ($this->config) {
+            $plugin_dir = $this->config->get('plugin_dir');
+            if ($plugin_dir) {
+                return $plugin_dir . '/templates';
+            }
+        }
+
+        // Fallback to current directory
+        return dirname(__FILE__) . '/templates';
     }
 
     /**
@@ -469,32 +655,35 @@ class Page
      *
      * @return void
      */
-    protected static function detect_current_page(): void
+    protected function detectCurrentPage(): void
     {
         if (is_admin()) {
             $page = sanitize_text_field($_GET['page'] ?? '');
 
-            if (isset(self::$menu_pages[$page])) {
-                self::$current_page = [
+            // Remove app prefix to get clean slug
+            $clean_page = str_replace($this->app_slug . '_', '', $page);
+
+            if (isset($this->menu_pages[$clean_page])) {
+                $this->current_page = [
                     'type' => 'admin',
-                    'slug' => $page,
-                    'config' => self::$menu_pages[$page],
+                    'slug' => $clean_page,
+                    'config' => $this->menu_pages[$clean_page],
                 ];
-            } elseif (isset(self::$submenu_pages[$page])) {
-                self::$current_page = [
+            } elseif (isset($this->submenu_pages[$clean_page])) {
+                $this->current_page = [
                     'type' => 'admin',
-                    'slug' => $page,
-                    'config' => self::$submenu_pages[$page],
+                    'slug' => $clean_page,
+                    'config' => $this->submenu_pages[$clean_page],
                 ];
             }
         } else {
-            $plugin_page = get_query_var('plugin_page');
+            $plugin_page = get_query_var($this->app_slug . '_page');
 
-            if ($plugin_page && isset(self::$frontend_pages[$plugin_page])) {
-                self::$current_page = [
+            if ($plugin_page && isset($this->frontend_pages[$plugin_page])) {
+                $this->current_page = [
                     'type' => 'frontend',
                     'slug' => $plugin_page,
-                    'config' => self::$frontend_pages[$plugin_page],
+                    'config' => $this->frontend_pages[$plugin_page],
                 ];
             }
         }
@@ -505,9 +694,9 @@ class Page
      *
      * @param string $slug Page slug
      * @param array<string, mixed> $config Page configuration
-     * @return callable|array Page callback
+     * @return callable Page callback
      */
-    protected static function get_page_callback(string $slug, array $config)
+    protected function getPageCallback(string $slug, array $config): callable
     {
         $callback = $config['callback'];
 
@@ -515,13 +704,13 @@ class Page
             return $callback;
         }
 
-        if (is_string($callback) && method_exists(self::class, $callback)) {
-            return [self::class, $callback];
+        if (is_string($callback) && method_exists($this, $callback)) {
+            return [$this, $callback];
         }
 
         // Default callback
         return function () use ($slug, $config) {
-            self::render_page($slug, []);
+            $this->renderPage($slug, []);
         };
     }
 
@@ -533,15 +722,23 @@ class Page
      * @param array<string, mixed> $data Template data
      * @return void
      */
-    protected static function render_admin_page(string $slug, array $config, array $data = []): void
+    protected function renderAdminPage(string $slug, array $config, array $data = []): void
     {
         // Check capability
         if (!current_user_can($config['capability'])) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'textdomain'));
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', $this->text_domain));
         }
 
         // Set page title
         $GLOBALS['title'] = $config['page_title'];
+
+        // Add app-specific data
+        $data = array_merge($data, [
+            'app_slug' => $this->app_slug,
+            'app_name' => $this->app_name,
+            'page_slug' => $slug,
+            'page_config' => $config,
+        ]);
 
         // Use callback if provided
         if (isset($config['callback']) && is_callable($config['callback'])) {
@@ -552,15 +749,16 @@ class Page
         // Use template if provided
         $template = $config['template'] ?? null;
         if ($template) {
-            self::load_template($template, $data);
+            $this->loadTemplate($template, $data);
             return;
         }
 
         // Default admin page content
         printf(
-            '<div class="wrap"><h1>%s</h1><p>%s</p></div>',
+            '<div class="wrap %s-page"><h1>%s</h1><p>%s</p></div>',
+            esc_attr($this->app_slug),
             esc_html($config['page_title']),
-            esc_html__('This page has no content configured.', 'textdomain')
+            esc_html__('This page has no content configured.', $this->text_domain)
         );
     }
 
@@ -572,8 +770,17 @@ class Page
      * @param array<string, mixed> $data Template data
      * @return void
      */
-    protected static function render_frontend_page(string $slug, array $config, array $data = []): void
+    protected function renderFrontendPage(string $slug, array $config, array $data = []): void
     {
+        // Add app-specific data
+        $data = array_merge($data, [
+            'app_slug' => $this->app_slug,
+            'app_name' => $this->app_name,
+            'page_slug' => $slug,
+            'page_config' => $config,
+            'page_path' => get_query_var($this->app_slug . '_path', ''),
+        ]);
+
         // Use callback if provided
         if (isset($config['callback']) && is_callable($config['callback'])) {
             call_user_func($config['callback'], $data);
@@ -583,7 +790,7 @@ class Page
         // Use template if provided
         $template = $config['template'] ?? null;
         if ($template) {
-            self::load_template($template, $data);
+            $this->loadTemplate($template, $data);
             return;
         }
 
@@ -602,10 +809,12 @@ class Page
 
         // Default frontend page content
         printf(
-            '<div class="plugin-page plugin-page-%s"><div class="container"><h1>%s</h1><p>%s</p></div></div>',
+            '<div class="plugin-page %s-page %s-page-%s"><div class="container"><h1>%s</h1><p>%s</p></div></div>',
+            esc_attr($this->app_slug),
+            esc_attr($this->app_slug),
             esc_attr($slug),
             esc_html($config['title'] ?? 'Plugin Page'),
-            esc_html__('This page has no content configured.', 'textdomain')
+            esc_html__('This page has no content configured.', $this->text_domain)
         );
 
         // Load theme footer
@@ -620,7 +829,7 @@ class Page
      * @param array<string, mixed> $data Template data
      * @return void
      */
-    protected static function load_template(string $template, array $data = []): void
+    protected function loadTemplate(string $template, array $data = []): void
     {
         // Extract data to variables
         if (!empty($data)) {
@@ -628,8 +837,7 @@ class Page
         }
 
         // Try to find template in plugin directory
-        $plugin_dir = Config::get('plugin_dir') ?? plugin_dir_path(__FILE__);
-        $template_path = $plugin_dir . 'templates/' . ltrim($template, '/');
+        $template_path = $this->template_dir . '/' . ltrim($template, '/');
 
         if (file_exists($template_path)) {
             include $template_path;
@@ -637,7 +845,11 @@ class Page
         }
 
         // Try theme template override
-        $theme_template = locate_template(['plugin-templates/' . basename($template)]);
+        $theme_template = locate_template([
+            $this->app_slug . '-templates/' . basename($template),
+            'plugin-templates/' . basename($template)
+        ]);
+
         if ($theme_template) {
             include $theme_template;
             return;
@@ -647,7 +859,13 @@ class Page
         if (is_admin()) {
             printf(
                 '<div class="notice notice-error"><p>%s: %s</p></div>',
-                esc_html__('Template not found', 'textdomain'),
+                esc_html__('Template not found', $this->text_domain),
+                esc_html($template)
+            );
+        } else {
+            printf(
+                '<div class="template-error"><p>%s: %s</p></div>',
+                esc_html__('Template not found', $this->text_domain),
                 esc_html($template)
             );
         }
@@ -658,8 +876,8 @@ class Page
      *
      * @return string Option key
      */
-    protected static function get_flush_rules_option(): string
+    protected function getFlushRulesOption(): string
     {
-        return (Config::get('slug') ?? 'wp_plugin') . '_flush_rules';
+        return $this->app_slug . '_flush_rules';
     }
 }

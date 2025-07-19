@@ -15,19 +15,22 @@ namespace Codad5\WPToolkit\Utils;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
+use InvalidArgumentException;
+use function current_user_can;
 
 /**
  * Enhanced REST Route Helper class with multi-version support.
  *
  * Provides comprehensive API management with version control, deprecation handling,
  * and backward compatibility features for scalable WordPress REST APIs.
+ * Now fully object-based with dependency injection support.
  */
 class RestRoute
 {
     /**
      * Base API namespace for all routes.
      */
-    protected static string $base_namespace = '';
+    protected string $base_namespace;
 
     /**
      * Registered API versions with their configurations.
@@ -41,53 +44,90 @@ class RestRoute
      *     successor_version: string|null
      * }>
      */
-    protected static array $versions = [];
+    protected array $versions = [];
 
     /**
      * Current default version.
      */
-    protected static string $default_version = 'v1';
+    protected string $default_version = 'v1';
 
     /**
      * Global middleware applied to all versions.
+     *
+     * @var array<int, array<callable>>
      */
-    protected static array $global_middleware = [];
+    protected array $global_middleware = [];
 
     /**
      * API documentation metadata.
+     *
+     * @var array<string, mixed>
      */
-    protected static array $api_docs = [];
+    protected array $api_docs = [];
 
     /**
-     * Initialize the REST route system with multi-version support.
+     * Application slug for identification.
+     */
+    protected string $app_slug;
+
+    /**
+     * Text domain for translations.
+     */
+    protected string $text_domain;
+
+    /**
+     * Config instance (optional dependency).
+     */
+    protected ?Config $config = null;
+
+    /**
+     * Whether hooks have been registered.
+     */
+    protected bool $hooks_registered = false;
+
+    /**
+     * Constructor for creating a new RestRoute instance.
      *
-     * @param string|null $base_namespace Custom base namespace
+     * @param Config|string $config_or_slug Config instance or app slug
      * @param array<string> $supported_versions List of supported versions
      * @param string $default_version Default API version
-     * @return bool Success status
+     * @param string|null $base_namespace Custom base namespace
+     * @throws InvalidArgumentException If parameters are invalid
      */
-    public static function init(
-        ?string $base_namespace = null,
+    public function __construct(
+        Config|string $config_or_slug,
         array $supported_versions = ['v1'],
-        string $default_version = 'v1'
-    ): bool {
-        if ($base_namespace === null) {
-            $plugin_slug = Config::get('slug') ?? 'wp-plugin';
-            $base_namespace = str_replace('-', '_', $plugin_slug);
-        }
-
-        self::$base_namespace = sanitize_key($base_namespace);
-        self::$default_version = sanitize_key($default_version);
+        string $default_version = 'v1',
+        ?string $base_namespace = null
+    ) {
+        $this->parseConfigOrSlug($config_or_slug);
+        $this->base_namespace = $base_namespace ?? str_replace('-', '_', $this->app_slug);
+        $this->default_version = sanitize_key($default_version);
 
         // Initialize supported versions
         foreach ($supported_versions as $version) {
-            self::register_version($version);
+            $this->registerVersion($version);
         }
 
-        add_action('rest_api_init', [self::class, 'register_all_routes']);
-        add_action('wp_head', [self::class, 'add_api_discovery']);
+        $this->registerHooks();
+    }
 
-        return true;
+    /**
+     * Static factory method for creating RestRoute instances.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @param array<string> $supported_versions List of supported versions
+     * @param string $default_version Default API version
+     * @param string|null $base_namespace Custom base namespace
+     * @return static New RestRoute instance
+     */
+    public static function create(
+        Config|string $config_or_slug,
+        array $supported_versions = ['v1'],
+        string $default_version = 'v1',
+        ?string $base_namespace = null
+    ): static {
+        return new static($config_or_slug, $supported_versions, $default_version, $base_namespace);
     }
 
     /**
@@ -95,9 +135,9 @@ class RestRoute
      *
      * @param string $version Version identifier (e.g., 'v1', 'v2')
      * @param array<string, mixed> $config Version configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function register_version(string $version, array $config = []): bool
+    public function registerVersion(string $version, array $config = []): static
     {
         $version = sanitize_key($version);
 
@@ -112,9 +152,9 @@ class RestRoute
             'changelog' => [],
         ];
 
-        self::$versions[$version] = array_merge($defaults, $config);
+        $this->versions[$version] = array_merge($defaults, $config);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -124,24 +164,24 @@ class RestRoute
      * @param string $deprecation_date Deprecation date (ISO 8601)
      * @param string|null $removal_date Planned removal date
      * @param string|null $successor_version Recommended successor version
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function deprecate_version(
+    public function deprecateVersion(
         string $version,
         string $deprecation_date,
         ?string $removal_date = null,
         ?string $successor_version = null
-    ): bool {
-        if (!isset(self::$versions[$version])) {
-            return false;
+    ): static {
+        if (!isset($this->versions[$version])) {
+            throw new InvalidArgumentException("Version '{$version}' is not registered");
         }
 
-        self::$versions[$version]['deprecated'] = true;
-        self::$versions[$version]['deprecation_date'] = $deprecation_date;
-        self::$versions[$version]['removal_date'] = $removal_date;
-        self::$versions[$version]['successor_version'] = $successor_version;
+        $this->versions[$version]['deprecated'] = true;
+        $this->versions[$version]['deprecation_date'] = $deprecation_date;
+        $this->versions[$version]['removal_date'] = $removal_date;
+        $this->versions[$version]['successor_version'] = $successor_version;
 
-        return true;
+        return $this;
     }
 
     /**
@@ -150,14 +190,14 @@ class RestRoute
      * @param string $version API version
      * @param string $route Route pattern
      * @param array<string, mixed> $config Route configuration
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_route(string $version, string $route, array $config): bool
+    public function addRoute(string $version, string $route, array $config): static
     {
         $version = sanitize_key($version);
 
-        if (!isset(self::$versions[$version])) {
-            self::register_version($version);
+        if (!isset($this->versions[$version])) {
+            $this->registerVersion($version);
         }
 
         $defaults = [
@@ -174,9 +214,9 @@ class RestRoute
         ];
 
         $route = '/' . ltrim($route, '/');
-        self::$versions[$version]['routes'][$route] = array_merge($defaults, $config);
+        $this->versions[$version]['routes'][$route] = array_merge($defaults, $config);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -184,14 +224,14 @@ class RestRoute
      *
      * @param string $version API version
      * @param array<string, array<string, mixed>> $routes Routes to add
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_routes(string $version, array $routes): bool
+    public function addRoutes(string $version, array $routes): static
     {
         foreach ($routes as $route => $config) {
-            self::add_route($version, $route, $config);
+            $this->addRoute($version, $route, $config);
         }
-        return true;
+        return $this;
     }
 
     /**
@@ -201,11 +241,11 @@ class RestRoute
      * @param string $route Route pattern
      * @param callable $callback Route callback
      * @param array<string, mixed> $args Additional arguments
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function get(string $version, string $route, callable $callback, array $args = []): bool
+    public function get(string $version, string $route, callable $callback, array $args = []): static
     {
-        return self::add_route($version, $route, array_merge($args, [
+        return $this->addRoute($version, $route, array_merge($args, [
             'methods' => 'GET',
             'callback' => $callback,
         ]));
@@ -218,11 +258,11 @@ class RestRoute
      * @param string $route Route pattern
      * @param callable $callback Route callback
      * @param array<string, mixed> $args Additional arguments
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function post(string $version, string $route, callable $callback, array $args = []): bool
+    public function post(string $version, string $route, callable $callback, array $args = []): static
     {
-        return self::add_route($version, $route, array_merge($args, [
+        return $this->addRoute($version, $route, array_merge($args, [
             'methods' => 'POST',
             'callback' => $callback,
         ]));
@@ -235,11 +275,11 @@ class RestRoute
      * @param string $route Route pattern
      * @param callable $callback Route callback
      * @param array<string, mixed> $args Additional arguments
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function put(string $version, string $route, callable $callback, array $args = []): bool
+    public function put(string $version, string $route, callable $callback, array $args = []): static
     {
-        return self::add_route($version, $route, array_merge($args, [
+        return $this->addRoute($version, $route, array_merge($args, [
             'methods' => 'PUT',
             'callback' => $callback,
         ]));
@@ -252,11 +292,11 @@ class RestRoute
      * @param string $route Route pattern
      * @param callable $callback Route callback
      * @param array<string, mixed> $args Additional arguments
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function delete(string $version, string $route, callable $callback, array $args = []): bool
+    public function delete(string $version, string $route, callable $callback, array $args = []): static
     {
-        return self::add_route($version, $route, array_merge($args, [
+        return $this->addRoute($version, $route, array_merge($args, [
             'methods' => 'DELETE',
             'callback' => $callback,
         ]));
@@ -268,25 +308,25 @@ class RestRoute
      * @param string $from_version Source version
      * @param string $to_version Target version
      * @param array<string> $exclude_routes Routes to exclude from copying
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function copy_routes(string $from_version, string $to_version, array $exclude_routes = []): bool
+    public function copyRoutes(string $from_version, string $to_version, array $exclude_routes = []): static
     {
-        if (!isset(self::$versions[$from_version])) {
-            return false;
+        if (!isset($this->versions[$from_version])) {
+            throw new InvalidArgumentException("Source version '{$from_version}' is not registered");
         }
 
-        if (!isset(self::$versions[$to_version])) {
-            self::register_version($to_version);
+        if (!isset($this->versions[$to_version])) {
+            $this->registerVersion($to_version);
         }
 
-        foreach (self::$versions[$from_version]['routes'] as $route => $config) {
+        foreach ($this->versions[$from_version]['routes'] as $route => $config) {
             if (!in_array($route, $exclude_routes, true)) {
-                self::$versions[$to_version]['routes'][$route] = $config;
+                $this->versions[$to_version]['routes'][$route] = $config;
             }
         }
 
-        return true;
+        return $this;
     }
 
     /**
@@ -295,22 +335,22 @@ class RestRoute
      * @param string $version API version
      * @param callable $middleware Middleware function
      * @param int $priority Priority (lower = earlier)
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_middleware(string $version, callable $middleware, int $priority = 10): bool
+    public function addMiddleware(string $version, callable $middleware, int $priority = 10): static
     {
-        if (!isset(self::$versions[$version])) {
-            self::register_version($version);
+        if (!isset($this->versions[$version])) {
+            $this->registerVersion($version);
         }
 
-        if (!isset(self::$versions[$version]['middleware'][$priority])) {
-            self::$versions[$version]['middleware'][$priority] = [];
+        if (!isset($this->versions[$version]['middleware'][$priority])) {
+            $this->versions[$version]['middleware'][$priority] = [];
         }
 
-        self::$versions[$version]['middleware'][$priority][] = $middleware;
-        ksort(self::$versions[$version]['middleware']);
+        $this->versions[$version]['middleware'][$priority][] = $middleware;
+        ksort($this->versions[$version]['middleware']);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -318,136 +358,18 @@ class RestRoute
      *
      * @param callable $middleware Middleware function
      * @param int $priority Priority (lower = earlier)
-     * @return bool Success status
+     * @return static For method chaining
      */
-    public static function add_global_middleware(callable $middleware, int $priority = 10): bool
+    public function addGlobalMiddleware(callable $middleware, int $priority = 10): static
     {
-        if (!isset(self::$global_middleware[$priority])) {
-            self::$global_middleware[$priority] = [];
+        if (!isset($this->global_middleware[$priority])) {
+            $this->global_middleware[$priority] = [];
         }
 
-        self::$global_middleware[$priority][] = $middleware;
-        ksort(self::$global_middleware);
+        $this->global_middleware[$priority][] = $middleware;
+        ksort($this->global_middleware);
 
-        return true;
-    }
-
-    /**
-     * Register all routes for all versions with WordPress.
-     *
-     * @return void
-     */
-    public static function register_all_routes(): void
-    {
-        foreach (self::$versions as $version => $version_config) {
-            $namespace = self::get_full_namespace($version);
-
-            foreach ($version_config['routes'] as $route => $config) {
-                $route_config = [
-                    'methods' => $config['methods'],
-                    'callback' => [self::class, 'handle_request'],
-                    'permission_callback' => $config['permission_callback'],
-                    'args' => self::build_route_args($config['args']),
-                ];
-
-                // Store metadata for the handler
-                $route_config['route_meta'] = [
-                    'version' => $version,
-                    'original_config' => $config,
-                    'version_config' => $version_config,
-                ];
-
-                register_rest_route($namespace, $route, $route_config);
-            }
-        }
-    }
-
-    /**
-     * Handle incoming REST requests with version-aware processing.
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response|WP_Error Response
-     */
-    public static function handle_request(WP_REST_Request $request)
-    {
-        try {
-            // Extract version and route information
-            $route_meta = self::extract_route_metadata($request);
-            if (!$route_meta) {
-                return new WP_Error(
-                    'route_not_found',
-                    __('Route not found', 'textdomain'),
-                    ['status' => 404]
-                );
-            }
-
-            $version = $route_meta['version'];
-            $config = $route_meta['original_config'];
-            $version_config = $route_meta['version_config'];
-
-            // Check if version is deprecated
-            $deprecation_response = self::handle_deprecation($version, $version_config);
-            if ($deprecation_response instanceof WP_Error) {
-                return $deprecation_response;
-            }
-
-            // Apply global middleware
-            $global_middleware_response = self::apply_global_middleware($request, $route_meta);
-            if ($global_middleware_response instanceof WP_Error || $global_middleware_response instanceof WP_REST_Response) {
-                return $global_middleware_response;
-            }
-
-            // Apply version-specific middleware
-            $version_middleware_response = self::apply_version_middleware($request, $route_meta);
-            if ($version_middleware_response instanceof WP_Error || $version_middleware_response instanceof WP_REST_Response) {
-                return $version_middleware_response;
-            }
-
-            // Validate request
-            $validation_error = self::validate_request($request, $config);
-            if ($validation_error) {
-                return $validation_error;
-            }
-
-            // Sanitize request parameters
-            $sanitized_request = self::sanitize_request($request, $config);
-
-            // Call the route callback
-            $callback = $config['callback'];
-            if (!is_callable($callback)) {
-                return new WP_Error(
-                    'invalid_callback',
-                    __('Invalid route callback', 'textdomain'),
-                    ['status' => 500]
-                );
-            }
-
-            $response = call_user_func($callback, $sanitized_request);
-
-            // Format and enhance response with version metadata
-            $formatted_response = self::format_response($response);
-
-            if ($formatted_response instanceof WP_REST_Response) {
-                // Add version headers
-                $formatted_response->header('X-API-Version', $version);
-
-                // Add deprecation warnings if applicable
-                if ($deprecation_response instanceof WP_REST_Response) {
-                    $deprecation_headers = $deprecation_response->get_headers();
-                    foreach ($deprecation_headers as $header => $value) {
-                        $formatted_response->header($header, $value);
-                    }
-                }
-            }
-
-            return $formatted_response;
-        } catch (\Exception $e) {
-            return new WP_Error(
-                'internal_error',
-                $e->getMessage(),
-                ['status' => 500]
-            );
-        }
+        return $this;
     }
 
     /**
@@ -456,9 +378,9 @@ class RestRoute
      * @param string $version API version
      * @return string Full namespace
      */
-    public static function get_full_namespace(string $version): string
+    public function getFullNamespace(string $version): string
     {
-        return self::$base_namespace . '/' . $version;
+        return $this->base_namespace . '/' . $version;
     }
 
     /**
@@ -469,10 +391,10 @@ class RestRoute
      * @param array<string, mixed> $params URL parameters
      * @return string Route URL
      */
-    public static function get_route_url(string $version, string $route, array $params = []): string
+    public function getRouteUrl(string $version, string $route, array $params = []): string
     {
         $route = '/' . ltrim($route, '/');
-        $namespace = self::get_full_namespace($version);
+        $namespace = $this->getFullNamespace($version);
         $url = rest_url($namespace . $route);
 
         if (!empty($params)) {
@@ -488,13 +410,13 @@ class RestRoute
      * @param bool $include_deprecated Whether to include deprecated versions
      * @return array<string> Available versions
      */
-    public static function get_available_versions(bool $include_deprecated = true): array
+    public function getAvailableVersions(bool $include_deprecated = true): array
     {
         if ($include_deprecated) {
-            return array_keys(self::$versions);
+            return array_keys($this->versions);
         }
 
-        return array_keys(array_filter(self::$versions, fn($config) => !$config['deprecated']));
+        return array_keys(array_filter($this->versions, fn($config) => !$config['deprecated']));
     }
 
     /**
@@ -502,18 +424,19 @@ class RestRoute
      *
      * @return array<string, mixed> API documentation
      */
-    public static function get_api_documentation(): array
+    public function getApiDocumentation(): array
     {
         $docs = [
-            'base_namespace' => self::$base_namespace,
-            'default_version' => self::$default_version,
+            'app_slug' => $this->app_slug,
+            'base_namespace' => $this->base_namespace,
+            'default_version' => $this->default_version,
             'versions' => [],
         ];
 
-        foreach (self::$versions as $version => $config) {
+        foreach ($this->versions as $version => $config) {
             $version_docs = [
                 'version' => $version,
-                'namespace' => self::get_full_namespace($version),
+                'namespace' => $this->getFullNamespace($version),
                 'deprecated' => $config['deprecated'],
                 'description' => $config['description'] ?? '',
                 'routes' => [],
@@ -530,7 +453,7 @@ class RestRoute
             foreach ($config['routes'] as $route => $route_config) {
                 $version_docs['routes'][$route] = [
                     'methods' => $route_config['methods'],
-                    'url' => self::get_route_url($version, $route),
+                    'url' => $this->getRouteUrl($version, $route),
                     'deprecated' => $route_config['deprecated'] ?? false,
                     'args' => $route_config['args'] ?? [],
                 ];
@@ -550,7 +473,7 @@ class RestRoute
      * @param int $status HTTP status code
      * @return WP_REST_Response Success response
      */
-    public static function success_response(mixed $data = null, string $message = '', int $status = 200): WP_REST_Response
+    public function successResponse(mixed $data = null, string $message = '', int $status = 200): WP_REST_Response
     {
         $response_data = [
             'success' => true,
@@ -573,7 +496,7 @@ class RestRoute
      * @param int $status HTTP status code
      * @return WP_Error Error response
      */
-    public static function error_response(string $code, string $message, mixed $data = null, int $status = 400): WP_Error
+    public function errorResponse(string $code, string $message, mixed $data = null, int $status = 400): WP_Error
     {
         $error_data = ['status' => $status];
 
@@ -590,12 +513,12 @@ class RestRoute
      * @param string $capability Required capability
      * @return bool|WP_Error True if allowed, WP_Error if not
      */
-    public static function check_permissions(string $capability = 'read')
+    public function checkPermissions(string $capability = 'read')
     {
         if (!current_user_can($capability)) {
             return new WP_Error(
                 'rest_forbidden',
-                __('You do not have permission to access this resource', 'textdomain'),
+                __('You do not have permission to access this resource', $this->text_domain),
                 ['status' => 403]
             );
         }
@@ -611,14 +534,14 @@ class RestRoute
      * @param string $param Parameter name containing nonce
      * @return bool|WP_Error True if valid, WP_Error if not
      */
-    public static function verify_nonce(WP_REST_Request $request, string $action, string $param = '_wpnonce')
+    public function verifyNonce(WP_REST_Request $request, string $action, string $param = '_wpnonce')
     {
         $nonce = $request->get_param($param);
 
         if (!wp_verify_nonce($nonce, $action)) {
             return new WP_Error(
                 'rest_nonce_invalid',
-                __('Invalid nonce', 'textdomain'),
+                __('Invalid nonce', $this->text_domain),
                 ['status' => 403]
             );
         }
@@ -627,19 +550,234 @@ class RestRoute
     }
 
     /**
+     * Get the application slug.
+     *
+     * @return string Application slug
+     */
+    public function getAppSlug(): string
+    {
+        return $this->app_slug;
+    }
+
+    /**
+     * Get the text domain.
+     *
+     * @return string Text domain
+     */
+    public function getTextDomain(): string
+    {
+        return $this->text_domain;
+    }
+
+    /**
+     * Get the base namespace.
+     *
+     * @return string Base namespace
+     */
+    public function getBaseNamespace(): string
+    {
+        return $this->base_namespace;
+    }
+
+    /**
+     * Get the default version.
+     *
+     * @return string Default version
+     */
+    public function getDefaultVersion(): string
+    {
+        return $this->default_version;
+    }
+
+    /**
+     * Get the config instance if available.
+     *
+     * @return Config|null Config instance or null
+     */
+    public function getConfig(): ?Config
+    {
+        return $this->config;
+    }
+
+    /**
+     * Register WordPress hooks.
+     *
+     * @return void
+     */
+    protected function registerHooks(): void
+    {
+        if ($this->hooks_registered) {
+            return;
+        }
+
+        add_action('rest_api_init', [$this, 'registerAllRoutes']);
+        add_action('wp_head', [$this, 'addApiDiscovery']);
+
+        $this->hooks_registered = true;
+    }
+
+    /**
+     * Register all routes for all versions with WordPress.
+     *
+     * @return void
+     */
+    public function registerAllRoutes(): void
+    {
+        foreach ($this->versions as $version => $version_config) {
+            $namespace = $this->getFullNamespace($version);
+
+            foreach ($version_config['routes'] as $route => $config) {
+                $route_config = [
+                    'methods' => $config['methods'],
+                    'callback' => [$this, 'handleRequest'],
+                    'permission_callback' => $config['permission_callback'],
+                    'args' => $this->buildRouteArgs($config['args']),
+                ];
+
+                // Store metadata for the handler
+                $route_config['route_meta'] = [
+                    'version' => $version,
+                    'original_config' => $config,
+                    'version_config' => $version_config,
+                    'app_slug' => $this->app_slug,
+                    'instance' => $this,
+                ];
+
+                register_rest_route($namespace, $route, $route_config);
+            }
+        }
+    }
+
+    /**
+     * Handle incoming REST requests with version-aware processing.
+     *
+     * @param WP_REST_Request $request Request object
+     * @return WP_REST_Response|WP_Error Response
+     */
+    public function handleRequest(WP_REST_Request $request)
+    {
+        try {
+            // Extract version and route information
+            $route_meta = $this->extractRouteMetadata($request);
+            if (!$route_meta) {
+                return new WP_Error(
+                    'route_not_found',
+                    __('Route not found', $this->text_domain),
+                    ['status' => 404]
+                );
+            }
+
+            $version = $route_meta['version'];
+            $config = $route_meta['original_config'];
+            $version_config = $route_meta['version_config'];
+
+            // Check if version is deprecated
+            $deprecation_response = $this->handleDeprecation($version, $version_config);
+            if ($deprecation_response instanceof WP_Error) {
+                return $deprecation_response;
+            }
+
+            // Apply global middleware
+            $global_middleware_response = $this->applyGlobalMiddleware($request, $route_meta);
+            if ($global_middleware_response instanceof WP_Error || $global_middleware_response instanceof WP_REST_Response) {
+                return $global_middleware_response;
+            }
+
+            // Apply version-specific middleware
+            $version_middleware_response = $this->applyVersionMiddleware($request, $route_meta);
+            if ($version_middleware_response instanceof WP_Error || $version_middleware_response instanceof WP_REST_Response) {
+                return $version_middleware_response;
+            }
+
+            // Validate request
+            $validation_error = $this->validateRequest($request, $config);
+            if ($validation_error) {
+                return $validation_error;
+            }
+
+            // Sanitize request parameters
+            $sanitized_request = $this->sanitizeRequest($request, $config);
+
+            // Call the route callback
+            $callback = $config['callback'];
+            if (!is_callable($callback)) {
+                return new WP_Error(
+                    'invalid_callback',
+                    __('Invalid route callback', $this->text_domain),
+                    ['status' => 500]
+                );
+            }
+
+            $response = call_user_func($callback, $sanitized_request);
+
+            // Format and enhance response with version metadata
+            $formatted_response = $this->formatResponse($response);
+
+            if ($formatted_response instanceof WP_REST_Response) {
+                // Add version headers
+                $formatted_response->header('X-API-Version', $version);
+                $formatted_response->header('X-API-App', $this->app_slug);
+
+                // Add deprecation warnings if applicable
+                if ($deprecation_response instanceof WP_REST_Response) {
+                    $deprecation_headers = $deprecation_response->get_headers();
+                    foreach ($deprecation_headers as $header => $value) {
+                        $formatted_response->header($header, $value);
+                    }
+                }
+            }
+
+            return $formatted_response;
+        } catch (\Exception $e) {
+            return new WP_Error(
+                'internal_error',
+                $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
      * Add API discovery to HTML head.
      *
      * @return void
      */
-    public static function add_api_discovery(): void
+    public function addApiDiscovery(): void
     {
-        $default_namespace = self::get_full_namespace(self::$default_version);
+        $default_namespace = $this->getFullNamespace($this->default_version);
         $api_url = rest_url($default_namespace);
 
         printf(
-            '<link rel="https://api.w.org/" href="%s" />',
-            esc_url($api_url)
+            '<link rel="https://api.w.org/" href="%s" data-app="%s" />',
+            esc_url($api_url),
+            esc_attr($this->app_slug)
         );
+    }
+
+    /**
+     * Parse config or slug parameter and set instance properties.
+     *
+     * @param Config|string $config_or_slug Config instance or app slug
+     * @return void
+     * @throws InvalidArgumentException If parameters are invalid
+     */
+    protected function parseConfigOrSlug(Config|string $config_or_slug): void
+    {
+        if ($config_or_slug instanceof Config) {
+            $this->config = $config_or_slug;
+            $this->app_slug = $config_or_slug->slug;
+            $this->text_domain = $config_or_slug->get('text_domain', $config_or_slug->slug);
+        } elseif (is_string($config_or_slug)) {
+            $this->config = null;
+            $this->app_slug = sanitize_key($config_or_slug);
+            $this->text_domain = $this->app_slug;
+        } else {
+            throw new InvalidArgumentException('First parameter must be Config instance or string');
+        }
+
+        if (empty($this->app_slug)) {
+            throw new InvalidArgumentException('App slug cannot be empty');
+        }
     }
 
     /**
@@ -648,7 +786,7 @@ class RestRoute
      * @param WP_REST_Request $request Request object
      * @return array<string, mixed>|null Route metadata
      */
-    protected static function extract_route_metadata(WP_REST_Request $request): ?array
+    protected function extractRouteMetadata(WP_REST_Request $request): ?array
     {
         // WordPress stores route metadata in the request attributes
         $route_attributes = $request->get_attributes();
@@ -662,7 +800,7 @@ class RestRoute
      * @param array<string, mixed> $version_config Version configuration
      * @return WP_REST_Response|WP_Error|null Deprecation response
      */
-    protected static function handle_deprecation(string $version, array $version_config)
+    protected function handleDeprecation(string $version, array $version_config)
     {
         if (!$version_config['deprecated']) {
             return null;
@@ -691,7 +829,7 @@ class RestRoute
             return new WP_Error(
                 'api_version_removed',
                 sprintf(
-                    __('API version %s has been removed. Please use version %s.', 'textdomain'),
+                    __('API version %s has been removed. Please use version %s.', $this->text_domain),
                     $version,
                     $version_config['successor_version'] ?? 'latest'
                 ),
@@ -709,9 +847,9 @@ class RestRoute
      * @param array<string, mixed> $route_meta Route metadata
      * @return mixed Middleware response or null to continue
      */
-    protected static function apply_global_middleware(WP_REST_Request $request, array $route_meta)
+    protected function applyGlobalMiddleware(WP_REST_Request $request, array $route_meta)
     {
-        foreach (self::$global_middleware as $priority_group) {
+        foreach ($this->global_middleware as $priority_group) {
             foreach ($priority_group as $middleware) {
                 $result = call_user_func($middleware, $request, $route_meta);
 
@@ -731,7 +869,7 @@ class RestRoute
      * @param array<string, mixed> $route_meta Route metadata
      * @return mixed Middleware response or null to continue
      */
-    protected static function apply_version_middleware(WP_REST_Request $request, array $route_meta)
+    protected function applyVersionMiddleware(WP_REST_Request $request, array $route_meta)
     {
         $version = $route_meta['version'];
         $version_config = $route_meta['version_config'];
@@ -756,7 +894,7 @@ class RestRoute
      * @param array<string, mixed> $config Route configuration
      * @return WP_Error|null Validation error or null if valid
      */
-    protected static function validate_request(WP_REST_Request $request, array $config): ?WP_Error
+    protected function validateRequest(WP_REST_Request $request, array $config): ?WP_Error
     {
         $args = $config['args'] ?? [];
 
@@ -767,7 +905,7 @@ class RestRoute
             if (($param_config['required'] ?? false) && $value === null) {
                 return new WP_Error(
                     'missing_parameter',
-                    sprintf(__('Missing required parameter: %s', 'textdomain'), $param),
+                    sprintf(__('Missing required parameter: %s', $this->text_domain), $param),
                     ['status' => 400]
                 );
             }
@@ -779,7 +917,7 @@ class RestRoute
                 if (!$is_valid) {
                     return new WP_Error(
                         'invalid_parameter',
-                        sprintf(__('Invalid parameter: %s', 'textdomain'), $param),
+                        sprintf(__('Invalid parameter: %s', $this->text_domain), $param),
                         ['status' => 400]
                     );
                 }
@@ -796,7 +934,7 @@ class RestRoute
      * @param array<string, mixed> $config Route configuration
      * @return WP_REST_Request Sanitized request
      */
-    protected static function sanitize_request(WP_REST_Request $request, array $config): WP_REST_Request
+    protected function sanitizeRequest(WP_REST_Request $request, array $config): WP_REST_Request
     {
         $args = $config['args'] ?? [];
 
@@ -818,7 +956,7 @@ class RestRoute
      * @param mixed $response Raw response
      * @return WP_REST_Response|WP_Error Formatted response
      */
-    protected static function format_response(mixed $response)
+    protected function formatResponse(mixed $response)
     {
         if ($response instanceof WP_REST_Response || $response instanceof WP_Error) {
             return $response;
@@ -841,7 +979,7 @@ class RestRoute
      * @param array<string, mixed> $args Raw arguments
      * @return array<string, mixed> WordPress-formatted arguments
      */
-    protected static function build_route_args(array $args): array
+    protected function buildRouteArgs(array $args): array
     {
         $wp_args = [];
 
