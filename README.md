@@ -55,7 +55,8 @@ WPToolkit now uses a **Service Registry** pattern for managing dependencies acro
 
 ```php
 <?php
-use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification};
+use Codad5\WPToolkit\Registry;
+use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification};
 
 // 1. Create immutable configuration
 $config = Config::plugin('my-awesome-plugin', __FILE__, [
