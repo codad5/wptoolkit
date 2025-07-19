@@ -12,8 +12,6 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
-
-
 /**
  * Autoloader Helper class for automatic class loading.
  *
@@ -48,25 +46,65 @@ class Autoloader
     protected static array $file_extensions = ['.php'];
 
     /**
+     * Track which plugins have initialized the autoloader
+     */
+    protected static array $initialized_plugins = [];
+
+    /**
      * Initialize and register the autoloader.
      *
      * @param array<string, string> $namespace_map Initial namespace mappings
      * @param array<string, string> $class_map Initial class mappings
+     * @param bool $overwrite Whether to overwrite existing mappings
+     * @param string|null $plugin_id Optional plugin identifier for tracking
      * @return bool Success status
      */
-    public static function init(array $namespace_map = [], array $class_map = [], bool $overwrite = false): bool
+    public static function init(array $namespace_map = [], array $class_map = [], bool $overwrite = false, ?string $plugin_id = null): bool
     {
-        if (self::$is_registered) {
-            return true;
+        // Generate plugin ID if not provided
+        if ($plugin_id === null) {
+            $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+            $plugin_id = $backtrace[1]['file'] ?? 'unknown';
         }
 
-        // if duplicate namespaces or classes are provided, warn and skip unless overwriting is allowed
-        self::add_namespaces($namespace_map, $overwrite);
-        self::add_class_maps($class_map, $overwrite);
+        // Track this plugin's initialization
+        if (!isset(self::$initialized_plugins[$plugin_id])) {
+            self::$initialized_plugins[$plugin_id] = [
+                'namespaces' => [],
+                'classes' => [],
+                'timestamp' => time()
+            ];
+        }
 
-        self::unregister();
-        // Register the autoloader
-        return self::register();
+        $success = true;
+
+        // Add namespace mappings and track them per plugin
+        foreach ($namespace_map as $namespace => $base_dir) {
+            if (self::add_namespace($namespace, $base_dir, $overwrite)) {
+                self::$initialized_plugins[$plugin_id]['namespaces'][] = $namespace;
+            } else {
+                $success = false;
+            }
+        }
+
+        // Add class mappings and track them per plugin
+        foreach ($class_map as $class_name => $file_path) {
+            if (self::add_class_map($class_name, $file_path, $overwrite)) {
+                self::$initialized_plugins[$plugin_id]['classes'][] = $class_name;
+            } else {
+                $success = false;
+            }
+        }
+
+        // Register the autoloader if not already registered
+        if (!self::$is_registered) {
+            $register_success = self::register();
+            if (!$register_success) {
+                $success = false;
+            }
+        }
+
+        return $success;
     }
 
     /**
@@ -105,6 +143,8 @@ class Autoloader
 
         if ($success) {
             self::$is_registered = false;
+            // Clear plugin tracking when unregistering
+            self::$initialized_plugins = [];
         }
 
         return $success;
@@ -115,6 +155,7 @@ class Autoloader
      *
      * @param string $namespace Namespace prefix
      * @param string $base_dir Base directory for the namespace
+     * @param bool $overwrite Whether to overwrite existing mapping
      * @param bool $prepend Whether to prepend to the namespace list
      * @return bool Success status
      */
@@ -130,12 +171,19 @@ class Autoloader
             return false;
         }
 
-        // Check if namespace already exists also compare path
+        // Check if namespace already exists
         if (!$overwrite && isset(self::$namespace_map[$namespace])) {
             if (self::$namespace_map[$namespace] === $base_dir) {
                 return true; // Already exists with the same path
             } else {
-                return false; // Namespace exists with a different path
+                // Different path - this could be a conflict
+                trigger_error(
+                    "Namespace conflict: '{$namespace}' is already mapped to a different directory. " .
+                        "Existing: '" . self::$namespace_map[$namespace] . "', " .
+                        "New: '{$base_dir}'",
+                    E_USER_WARNING
+                );
+                return false;
             }
         }
 
@@ -152,6 +200,7 @@ class Autoloader
      * Add multiple namespace mappings.
      *
      * @param array<string, string> $namespaces Namespace to directory mappings
+     * @param bool $overwrite Whether to overwrite existing mappings
      * @return bool Success status
      */
     public static function add_namespaces(array $namespaces, bool $overwrite = false): bool
@@ -172,6 +221,7 @@ class Autoloader
      *
      * @param string $class_name Fully qualified class name
      * @param string $file_path Path to the class file
+     * @param bool $overwrite Whether to overwrite existing mapping
      * @return bool Success status
      */
     public static function add_class_map(string $class_name, string $file_path, bool $overwrite = false): bool
@@ -186,22 +236,31 @@ class Autoloader
             return false; // File does not exist
         }
 
-        // Check if class already exists also compare path
+        // Check if class already exists
         if (!$overwrite && isset(self::$class_map[$class_name])) {
             if (self::$class_map[$class_name] === $file_path) {
                 return true; // Already exists with the same path
             } else {
-                return false; // Class exists with a different path
+                // Different path - this could be a conflict
+                trigger_error(
+                    "Class mapping conflict: '{$class_name}' is already mapped to a different file. " .
+                        "Existing: '" . self::$class_map[$class_name] . "', " .
+                        "New: '{$file_path}'",
+                    E_USER_WARNING
+                );
+                return false;
             }
         }
 
         self::$class_map[$class_name] = $file_path;
         return true;
     }
+
     /**
      * Add multiple class file mappings.
      *
      * @param array<string, string> $class_map Class to file mappings
+     * @param bool $overwrite Whether to overwrite existing mappings
      * @return bool Success status
      */
     public static function add_class_maps(array $class_map, bool $overwrite = false): bool
@@ -215,6 +274,58 @@ class Autoloader
         }
 
         return $success;
+    }
+
+    /**
+     * Remove a plugin's registered namespaces and classes.
+     *
+     * @param string $plugin_id Plugin identifier
+     * @return bool Success status
+     */
+    public static function remove_plugin_mappings(string $plugin_id): bool
+    {
+        if (!isset(self::$initialized_plugins[$plugin_id])) {
+            return false;
+        }
+
+        $plugin_data = self::$initialized_plugins[$plugin_id];
+
+        // Remove namespaces
+        foreach ($plugin_data['namespaces'] as $namespace) {
+            unset(self::$namespace_map[$namespace]);
+        }
+
+        // Remove class mappings
+        foreach ($plugin_data['classes'] as $class_name) {
+            unset(self::$class_map[$class_name]);
+            unset(self::$loaded_classes[$class_name]);
+        }
+
+        // Remove plugin tracking
+        unset(self::$initialized_plugins[$plugin_id]);
+
+        return true;
+    }
+
+    /**
+     * Get information about initialized plugins.
+     *
+     * @return array<string, array> Plugin initialization data
+     */
+    public static function get_initialized_plugins(): array
+    {
+        return self::$initialized_plugins;
+    }
+
+    /**
+     * Check if a specific plugin has been initialized.
+     *
+     * @param string $plugin_id Plugin identifier
+     * @return bool Whether the plugin has been initialized
+     */
+    public static function is_plugin_initialized(string $plugin_id): bool
+    {
+        return isset(self::$initialized_plugins[$plugin_id]);
     }
 
     /**
@@ -239,7 +350,7 @@ class Autoloader
             }
         }
 
-        // Try namespace mappings
+        // Try namespace mappings (order matters - first match wins)
         foreach (self::$namespace_map as $namespace => $base_dir) {
             if (str_starts_with($class_name . '\\', $namespace)) {
                 $relative_class = substr($class_name, strlen($namespace));
@@ -524,7 +635,6 @@ class Autoloader
         return false;
     }
 
-
     /**
      * Dump autoloader information for debugging.
      *
@@ -538,7 +648,7 @@ class Autoloader
             'class_map' => self::$class_map,
             'loaded_classes' => self::$loaded_classes,
             'file_extensions' => self::$file_extensions,
-
+            'initialized_plugins' => self::$initialized_plugins,
         ];
     }
 }
