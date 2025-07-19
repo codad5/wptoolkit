@@ -54,15 +54,15 @@ class Autoloader
      * @param array<string, string> $class_map Initial class mappings
      * @return bool Success status
      */
-    public static function init(array $namespace_map = [], array $class_map = []): bool
+    public static function init(array $namespace_map = [], array $class_map = [], bool $overwrite = false): bool
     {
         if (self::$is_registered) {
             return true;
         }
 
-        // Set initial mappings
-        self::$namespace_map = $namespace_map;
-        self::$class_map = $class_map;
+        // if duplicate namespaces or classes are provided, warn and skip unless overwriting is allowed
+        self::add_namespaces($namespace_map, $overwrite);
+        self::add_class_maps($class_map, $overwrite);
 
         // Register the autoloader
         return self::register();
@@ -117,7 +117,7 @@ class Autoloader
      * @param bool $prepend Whether to prepend to the namespace list
      * @return bool Success status
      */
-    public static function add_namespace(string $namespace, string $base_dir, bool $prepend = false): bool
+    public static function add_namespace(string $namespace, string $base_dir, bool $overwrite = false, bool $prepend = false): bool
     {
         // Normalize namespace
         $namespace = rtrim($namespace, '\\') . '\\';
@@ -127,6 +127,15 @@ class Autoloader
 
         if (!is_dir($base_dir)) {
             return false;
+        }
+
+        // Check if namespace already exists also compare path
+        if (!$overwrite && isset(self::$namespace_map[$namespace])) {
+            if (self::$namespace_map[$namespace] === $base_dir) {
+                return true; // Already exists with the same path
+            } else {
+                return false; // Namespace exists with a different path
+            }
         }
 
         if ($prepend) {
@@ -144,12 +153,12 @@ class Autoloader
      * @param array<string, string> $namespaces Namespace to directory mappings
      * @return bool Success status
      */
-    public static function add_namespaces(array $namespaces): bool
+    public static function add_namespaces(array $namespaces, bool $overwrite = false): bool
     {
         $success = true;
 
         foreach ($namespaces as $namespace => $base_dir) {
-            if (!self::add_namespace($namespace, $base_dir)) {
+            if (!self::add_namespace($namespace, $base_dir, $overwrite)) {
                 $success = false;
             }
         }
@@ -164,30 +173,42 @@ class Autoloader
      * @param string $file_path Path to the class file
      * @return bool Success status
      */
-    public static function add_class_map(string $class_name, string $file_path): bool
+    public static function add_class_map(string $class_name, string $file_path, bool $overwrite = false): bool
     {
+        // Normalize class name
         $class_name = ltrim($class_name, '\\');
 
-        if (!file_exists($file_path)) {
-            return false;
+        // Normalize file path
+        $file_path = self::normalize_directory($file_path);
+
+        if (!is_file($file_path)) {
+            return false; // File does not exist
+        }
+
+        // Check if class already exists also compare path
+        if (!$overwrite && isset(self::$class_map[$class_name])) {
+            if (self::$class_map[$class_name] === $file_path) {
+                return true; // Already exists with the same path
+            } else {
+                return false; // Class exists with a different path
+            }
         }
 
         self::$class_map[$class_name] = $file_path;
         return true;
     }
-
     /**
      * Add multiple class file mappings.
      *
      * @param array<string, string> $class_map Class to file mappings
      * @return bool Success status
      */
-    public static function add_class_maps(array $class_map): bool
+    public static function add_class_maps(array $class_map, bool $overwrite = false): bool
     {
         $success = true;
 
         foreach ($class_map as $class_name => $file_path) {
-            if (!self::add_class_map($class_name, $file_path)) {
+            if (!self::add_class_map($class_name, $file_path, $overwrite)) {
                 $success = false;
             }
         }
@@ -516,7 +537,7 @@ class Autoloader
             'class_map' => self::$class_map,
             'loaded_classes' => self::$loaded_classes,
             'file_extensions' => self::$file_extensions,
-            
+
         ];
     }
 }
