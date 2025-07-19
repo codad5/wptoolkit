@@ -5,7 +5,7 @@
  *
  * @author Chibueze <hello@codad5.me>
  * @license GPL-2.0-or-later http://www.gnu.org/licenses/gpl-2.0.txt
- * @link https://github.com/szepeviktor/starter-plugin
+ * @link https://github.com/codad5/wptoolkit
  */
 
 declare(strict_types=1);
@@ -531,6 +531,4 @@ final class Config
 
         return implode("\n", $lines);
     }
-
-
 }

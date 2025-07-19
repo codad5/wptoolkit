@@ -1318,31 +1318,6 @@ if ($config->isDevelopment()) {
 }
 ```
 
-## Migration from v1.x
-
-If you're upgrading from WPToolkit v1.x, here are the key changes:
-
-### Old (v1.x)
-
-```php
-Config::init(['slug' => 'my-plugin']);
-Settings::init($settings_config);
-Page::init();
-$value = Settings::get('api_key');
-```
-
-### New (v2.x)
-
-```php
-$config = Config::plugin('my-plugin', __FILE__);
-Registry::registerApp($config, [
-    'settings' => Settings::create($settings_config, $config),
-    'page' => Page::create($config)
-]);
-$settings = Registry::get('my-plugin', 'settings');
-$value = $settings->get('api_key');
-```
-
 ## Requirements
 
 - **PHP 8.1** or higher (uses modern PHP features like union types, readonly properties)
