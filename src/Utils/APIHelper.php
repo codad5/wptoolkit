@@ -55,6 +55,14 @@ abstract class APIHelper
      * @return string Base API host URL
      */
     abstract protected static function get_base_url(): string;
+    /**
+     * Get headers for API requests.
+     *
+     * Child classes must implement this.
+     *
+     * @return array<string, string> Headers array
+     */
+    abstract protected static function get_headers(): array;
 
     /**
      * Prepare a complete request URL with query parameters.
@@ -193,7 +201,10 @@ abstract class APIHelper
         $request_args = array_merge([
             'method' => $method,
             'timeout' => 30,
-            'headers' => [],
+            'headers' => array_merge(
+                static::get_headers(),
+                $args['headers'] ?? []
+            ),
         ], $args);
 
         // Add body for non-GET requests
