@@ -64,6 +64,7 @@ class Autoloader
         self::add_namespaces($namespace_map, $overwrite);
         self::add_class_maps($class_map, $overwrite);
 
+        self::unregister();
         // Register the autoloader
         return self::register();
     }
