@@ -1,7 +1,7 @@
 <?php
 
 /**
- * API Helper
+ * Updated API Helper using Cache Utility
  *
  * @author Chibueze Aniezeofor <hello@codad5.me>
  * @license GPL-2.0-or-later http://www.gnu.org/licenses/gpl-2.0.txt
@@ -12,12 +12,12 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
+use Codad5\WPToolkit\Utils\Cache;
 
 /**
  * Abstract API Helper class for making HTTP requests and managing API responses.
  *
- * This class provides a foundation for API integrations with built-in caching,
- * request counting, and error handling using WordPress functions.
+ * Now uses the Cache utility class for improved caching capabilities.
  */
 abstract class APIHelper
 {
@@ -25,6 +25,16 @@ abstract class APIHelper
      * The name identifier for this API helper instance.
      */
     protected static string $name = 'APIHelper';
+
+    /**
+     * Cache group for this API helper.
+     */
+    protected static string $cache_group = 'api_helper';
+
+    /**
+     * Default cache duration in minutes.
+     */
+    protected static int $default_cache_duration = 90;
 
     /**
      * API endpoints configuration - should be overridden in child classes.
@@ -38,6 +48,7 @@ abstract class APIHelper
      * }>
      */
     abstract protected static function get_endpoints(): array;
+
     /**
      * Get the plugin slug for cache and option key generation.
      *
@@ -55,6 +66,7 @@ abstract class APIHelper
      * @return string Base API host URL
      */
     abstract protected static function get_base_url(): string;
+
     /**
      * Get headers for API requests.
      *
@@ -82,7 +94,7 @@ abstract class APIHelper
     }
 
     /**
-     * Cache data using WordPress transients.
+     * Cache data using the Cache utility.
      *
      * @param string $key Cache key
      * @param mixed $value Data to cache
@@ -91,39 +103,34 @@ abstract class APIHelper
      */
     public static function cache(string $key, mixed $value, ?int $expiration = null): bool
     {
-        if ($expiration === null) {
-            $expiration = 90; // Default 90 minutes
-        }
+        $expiration = $expiration ?? static::$default_cache_duration;
+        $cache_key = static::generate_cache_key($key);
 
-        $cache_key = static::get_cache_key($key);
-        $expiration_seconds = absint($expiration) * MINUTE_IN_SECONDS;
-
-        if (set_transient($cache_key, $value, $expiration_seconds)) {
-            static::track_cache_key($cache_key, $expiration_seconds);
-            return true;
-        }
-
-        return false;
+        return Cache::set($cache_key, $value, $expiration * 60, static::get_cache_group());
     }
 
     /**
-     * Track cache keys for bulk operations.
+     * Get cached data using the Cache utility.
      *
-     * @param string $cache_key The cache key to track
-     * @param int $expiration_seconds Expiration in seconds
-     * @return void
+     * @param string $key Cache key
+     * @return mixed Cached data or false if not found
      */
-    protected static function track_cache_key(string $cache_key, int $expiration_seconds): void
+    public static function get_cache(string $key): mixed
     {
-        $tracker_key = static::get_cache_tracker_key();
-        $previous_cache_keys = get_transient($tracker_key) ?: [];
+        $cache_key = static::generate_cache_key($key);
+        return Cache::get($cache_key, false, static::get_cache_group());
+    }
 
-        if (!is_array($previous_cache_keys)) {
-            $previous_cache_keys = [];
-        }
-
-        $previous_cache_keys = array_unique(array_merge($previous_cache_keys, [$cache_key]));
-        set_transient($tracker_key, $previous_cache_keys, $expiration_seconds);
+    /**
+     * Delete specific cached data.
+     *
+     * @param string $key Cache key
+     * @return bool True on success, false on failure
+     */
+    public static function delete_cache(string $key): bool
+    {
+        $cache_key = static::generate_cache_key($key);
+        return Cache::delete($cache_key, static::get_cache_group());
     }
 
     /**
@@ -133,54 +140,48 @@ abstract class APIHelper
      */
     public static function clear_cache(): int
     {
-        $tracker_key = static::get_cache_tracker_key();
-        $cache_keys = get_transient($tracker_key);
-        $cleared = 0;
-
-        if (is_array($cache_keys)) {
-            foreach ($cache_keys as $key) {
-                if (delete_transient($key)) {
-                    $cleared++;
-                }
-            }
-        }
-
-        delete_transient($tracker_key);
-        return $cleared;
+        return Cache::clear_group(static::get_cache_group());
     }
 
     /**
      * List all cached data for this API helper.
      *
-     * @return array<string, mixed> Array of cached data keyed by cache key
+     * @return array Array of cached data keyed by cache key
      */
     public static function list_cache(): array
     {
-        $tracker_key = static::get_cache_tracker_key();
-        $cache_keys = get_transient($tracker_key);
-        $caches = [];
-
-        if (is_array($cache_keys)) {
-            foreach ($cache_keys as $key) {
-                $data = get_transient($key);
-                if ($data !== false) {
-                    $caches[$key] = $data;
-                }
-            }
-        }
-
-        return $caches;
+        return Cache::list_group(static::get_cache_group());
     }
 
     /**
-     * Get cached data by key.
+     * Get cache statistics for this API helper.
+     *
+     * @return array Cache statistics
+     */
+    public static function get_cache_stats(): array
+    {
+        return Cache::get_stats(static::get_cache_group());
+    }
+
+    /**
+     * Remember a value - get from cache or compute and cache if not exists.
      *
      * @param string $key Cache key
-     * @return mixed Cached data or false if not found
+     * @param callable $callback Function to compute value if cache miss
+     * @param int|null $expiration Expiration time in minutes
+     * @return mixed Cached or computed value
      */
-    public static function get_cache(string $key): mixed
+    public static function remember(string $key, callable $callback, ?int $expiration = null): mixed
     {
-        return get_transient(static::get_cache_key($key));
+        $expiration = $expiration ?? static::$default_cache_duration;
+        $cache_key = static::generate_cache_key($key);
+
+        return Cache::remember(
+            $cache_key,
+            $callback,
+            $expiration * 60,
+            static::get_cache_group()
+        );
     }
 
     /**
@@ -201,7 +202,6 @@ abstract class APIHelper
         $request_args = array_merge([
             'method' => $method,
             'timeout' => 30,
-
         ], $args, [
             'headers' => array_merge(
                 static::get_headers(),
@@ -213,7 +213,6 @@ abstract class APIHelper
         if ($method !== 'GET' && !empty($params)) {
             $request_args['body'] = $params;
         }
-
 
         $response = wp_remote_request($url, $request_args);
 
@@ -251,7 +250,7 @@ abstract class APIHelper
         $should_cache = static::should_cache_response($cache_setting, $data);
 
         if ($should_cache && $method === 'GET') {
-            $cache_duration = is_numeric($cache_setting) ? (int)$cache_setting : 90;
+            $cache_duration = is_numeric($cache_setting) ? (int)$cache_setting : static::$default_cache_duration;
             static::cache($url, $data, $cache_duration);
         }
 
@@ -293,7 +292,6 @@ abstract class APIHelper
      */
     protected static function update_api_call_count(): void
     {
-        $name = static::get_name();
         $count_key = static::get_option_key('api_calls');
         $date_key = static::get_option_key('api_calls_start_date');
 
@@ -345,6 +343,18 @@ abstract class APIHelper
     public static function set_name(string $name): void
     {
         static::$name = sanitize_key($name);
+        static::$cache_group = static::$name . '_api';
+    }
+
+    /**
+     * Set cache duration for this API helper.
+     *
+     * @param int $duration Cache duration in minutes
+     * @return void
+     */
+    public static function set_cache_duration(int $duration): void
+    {
+        static::$default_cache_duration = $duration;
     }
 
     /**
@@ -442,33 +452,24 @@ abstract class APIHelper
     }
 
     /**
-     * Generate a prefixed cache key.
+     * Generate a cache key for this API helper.
      *
      * @param string $key Base cache key
-     * @return string Prefixed cache key
+     * @return string Generated cache key
      */
-    protected static function get_cache_key(string $key): string
+    protected static function generate_cache_key(string $key): string
     {
-        return sprintf(
-            '%s_%s_%s',
-            static::get_slug(),
-            static::get_name(),
-            md5($key)
-        );
+        return sprintf('%s_%s', static::get_name(), md5($key));
     }
 
     /**
-     * Generate cache tracker key.
+     * Get the cache group for this API helper.
      *
-     * @return string Cache tracker key
+     * @return string Cache group
      */
-    protected static function get_cache_tracker_key(): string
+    protected static function get_cache_group(): string
     {
-        return sprintf(
-            '%s_%s_cache_keys',
-            static::get_slug(),
-            static::get_name()
-        );
+        return static::$cache_group;
     }
 
     /**

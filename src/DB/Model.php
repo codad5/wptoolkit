@@ -12,8 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\DB;
 
-use Codad5\WPToolkit\Utils\{Config, Cache, Notification};
-use Codad5\EasyMetabox\{MetaBox, helpers\InputValidator};
+use Codad5\WPToolkit\Utils\{Config, Cache, Notification, InputValidator};
 use WP_Post;
 use WP_Error;
 use WP_Query;

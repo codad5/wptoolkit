@@ -1,6 +1,6 @@
 # WPToolkit
 
-**Your go-to WordPress development library** - A comprehensive collection of utility classes that streamline WordPress plugin and theme development with modern dependency injection and service registry architecture.
+**Your go-to WordPress development library** - A comprehensive collection of utility classes that streamline WordPress plugin and theme development with modern dependency injection, service registry architecture, and advanced form management.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-blue.svg)](https://php.net)
@@ -16,6 +16,10 @@
 - **Multi-App Support**: Manage multiple plugins/themes from a single codebase
 - **Immutable Configuration**: Type-safe, immutable configuration management
 - **Enhanced Error Handling**: Comprehensive validation and error reporting
+- **Advanced Form Management**: MetaBox and InputValidator with lifecycle hooks
+- **Smart Caching**: Multi-level caching with automatic invalidation
+- **Template System**: Flexible view loading with inheritance support
+- **Database Models**: Abstract model class with CRUD operations and caching
 
 ## Installation
 
@@ -33,7 +37,9 @@ Then use the autoloader in your plugin:
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification};
+use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification, Cache, ViewLoader};
+use Codad5\WPToolkit\Forms\{MetaBox, InputValidator};
+use Codad5\WPToolkit\DB\Model;
 ```
 
 ### Method 2: Direct Download
@@ -46,23 +52,26 @@ use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification};
 <?php
 require_once __DIR__ . '/lib/wptoolkit/autoloader.php';
 
-use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification};
+use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification, Cache, ViewLoader};
+use Codad5\WPToolkit\Forms\{MetaBox, InputValidator};
+use Codad5\WPToolkit\DB\Model;
 ```
 
 ## Quick Start
 
-WPToolkit now uses a **Service Registry** pattern for managing dependencies across your applications:
+WPToolkit uses a **Service Registry** pattern for managing dependencies across your applications:
 
 ```php
 <?php
 use Codad5\WPToolkit\Registry;
 use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification};
+use Codad5\WPToolkit\Forms\MetaBox;
 
 // 1. Create immutable configuration
 $config = Config::plugin('my-awesome-plugin', __FILE__, [
     'name' => 'My Awesome Plugin',
     'version' => '1.0.0',
-    'description' => 'An amazing WordPress plugin'
+    'description' => 'An amazing WordPress plugin built with WPToolkit'
 ]);
 
 // 2. Register your application with the registry
@@ -80,12 +89,29 @@ $settings = Settings::create([
 $page = Page::create($config);
 $notification = Notification::create($config);
 
-// 4. Register services in the registry
-Registry::add($config, 'settings', $settings);
-Registry::add($config, 'page', $page);
-Registry::add($config, 'notification', $notification);
+// 4. Create MetaBox for custom fields
+$metabox = MetaBox::create('product_details', 'Product Details', 'product', $config)
+    ->add_field('price', 'Price', 'number', [], ['min' => 0, 'step' => 0.01])
+    ->add_field('category', 'Category', 'select', [
+        'electronics' => 'Electronics',
+        'clothing' => 'Clothing',
+        'books' => 'Books'
+    ])
+    ->onSuccess(function($post_id, $metabox) {
+        // Custom success handling
+        wp_cache_delete('product_' . $post_id, 'products');
+    })
+    ->setup_actions();
 
-// 5. Use services from anywhere in your application
+// 5. Register services in the registry
+Registry::addMany($config, [
+    'settings' => $settings,
+    'page' => $page,
+    'notification' => $notification,
+    'product_metabox' => $metabox
+]);
+
+// 6. Use services from anywhere in your application
 $settings = Registry::get('my-awesome-plugin', 'settings');
 $settings->set('api_key', 'your-api-key');
 ```
@@ -161,6 +187,310 @@ $template_path = $config->path('templates/admin.php');
 ```
 
 ## Available Classes
+
+### Cache Management
+
+Advanced caching utility with group-based organization:
+
+```php
+use Codad5\WPToolkit\Utils\Cache;
+
+// Basic caching
+Cache::set('user_data', $user_data, 3600, 'users'); // 1 hour in 'users' group
+$user_data = Cache::get('user_data', [], 'users');
+
+// Remember pattern - cache or compute
+$expensive_data = Cache::remember('complex_query', function() {
+    return perform_complex_database_query();
+}, 1800, 'database'); // 30 minutes
+
+// Bulk operations
+Cache::set_many([
+    'key1' => 'value1',
+    'key2' => 'value2'
+], 3600, 'bulk_data');
+
+$values = Cache::get_many(['key1', 'key2'], 'default', 'bulk_data');
+
+// Group management
+Cache::clear_group('users'); // Clear all user-related cache
+$stats = Cache::get_stats('users'); // Get cache statistics for group
+
+// Advanced operations
+Cache::flush_expired('users'); // Remove expired entries
+$all_cache = Cache::list_group('users'); // List all cached data in group
+```
+
+### Form Management
+
+Advanced MetaBox and input validation system:
+
+```php
+use Codad5\WPToolkit\Forms\{MetaBox, InputValidator};
+
+// Create MetaBox with advanced features
+$metabox = MetaBox::create('event_details', 'Event Details', 'event', $config)
+    ->set_caching(true, 7200) // Enable caching for 2 hours
+    ->add_field('event_date', 'Event Date', 'date', [], [
+        'required' => true,
+        'min' => date('Y-m-d'), // No past dates
+    ], [
+        'allow_quick_edit' => true,
+        'description' => 'Select the event date'
+    ])
+    ->add_field('ticket_price', 'Ticket Price', 'number', [], [
+        'min' => 0,
+        'step' => 0.01,
+        'required' => true
+    ], [
+        'sanitize_callback' => function($value) {
+            return round(floatval($value), 2);
+        }
+    ])
+    ->add_field('venue', 'Venue', 'select', [
+        'auditorium' => 'Main Auditorium',
+        'conference' => 'Conference Hall',
+        'outdoor' => 'Outdoor Space'
+    ], ['required' => true])
+    ->add_field('featured_image', 'Featured Image', 'wp_media', [], [
+        'multiple' => false
+    ], [
+        'description' => 'Upload event featured image'
+    ])
+    // Lifecycle callbacks
+    ->onPreSave(function($post_id, $metabox) {
+        // Custom logic before saving
+        error_log("About to save event details for post {$post_id}");
+    })
+    ->onSuccess(function($post_id, $metabox) {
+        // Clear related caches
+        wp_cache_delete("event_details_{$post_id}", 'events');
+        
+        // Send notification
+        $notification = Registry::get('my-plugin', 'notification');
+        $notification->success('Event details saved successfully!');
+    })
+    ->onError(function($errors, $post_id, $metabox) {
+        // Handle validation errors
+        error_log("Validation failed for post {$post_id}: " . print_r($errors, true));
+        
+        $notification = Registry::get('my-plugin', 'notification');
+        $notification->error('Please fix the errors and try again.');
+    })
+    ->setup_actions();
+
+// Custom validation with InputValidator
+InputValidator::register_validator('custom_email', function($value, $field) {
+    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+        return 'Please enter a valid email address';
+    }
+    
+    // Custom domain check
+    $domain = substr(strrchr($value, "@"), 1);
+    if (in_array($domain, ['spam.com', 'fake.com'])) {
+        return 'Email domain not allowed';
+    }
+    
+    return true;
+});
+
+// Global validator for all fields
+InputValidator::add_global_validator(function($value, $field, $type) {
+    // Block certain words across all fields
+    $blocked_words = ['spam', 'fake', 'test123'];
+    
+    if (is_string($value)) {
+        foreach ($blocked_words as $word) {
+            if (stripos($value, $word) !== false) {
+                return "Content contains blocked word: {$word}";
+            }
+        }
+    }
+    
+    return true;
+});
+
+// Custom error messages
+InputValidator::set_error_message('required', 'This field is absolutely required!');
+InputValidator::set_error_message('invalid_email', 'Please provide a valid email address.');
+
+// Bulk validation
+$validation_results = InputValidator::validate_many([
+    'email' => ['email', 'user@example.com'],
+    'age' => ['number', '25'],
+    'name' => ['text', 'John Doe']
+], [
+    'email' => ['required' => true],
+    'age' => ['attributes' => ['min' => 18, 'max' => 100]],
+    'name' => ['required' => true, 'attributes' => ['minlength' => 2]]
+]);
+```
+
+### Database Models
+
+Abstract model class for custom post types with MetaBox integration:
+
+```php
+use Codad5\WPToolkit\DB\Model;
+use Codad5\WPToolkit\Forms\MetaBox;
+
+class EventModel extends Model
+{
+    protected const POST_TYPE = 'event';
+    
+    protected static function get_post_type_args(): array
+    {
+        return [
+            'labels' => [
+                'name' => 'Events',
+                'singular_name' => 'Event',
+                'add_new' => 'Add New Event',
+                'edit_item' => 'Edit Event'
+            ],
+            'public' => true,
+            'has_archive' => true,
+            'menu_icon' => 'dashicons-calendar-alt',
+            'supports' => ['title', 'editor', 'thumbnail'],
+            'show_in_rest' => true
+        ];
+    }
+    
+    public function __construct(Config $config)
+    {
+        parent::__construct($config);
+        $this->setup_metaboxes();
+        $this->cache_duration = 3600; // 1 hour cache
+    }
+    
+    private function setup_metaboxes(): void
+    {
+        $event_details = MetaBox::create('event_details', 'Event Details', static::POST_TYPE, $this->config)
+            ->add_field('start_date', 'Start Date', 'date', [], ['required' => true])
+            ->add_field('end_date', 'End Date', 'date', [], ['required' => true])
+            ->add_field('max_attendees', 'Max Attendees', 'number', [], ['min' => 1])
+            ->add_field('venue_name', 'Venue Name', 'text', [], ['required' => true])
+            ->add_field('ticket_price', 'Ticket Price', 'number', [], ['min' => 0, 'step' => 0.01])
+            ->onSuccess(function($post_id) {
+                // Clear cache when event is updated
+                $this->clear_post_cache($post_id);
+            })
+            ->setup_actions();
+            
+        $this->register_metabox($event_details);
+    }
+    
+    // Custom methods for event-specific operations
+    public function get_upcoming_events(int $limit = 10): array
+    {
+        return $this->get_posts([
+            'meta_query' => [
+                [
+                    'key' => 'event_details_event_start_date',
+                    'value' => date('Y-m-d'),
+                    'compare' => '>='
+                ]
+            ],
+            'posts_per_page' => $limit,
+            'orderby' => 'meta_value',
+            'meta_key' => 'event_details_event_start_date',
+            'order' => 'ASC'
+        ], true);
+    }
+    
+    public function get_events_by_venue(string $venue): array
+    {
+        return $this->get_posts([
+            'meta_query' => [
+                [
+                    'key' => 'event_details_event_venue_name',
+                    'value' => $venue,
+                    'compare' => 'LIKE'
+                ]
+            ]
+        ], true);
+    }
+}
+
+// Usage
+$config = Config::plugin('event-manager', __FILE__);
+$event_model = new EventModel($config);
+
+// Create new event
+$event_id = $event_model->create([
+    'post_title' => 'WordPress Conference 2024',
+    'post_content' => 'Join us for an amazing WordPress conference...',
+    'post_status' => 'publish'
+], [
+    'event_details_event_start_date' => '2024-06-15',
+    'event_details_event_end_date' => '2024-06-17',
+    'event_details_event_max_attendees' => 500,
+    'event_details_event_venue_name' => 'Convention Center',
+    'event_details_event_ticket_price' => 199.99
+]);
+
+// Get upcoming events
+$upcoming = $event_model->get_upcoming_events(5);
+
+// Search events
+$results = $event_model->search('WordPress', ['title', 'content', 'meta']);
+
+// Get statistics
+$stats = $event_model->get_statistics();
+```
+
+### View Loading System
+
+Advanced template management with inheritance and caching:
+
+```php
+use Codad5\WPToolkit\Utils\ViewLoader;
+
+// Setup view paths with priority
+ViewLoader::add_path(get_template_directory() . '/wptoolkit-templates', 5); // Theme override
+ViewLoader::add_path($config->path('templates'), 10); // Plugin templates
+ViewLoader::add_path($config->path('views'), 15); // Fallback views
+
+// Enable caching for production
+if (!$config->isDevelopment()) {
+    ViewLoader::enable_cache(3600, 'plugin_views');
+}
+
+// Set global data available to all templates
+ViewLoader::set_global_data([
+    'plugin_name' => $config->get('name'),
+    'plugin_version' => $config->get('version'),
+    'current_user' => wp_get_current_user(),
+    'site_url' => home_url()
+]);
+
+// Load templates
+ViewLoader::load('admin/dashboard', [
+    'stats' => $dashboard_stats,
+    'recent_posts' => $recent_posts
+]);
+
+// Template inheritance with sections
+ViewLoader::layout('layouts/admin', 'admin/settings', [
+    'settings' => $settings_data,
+    'page_title' => 'Plugin Settings'
+]);
+
+// Check if template exists
+if (ViewLoader::exists('custom/special-template')) {
+    ViewLoader::load('custom/special-template', $data);
+} else {
+    ViewLoader::load('fallback/default-template', $data);
+}
+
+// Load without echoing
+$html_content = ViewLoader::get('email/notification', [
+    'user' => $user,
+    'message' => $notification_message
+]);
+
+// Clear template cache
+ViewLoader::clear_cache();
+```
 
 ### Settings Management
 
@@ -587,358 +917,182 @@ $instances = Debugger::getInstances();
 $has_instance = Debugger::hasInstance('my-plugin');
 ```
 
-## Complete Plugin Example
+## Complete Plugin Example with Forms
 
-Here's a comprehensive example showing WPToolkit in action:
+Here's a comprehensive example showing WPToolkit with Forms integration:
 
 ```php
 <?php
 /**
- * Plugin Name: My Awesome Plugin
- * Description: A WordPress plugin built with WPToolkit
+ * Plugin Name: Event Manager Pro
+ * Description: Advanced event management with WPToolkit
  * Version: 1.0.0
  * Requires PHP: 8.1
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Include WPToolkit
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification, RestRoute, Filesystem, Debugger};
+use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification, Cache, ViewLoader, Debugger};
+use Codad5\WPToolkit\Forms\{MetaBox, InputValidator};
+use Codad5\WPToolkit\DB\Model;
 
-class MyAwesomePlugin {
-
+class EventManagerPro {
     private Config $config;
-    private string $app_slug = 'my-awesome-plugin';
+    private string $app_slug = 'event-manager-pro';
 
     public function __construct() {
         $this->init_config();
+        $this->setup_view_loader();
         $this->register_services();
         $this->setup_hooks();
     }
 
     private function init_config(): void {
-        // Create immutable configuration
         $this->config = Config::plugin($this->app_slug, __FILE__, [
-            'name' => 'My Awesome Plugin',
+            'name' => 'Event Manager Pro',
             'version' => '1.0.0',
-            'description' => 'An amazing WordPress plugin built with WPToolkit',
-            'text_domain' => 'my-awesome-plugin',
-            'api_endpoint' => 'https://api.example.com',
+            'description' => 'Advanced event management system',
+            'cache_enabled' => true,
             'cache_duration' => 3600
         ]);
 
-        // Register application with service registry
         Registry::registerApp($this->config);
 
-        // Initialize debugging in development
         if ($this->config->isDevelopment()) {
             Debugger::initFromConfig($this->config);
-            Debugger::info($this->app_slug, 'Plugin initialized in development mode');
         }
     }
 
+    private function setup_view_loader(): void {
+        ViewLoader::add_path($this->config->path('templates'), 10);
+        
+        if (!$this->config->isDevelopment()) {
+            ViewLoader::enable_cache(3600, 'event_manager_views');
+        }
+
+        ViewLoader::set_global_data([
+            'plugin_name' => $this->config->get('name'),
+            'plugin_version' => $this->config->get('version'),
+            'plugin_url' => $this->config->url(),
+            'assets_url' => $this->config->url('assets')
+        ]);
+    }
+
     private function register_services(): void {
-        // Settings service
+        // Settings
         $settings = Settings::create([
-            'api_key' => [
-                'type' => 'password',
-                'label' => 'API Key',
-                'description' => 'Enter your API key from the service dashboard',
-                'required' => true,
-                'group' => 'api'
+            'default_venue' => [
+                'type' => 'text',
+                'label' => 'Default Venue',
+                'description' => 'Default venue for new events',
+                'group' => 'defaults'
             ],
-            'api_timeout' => [
+            'max_attendees_limit' => [
                 'type' => 'number',
-                'label' => 'API Timeout (seconds)',
-                'default' => 30,
-                'min' => 5,
-                'max' => 120,
-                'group' => 'api'
-            ],
-            'enable_caching' => [
-                'type' => 'checkbox',
-                'label' => 'Enable Response Caching',
-                'default' => true,
-                'group' => 'performance'
-            ],
-            'cache_duration' => [
-                'type' => 'number',
-                'label' => 'Cache Duration (minutes)',
-                'default' => 60,
+                'label' => 'Maximum Attendees Limit',
+                'default' => 1000,
                 'min' => 1,
-                'max' => 1440,
-                'group' => 'performance'
+                'group' => 'limits'
             ],
-            'theme_color' => [
-                'type' => 'select',
-                'label' => 'Admin Theme Color',
-                'choices' => [
-                    'blue' => 'Blue',
-                    'green' => 'Green',
-                    'purple' => 'Purple',
-                    'orange' => 'Orange'
-                ],
-                'default' => 'blue',
-                'group' => 'appearance'
+            'enable_email_notifications' => [
+                'type' => 'checkbox',
+                'label' => 'Enable Email Notifications',
+                'default' => true,
+                'group' => 'notifications'
             ]
         ], $this->config);
 
-        // Page service
-        $page = Page::create($this->config, plugin_dir_path(__FILE__) . 'templates');
+        // Page manager
+        $page = Page::create($this->config);
 
-        // Notification service
+        // Notification system
         $notification = Notification::create($this->config);
 
-        // REST API service
-        $api = RestRoute::create($this->config, ['v1'], 'v1');
+        // Event model with MetaBoxes
+        $event_model = new EventModel($this->config);
 
-        // Filesystem service
-        $filesystem = Filesystem::create($this->config, ['svg', 'webp']);
-
-        // Register all services
+        // Register services
         Registry::addMany($this->config, [
             'settings' => $settings,
             'page' => $page,
             'notification' => $notification,
-            'api' => $api,
-            'filesystem' => $filesystem
+            'event_model' => $event_model
         ]);
 
-        // Register service aliases for convenience
-        Registry::aliases($this->config, [
-            'notify' => 'notification',
-            'fs' => 'filesystem'
-        ]);
-
-        // Setup lazy-loaded services
-        Registry::factory($this->config, 'api_client', function($config) {
-            $settings = Registry::get($this->app_slug, 'settings');
-            return new MyAPIClient($settings->get('api_key'));
-        });
-
-        $this->setup_pages();
-        $this->setup_api_routes();
+        $this->setup_admin_pages();
+        $this->setup_custom_validators();
     }
 
-    private function setup_pages(): void {
+    private function setup_admin_pages(): void {
         /** @var Page $page */
         $page = Registry::get($this->app_slug, 'page');
 
-        // Main dashboard
         $page->addMenuPage('dashboard', [
-            'page_title' => 'My Awesome Plugin',
-            'menu_title' => 'Awesome Plugin',
-            'icon' => 'dashicons-admin-tools',
+            'page_title' => 'Event Manager Dashboard',
+            'menu_title' => 'Event Manager',
+            'icon' => 'dashicons-calendar-alt',
             'callback' => [$this, 'render_dashboard']
         ]);
 
-        // Settings page
         $page->addSubmenuPage('settings', [
             'parent_slug' => 'dashboard',
-            'page_title' => 'Plugin Settings',
+            'page_title' => 'Event Settings',
             'menu_title' => 'Settings',
             'callback' => [$this, 'render_settings']
         ]);
-
-        // Tools page
-        $page->addSubmenuPage('tools', [
-            'parent_slug' => 'dashboard',
-            'page_title' => 'Plugin Tools',
-            'menu_title' => 'Tools',
-            'callback' => [$this, 'render_tools']
-        ]);
-
-        // Frontend page
-        $page->addFrontendPage('user-dashboard', [
-            'title' => 'User Dashboard',
-            'template' => 'frontend/dashboard.php',
-            'capability' => 'read' // Requires login
-        ]);
-
-        // Dashboard widget
-        $page->addDashboardWidget(
-            'plugin-stats',
-            'Plugin Statistics',
-            [$this, 'render_dashboard_widget']
-        );
     }
 
-    private function setup_api_routes(): void {
-        /** @var RestRoute $api */
-        $api = Registry::get($this->app_slug, 'api');
-
-        // Status endpoint
-        $api->get('v1', '/status', function($request) {
-            return [
-                'plugin' => $this->config->get('name'),
-                'version' => $this->config->get('version'),
-                'status' => 'active',
-                'timestamp' => current_time('mysql')
-            ];
+    private function setup_custom_validators(): void {
+        // Custom validation for event dates
+        InputValidator::register_validator('future_date', function($value, $field) {
+            if (strtotime($value) <= time()) {
+                return 'Event date must be in the future';
+            }
+            return true;
         });
 
-        // Settings endpoints
-        $api->get('v1', '/settings', [$this, 'api_get_settings']);
-        $api->post('v1', '/settings', [$this, 'api_update_settings']);
-
-        // File upload endpoint
-        $api->post('v1', '/upload', [
-            'callback' => [$this, 'api_upload_file'],
-            'permission_callback' => function() {
-                return current_user_can('upload_files');
-            },
-            'args' => [
-                'title' => [
-                    'type' => 'string',
-                    'sanitize_callback' => 'sanitize_text_field'
-                ]
-            ]
-        ]);
-    }
-
-    private function setup_hooks(): void {
-        add_action('admin_init', [$this, 'admin_init']);
-        add_action('admin_enqueue_scripts', [$this, 'admin_enqueue_scripts']);
-        add_action('wp_enqueue_scripts', [$this, 'frontend_enqueue_scripts']);
-        add_action('admin_notices', [$this, 'admin_notices']);
-
-        // Plugin activation/deactivation
-        register_activation_hook(__FILE__, [$this, 'activate']);
-        register_deactivation_hook(__FILE__, [$this, 'deactivate']);
-    }
-
-    public function admin_init(): void {
-        /** @var Settings $settings */
-        $settings = Registry::get($this->app_slug, 'settings');
-
-        /** @var Page $page */
-        $page = Registry::get($this->app_slug, 'page');
-
-        // Check if API key is configured
-        $api_key = $settings->get('api_key');
-        if (empty($api_key) && $page->isPluginAdminPage()) {
-            /** @var Notification $notification */
-            $notification = Registry::get($this->app_slug, 'notification');
-            $notification->warning(
-                'Please configure your API key in the <a href="' .
-                $page->getAdminUrl('settings') . '">settings page</a>.',
-                'plugin'
-            );
-        }
+        // Global validator to prevent past dates
+        InputValidator::add_global_validator(function($value, $field, $type) {
+            if ($type === 'date' && isset($field['no_past_dates']) && $field['no_past_dates']) {
+                if (strtotime($value) < strtotime('today')) {
+                    return 'Past dates are not allowed';
+                }
+            }
+            return true;
+        });
     }
 
     public function render_dashboard(): void {
-        /** @var Settings $settings */
-        $settings = Registry::get($this->app_slug, 'settings');
+        /** @var EventModel $event_model */
+        $event_model = Registry::get($this->app_slug, 'event_model');
 
         $data = [
-            'plugin_name' => $this->config->get('name'),
-            'version' => $this->config->get('version'),
-            'api_configured' => !empty($settings->get('api_key')),
-            'cache_enabled' => $settings->get('enable_caching'),
-            'stats' => $this->get_plugin_stats()
+            'total_events' => $event_model->get_posts(['posts_per_page' => -1], false),
+            'upcoming_events' => $event_model->get_upcoming_events(5),
+            'stats' => $event_model->get_statistics()
         ];
 
-        $this->render_template('admin/dashboard.php', $data);
+        ViewLoader::load('admin/dashboard', $data);
     }
 
     public function render_settings(): void {
         /** @var Settings $settings */
         $settings = Registry::get($this->app_slug, 'settings');
 
-        // Handle form submission
         if ($_POST && wp_verify_nonce($_POST['_wpnonce'], 'update_settings')) {
             $this->handle_settings_update();
         }
 
-        $data = [
+        ViewLoader::load('admin/settings', [
             'settings' => $settings,
-            'groups' => $settings->getGroups(),
-            'current_tab' => $_GET['tab'] ?? 'api'
-        ];
-
-        $this->render_template('admin/settings.php', $data);
+            'groups' => $settings->getGroups()
+        ]);
     }
 
-    public function render_tools(): void {
-        $data = [
-            'tools' => [
-                'clear_cache' => 'Clear Plugin Cache',
-                'test_api' => 'Test API Connection',
-                'export_settings' => 'Export Settings',
-                'import_settings' => 'Import Settings'
-            ]
-        ];
-
-        $this->render_template('admin/tools.php', $data);
-    }
-
-    public function render_dashboard_widget(): void {
-        $stats = $this->get_plugin_stats();
-        echo '<div class="plugin-widget">';
-        echo '<p><strong>API Calls Today:</strong> ' . esc_html($stats['api_calls']) . '</p>';
-        echo '<p><strong>Cache Hit Rate:</strong> ' . esc_html($stats['cache_rate']) . '%</p>';
-        echo '</div>';
-    }
-
-    // API Endpoints
-    public function api_get_settings($request): array {
-        /** @var Settings $settings */
-        $settings = Registry::get($this->app_slug, 'settings');
-
-        $group = $request->get_param('group');
-        return $settings->getAll($group);
-    }
-
-    public function api_update_settings($request) {
-        /** @var Settings $settings */
-        $settings = Registry::get($this->app_slug, 'settings');
-
-        /** @var RestRoute $api */
-        $api = Registry::get($this->app_slug, 'api');
-
-        $data = $request->get_json_params();
-        $results = [];
-
-        foreach ($data as $key => $value) {
-            $results[$key] = $settings->set($key, $value);
-        }
-
-        if (in_array(false, $results, true)) {
-            return $api->errorResponse('validation_failed', 'Some settings could not be updated', $results);
-        }
-
-        return $api->successResponse($results, 'Settings updated successfully');
-    }
-
-    public function api_upload_file($request) {
-        /** @var Filesystem $fs */
-        $fs = Registry::get($this->app_slug, 'filesystem');
-
-        /** @var RestRoute $api */
-        $api = Registry::get($this->app_slug, 'api');
-
-        if (empty($_FILES['file'])) {
-            return $api->errorResponse('no_file', 'No file uploaded');
-        }
-
-        $title = $request->get_param('title') ?: 'Uploaded File';
-        $attachment_id = $fs->uploadToMediaLibrary($_FILES['file'], $title);
-
-        if (!$attachment_id) {
-            return $api->errorResponse('upload_failed', 'File upload failed');
-        }
-
-        $file_info = $fs->getMediaFileInfo($attachment_id);
-        return $api->successResponse($file_info, 'File uploaded successfully');
-    }
-
-    // Helper methods
     private function handle_settings_update(): void {
         /** @var Settings $settings */
         $settings = Registry::get($this->app_slug, 'settings');
@@ -957,36 +1111,22 @@ class MyAwesomePlugin {
 
         if ($updated > 0) {
             $notification->success("Updated {$updated} setting(s) successfully.");
-        } else {
-            $notification->warning('No settings were updated.');
         }
     }
 
-    private function get_plugin_stats(): array {
-        return [
-            'api_calls' => get_option($this->app_slug . '_api_calls_today', 0),
-            'cache_rate' => get_option($this->app_slug . '_cache_hit_rate', 0),
-            'users_count' => count(get_users(['meta_key' => $this->app_slug . '_user'])),
-            'last_sync' => get_option($this->app_slug . '_last_sync', 'Never')
-        ];
+    private function setup_hooks(): void {
+        add_action('init', function() {
+            /** @var EventModel $event_model */
+            $event_model = Registry::get($this->app_slug, 'event_model');
+            $event_model->register_post_type();
+        });
+
+        add_action('admin_enqueue_scripts', [$this, 'admin_enqueue_scripts']);
     }
 
-    private function render_template(string $template, array $data = []): void {
-        $template_path = plugin_dir_path(__FILE__) . 'templates/' . $template;
-
-        if (file_exists($template_path)) {
-            extract($data);
-            include $template_path;
-        } else {
-            echo '<div class="notice notice-error"><p>Template not found: ' . esc_html($template) . '</p></div>';
-        }
-    }
-
-    public function admin_enqueue_scripts($hook): void {
-        /** @var Page $page */
-        $page = Registry::get($this->app_slug, 'page');
-
-        if (!$page->isPluginAdminPage()) {
+    public function admin_enqueue_scripts(): void {
+        $screen = get_current_screen();
+        if (!$screen || $screen->post_type !== 'event') {
             return;
         }
 
@@ -1004,186 +1144,151 @@ class MyAwesomePlugin {
             $this->config->get('version'),
             true
         );
-
-        // Localize script with API data
-        /** @var RestRoute $api */
-        $api = Registry::get($this->app_slug, 'api');
-
-        wp_localize_script($this->app_slug . '-admin', 'pluginAPI', [
-            'root' => esc_url_raw(rest_url($api->getFullNamespace('v1'))),
-            'nonce' => wp_create_nonce('wp_rest')
-        ]);
-    }
-
-    public function frontend_enqueue_scripts(): void {
-        /** @var Page $page */
-        $page = Registry::get($this->app_slug, 'page');
-
-        if (!$page->isPluginFrontendPage()) {
-            return;
-        }
-
-        wp_enqueue_style(
-            $this->app_slug . '-frontend',
-            $this->config->url('assets/css/frontend.css'),
-            [],
-            $this->config->get('version')
-        );
-    }
-
-    public function admin_notices(): void {
-        // Global notification display is handled by Notification::initGlobal()
-        // This is called once in the main plugin file
-    }
-
-    public function activate(): void {
-        /** @var Settings $settings */
-        $settings = Registry::get($this->app_slug, 'settings');
-
-        // Set default options
-        $defaults = [
-            'api_timeout' => 30,
-            'enable_caching' => true,
-            'cache_duration' => 60,
-            'theme_color' => 'blue'
-        ];
-
-        foreach ($defaults as $key => $value) {
-            if ($settings->get($key) === null) {
-                $settings->set($key, $value);
-            }
-        }
-
-        // Create upload directory
-        /** @var Filesystem $fs */
-        $fs = Registry::get($this->app_slug, 'filesystem');
-        $fs->createAppUploadDir();
-
-        // Flush rewrite rules for frontend pages
-        flush_rewrite_rules();
-
-        Debugger::log($this->app_slug, 'Plugin activated successfully');
-    }
-
-    public function deactivate(): void {
-        // Clean up temporary data
-        /** @var Settings $settings */
-        $settings = Registry::get($this->app_slug, 'settings');
-        $settings->clearCaches();
-
-        // Flush rewrite rules
-        flush_rewrite_rules();
-
-        Debugger::log($this->app_slug, 'Plugin deactivated');
     }
 }
 
-// Initialize global notification system (call once)
-Notification::initGlobal();
+class EventModel extends Model {
+    protected const POST_TYPE = 'event';
+
+    protected static function get_post_type_args(): array {
+        return [
+            'labels' => [
+                'name' => 'Events',
+                'singular_name' => 'Event',
+                'add_new' => 'Add New Event',
+                'edit_item' => 'Edit Event',
+                'view_item' => 'View Event'
+            ],
+            'public' => true,
+            'has_archive' => true,
+            'menu_icon' => 'dashicons-calendar-alt',
+            'supports' => ['title', 'editor', 'thumbnail', 'excerpt'],
+            'show_in_rest' => true
+        ];
+    }
+
+    public function __construct(Config $config) {
+        parent::__construct($config);
+        $this->setup_metaboxes();
+        $this->cache_duration = 7200; // 2 hours
+    }
+
+    private function setup_metaboxes(): void {
+        // Event Details MetaBox
+        $event_details = MetaBox::create('event_details', 'Event Details', static::POST_TYPE, $this->config)
+            ->set_caching(true, 3600)
+            ->add_field('start_date', 'Start Date', 'date', [], [
+                'required' => true
+            ], [
+                'allow_quick_edit' => true,
+                'description' => 'Event start date',
+                'no_past_dates' => true
+            ])
+            ->add_field('end_date', 'End Date', 'date', [], [
+                'required' => true
+            ], [
+                'description' => 'Event end date',
+                'no_past_dates' => true
+            ])
+            ->add_field('venue_name', 'Venue', 'text', [], [
+                'required' => true,
+                'class' => 'widefat'
+            ], [
+                'allow_quick_edit' => true,
+                'description' => 'Event venue name'
+            ])
+            ->add_field('max_attendees', 'Max Attendees', 'number', [], [
+                'min' => 1,
+                'max' => 10000
+            ], [
+                'allow_quick_edit' => true,
+                'description' => 'Maximum number of attendees'
+            ])
+            ->add_field('ticket_price', 'Ticket Price', 'number', [], [
+                'min' => 0,
+                'step' => 0.01
+            ], [
+                'sanitize_callback' => function($value) {
+                    return round(floatval($value), 2);
+                }
+            ])
+            ->add_field('event_image', 'Event Image', 'wp_media', [], [
+                'multiple' => false
+            ], [
+                'description' => 'Featured image for the event'
+            ])
+            ->onPreSave(function($post_id, $metabox) {
+                Debugger::info('event-manager-pro', "About to save event {$post_id}");
+            })
+            ->onSuccess(function($post_id, $metabox) {
+                // Clear cache
+                Cache::delete("event_details_{$post_id}", 'events');
+                
+                // Send notification
+                $notification = Registry::get('event-manager-pro', 'notification');
+                $notification->success('Event details saved successfully!');
+                
+                Debugger::info('event-manager-pro', "Event {$post_id} saved successfully");
+            })
+            ->onError(function($errors, $post_id, $metabox) {
+                $notification = Registry::get('event-manager-pro', 'notification');
+                $notification->error('Please fix the validation errors and try again.');
+                
+                Debugger::error('event-manager-pro', "Validation errors for event {$post_id}", $errors);
+            })
+            ->setup_actions();
+
+        // Event Status MetaBox
+        $event_status = MetaBox::create('event_status', 'Event Status', static::POST_TYPE, $this->config)
+            ->set('context', 'side')
+            ->add_field('status', 'Status', 'select', [
+                'draft' => 'Draft',
+                'published' => 'Published',
+                'cancelled' => 'Cancelled',
+                'postponed' => 'Postponed'
+            ], ['required' => true], [
+                'default' => 'draft',
+                'allow_quick_edit' => true
+            ])
+            ->add_field('featured', 'Featured Event', 'checkbox', [], [], [
+                'description' => 'Mark as featured event'
+            ])
+            ->setup_actions();
+
+        $this->register_metaboxes([$event_details, $event_status]);
+    }
+
+    public function get_upcoming_events(int $limit = 10): array {
+        return $this->get_posts([
+            'meta_query' => [
+                [
+                    'key' => 'event_details_event_start_date',
+                    'value' => date('Y-m-d'),
+                    'compare' => '>='
+                ]
+            ],
+            'posts_per_page' => $limit,
+            'orderby' => 'meta_value',
+            'meta_key' => 'event_details_event_start_date',
+            'order' => 'ASC'
+        ], true);
+    }
+
+    public function get_featured_events(): array {
+        return $this->get_posts([
+            'meta_query' => [
+                [
+                    'key' => 'event_status_event_featured',
+                    'value' => '1',
+                    'compare' => '='
+                ]
+            ]
+        ], true);
+    }
+}
 
 // Initialize the plugin
-new MyAwesomePlugin();
-```
-
-## Template Examples
-
-### Admin Dashboard Template (`templates/admin/dashboard.php`)
-
-```php
-<div class="wrap <?php echo esc_attr($app_slug); ?>-dashboard">
-    <h1><?php echo esc_html($plugin_name); ?> Dashboard</h1>
-
-    <div class="dashboard-widgets-wrap">
-        <div class="metabox-holder">
-            <div class="postbox-container" style="width: 65%;">
-                <div class="postbox">
-                    <h2 class="hndle">Quick Stats</h2>
-                    <div class="inside">
-                        <table class="wp-list-table widefat">
-                            <tbody>
-                                <tr>
-                                    <td><strong>Plugin Version:</strong></td>
-                                    <td><?php echo esc_html($version); ?></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>API Status:</strong></td>
-                                    <td>
-                                        <span class="status-indicator <?php echo $api_configured ? 'connected' : 'disconnected'; ?>">
-                                            <?php echo $api_configured ? 'Connected' : 'Not Configured'; ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Cache Status:</strong></td>
-                                    <td><?php echo $cache_enabled ? 'Enabled' : 'Disabled'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>API Calls Today:</strong></td>
-                                    <td><?php echo esc_html($stats['api_calls']); ?></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="postbox-container" style="width: 35%;">
-                <div class="postbox">
-                    <h2 class="hndle">Quick Actions</h2>
-                    <div class="inside">
-                        <p><a href="<?php echo esc_url($page->getAdminUrl('settings')); ?>" class="button button-primary">Configure Settings</a></p>
-                        <p><a href="<?php echo esc_url($page->getAdminUrl('tools')); ?>" class="button">Access Tools</a></p>
-                        <p><a href="<?php echo esc_url($api->getRouteUrl('v1', '/status')); ?>" class="button" target="_blank">View API Status</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-```
-
-### Settings Template (`templates/admin/settings.php`)
-
-```php
-<div class="wrap <?php echo esc_attr($app_slug); ?>-settings">
-    <h1>Plugin Settings</h1>
-
-    <nav class="nav-tab-wrapper">
-        <?php foreach ($groups as $group): ?>
-        <a href="?page=<?php echo esc_attr($_GET['page']); ?>&tab=<?php echo esc_attr($group); ?>"
-           class="nav-tab <?php echo $current_tab === $group ? 'nav-tab-active' : ''; ?>">
-            <?php echo esc_html(ucfirst($group)); ?>
-        </a>
-        <?php endforeach; ?>
-    </nav>
-
-    <form method="post" action="">
-        <?php wp_nonce_field('update_settings'); ?>
-
-        <table class="form-table" role="presentation">
-            <?php
-            $group_settings = $settings->getSettingsConfig($current_tab);
-            foreach ($group_settings as $key => $config):
-            ?>
-            <tr>
-                <th scope="row">
-                    <label for="<?php echo esc_attr($key); ?>">
-                        <?php echo esc_html($config['label']); ?>
-                        <?php if ($config['required'] ?? false): ?>
-                        <span class="required">*</span>
-                        <?php endif; ?>
-                    </label>
-                </th>
-                <td>
-                    <?php echo $settings->renderField($key); ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-
-        <?php submit_button(); ?>
-    </form>
-</div>
+new EventManagerPro();
 ```
 
 ## Advanced Usage Patterns
@@ -1277,7 +1382,8 @@ Registry::registerApp($config);
 Registry::addMany($config, [
     'settings' => Settings::create($settings_config, $config),
     'page' => Page::create($config),
-    'notification' => Notification::create($config)
+    'notification' => Notification::create($config),
+    'metabox' => MetaBox::create('product_details', 'Product Details', 'product', $config)
 ]);
 
 // Use aliases for commonly accessed services
@@ -1296,14 +1402,13 @@ if (!$settings) {
     wp_die('Settings service not registered');
 }
 
-// Or use in try-catch blocks
-try {
-    $api_result = $external_api->call();
-    Registry::get('my-plugin', 'notify')->success('API call successful');
-} catch (Exception $e) {
-    Registry::get('my-plugin', 'notify')->error('API call failed: ' . $e->getMessage());
-    Debugger::error('my-plugin', 'API Error', ['exception' => $e]);
-}
+// Use MetaBox callbacks for error handling
+$metabox->onError(function($errors, $post_id, $metabox) {
+    error_log("Validation failed for post {$post_id}: " . print_r($errors, true));
+    
+    $notification = Registry::get('my-plugin', 'notification');
+    $notification->error('Please fix the errors and try again.');
+});
 ```
 
 ### 4. Development vs Production
@@ -1312,10 +1417,65 @@ try {
 // Use config-based environment detection
 if ($config->isDevelopment()) {
     Debugger::initFromConfig($config);
-    // Development-specific code
+    ViewLoader::disable_cache();
+    
+    // Development-specific MetaBox setup
+    $metabox->onPreSave(function($post_id) {
+        Debugger::info('my-plugin', "Saving post {$post_id}");
+    });
 } else {
     // Production optimizations
+    ViewLoader::enable_cache(3600);
+    Cache::set_many($production_cache_data);
 }
+```
+
+## Migration from EasyMetabox
+
+If you're migrating from EasyMetabox to WPToolkit, here's what's changed:
+
+### Namespace Changes
+```php
+// Old EasyMetabox
+use Codad5\EasyMetabox\MetaBox;
+use Codad5\EasyMetabox\helpers\InputValidator;
+
+// New WPToolkit
+use Codad5\WPToolkit\DB\MetaBox;
+use Codad5\WPToolkit\Utils\InputValidator;
+```
+
+### Enhanced Features
+```php
+// Old way - basic error handling
+$metabox = new MetaBox('product', 'Product Details', 'product');
+
+// New way - with callbacks and config
+$metabox = MetaBox::create('product', 'Product Details', 'product', $config)
+    ->onError(function($errors) {
+        // Custom error handling
+    })
+    ->onSuccess(function($post_id) {
+        // Custom success handling
+    })
+    ->set_caching(true, 3600);
+```
+
+### Improved Validation
+```php
+// Old validation
+$result = InputValidator::validate('email', $value, $field); // Returns bool
+
+// New validation
+$result = InputValidator::validate('email', $value, $field); // Returns bool|string
+if ($result !== true) {
+    echo $result; // Detailed error message
+}
+
+// Custom validators
+InputValidator::register_validator('custom_type', function($value, $field) {
+    return $value === 'expected' ? true : 'Custom error message';
+});
 ```
 
 ## Requirements
@@ -1338,4 +1498,4 @@ If you encounter any issues or have questions, please [open an issue](https://gi
 
 ---
 
-**WPToolkit** - Modern WordPress development with dependency injection, service registry, and enterprise-grade architecture! 🚀
+**WPToolkit** - Modern WordPress development with dependency injection, service registry, advanced form management, and enterprise-grade architecture! 🚀
