@@ -89,7 +89,7 @@ class MetaBox
     private array $custom_sanitizers = [];
 
     // private constant for input view base path
-    private const INPUT_VIEW_BASE = __DIR__ . '../../views/forms/';
+    private const INPUT_VIEW_BASE = __DIR__ . '/../../views/forms/';
 
     /**
      * Constructor for the MetaBox class.
