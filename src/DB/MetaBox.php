@@ -936,10 +936,11 @@ class MetaBox
 
         // Use default sanitization
         return match ($field['type']) {
-            'wp_media', 'number' => absint($value),
+            'number' => absint($value),
             'email' => sanitize_email($value),
             'url' => esc_url_raw($value),
             'textarea' => sanitize_textarea_field($value),
+            'wp_media' => is_array($value) ? array_map('absint', $value) : absint($value),
             default => sanitize_text_field($value)
         };
     }
@@ -1025,7 +1026,7 @@ class MetaBox
             echo ViewLoader::get('wp-media-field', [
                 'id' => $id,
                 'data' => $data,
-                'metabox' => $this, 
+                'metabox' => $this,
                 'attributes' => $this->attributes_to_string($data['attributes'] ?? []),
             ], self::INPUT_VIEW_BASE);
         } else {
