@@ -525,7 +525,7 @@ class MetaBox
      * @param string|null $strip Prefix to strip from meta keys
      * @return array Meta values
      */
-    public function all_meta(int $post_id, string $strip = null): array
+    public function all_meta(int $post_id, string|bool $strip = null): array
     {
         if ($this->enable_cache) {
             $cache_key = "metabox_{$this->id}_meta_{$post_id}";
@@ -539,8 +539,9 @@ class MetaBox
         $meta = [];
         $post_meta = get_post_meta($post_id);
 
+        $strip = $strip === true ? $this->meta_prefix : $strip;
         foreach ($this->fields as $field) {
-            $key = $strip ? str_replace($strip . '_', '', $field['id']) : $field['id'];
+            $key = $strip ? str_replace($strip, '', $field['id']) : $field['id'];
             $value = $post_meta[$field['id']][0] ?? null;
 
             // Apply reverse sanitization if needed

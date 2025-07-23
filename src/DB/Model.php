@@ -676,9 +676,10 @@ abstract class Model
      *
      * @param int $post_id Post ID
      * @param bool $include_meta Whether to include metadata
+     * @param bool $strip_meta_key Whether to strip the meta key prefix
      * @return array|null Post data array or null if not found
      */
-    public function get_post(int $post_id, bool $include_meta = true): ?array
+    public function get_post(int $post_id, bool $include_meta = true, ?bool $strip_meta_key = null): ?array
     {
         // Check cache first
         if ($this->enable_cache) {
@@ -702,7 +703,7 @@ abstract class Model
         ];
 
         if ($include_meta) {
-            $result['meta'] = $this->get_post_meta($post_id);
+            $result['meta'] = $this->get_post_meta($post_id, $strip_meta_key);
         }
 
         // Cache the result
@@ -718,9 +719,10 @@ abstract class Model
      *
      * @param array $args Query arguments
      * @param bool $include_meta Whether to include metadata for each post
+     * @param bool $include_meta Whether to include metadata for each post
      * @return array Array of post data
      */
-    public function get_posts(array $args = [], bool $include_meta = false): array
+    public function get_posts(array $args = [], bool $include_meta = false, ?bool $strip_meta_key): array
     {
         // Set post type in query args
         $args['post_type'] = static::POST_TYPE;
@@ -748,7 +750,7 @@ abstract class Model
             $post_data = ['post' => $post];
 
             if ($include_meta) {
-                $post_data['meta'] = $this->get_post_meta($post->ID);
+                $post_data['meta'] = $this->get_post_meta($post->ID, $strip_meta_key);
             }
 
             $results[] = $post_data;
@@ -962,14 +964,15 @@ abstract class Model
      * Get post metadata organized by MetaBox.
      *
      * @param int $post_id Post ID
+     * @param bool $strip Whether to strip the key prefix
      * @return array Organized metadata
      */
-    protected function get_post_meta(int $post_id): array
+    protected function get_post_meta(int $post_id, ?bool $strip = null): array
     {
         $meta = [];
 
         foreach ($this->metaBoxes as $metaBox) {
-            $metabox_data = $metaBox->all_meta($post_id);
+            $metabox_data = $metaBox->all_meta($post_id, $strip);
             $metabox_id = property_exists($metaBox, 'id') ? $metaBox->id : 'unknown';
             $meta[$metabox_id] = $metabox_data;
         }
