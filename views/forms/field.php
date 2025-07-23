@@ -15,6 +15,7 @@ $label = esc_html($data['label'] ?? '');
 $default_value = $data['default'] ?? '';
 $attributes_string = $attributes ?? "";
 $options = $data['options'] ?? [];
+
 $required = !empty($data['required']) || !empty($attributes['required']);
 $description = $data['description'] ?? '';
 
