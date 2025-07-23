@@ -17,6 +17,7 @@ use WP_Post;
 use WP_Error;
 use WP_Query;
 use Exception;
+use WP_Post_Type;
 
 /**
  * Abstract Model class for WordPress custom post types with MetaBox integration.

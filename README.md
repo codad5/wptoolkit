@@ -37,9 +37,8 @@ Then use the autoloader in your plugin:
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification, Cache, ViewLoader};
-use Codad5\WPToolkit\Forms\{MetaBox, InputValidator};
-use Codad5\WPToolkit\DB\Model;
+use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification, Cache, ViewLoader, InputValidator};
+use Codad5\WPToolkit\DB\{Model, MetaBox};
 ```
 
 ### Method 2: Direct Download
@@ -52,9 +51,8 @@ use Codad5\WPToolkit\DB\Model;
 <?php
 require_once __DIR__ . '/lib/wptoolkit/autoloader.php';
 
-use Codad5\WPToolkit\Utils\{Config, Registry, Settings, Page, Notification, Cache, ViewLoader};
-use Codad5\WPToolkit\Forms\{MetaBox, InputValidator};
-use Codad5\WPToolkit\DB\Model;
+use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification, Cache, ViewLoader, InputValidator};
+use Codad5\WPToolkit\DB\{Model, MetaBox};
 ```
 
 ## Quick Start
@@ -64,8 +62,8 @@ WPToolkit uses a **Service Registry** pattern for managing dependencies across y
 ```php
 <?php
 use Codad5\WPToolkit\Registry;
-use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification};
-use Codad5\WPToolkit\Forms\MetaBox;
+use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification, Cache, ViewLoader, InputValidator};
+use Codad5\WPToolkit\DB\{Model, MetaBox};
 
 // 1. Create immutable configuration
 $config = Config::plugin('my-awesome-plugin', __FILE__, [
