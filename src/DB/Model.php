@@ -53,6 +53,21 @@ abstract class Model
     protected const VIEW_CAPABILITY = 'read';
 
     /**
+     * Whether the model is currently running/initialized.
+     */
+    protected bool $is_running = false;
+
+    /**
+     * Whether the model has been initialized at least once.
+     */
+    protected bool $has_been_initialized = false;
+
+    /**
+     * Store registered hook callbacks for removal during deactivation.
+     */
+    protected array $registered_hooks = [];
+
+    /**
      * Registered MetaBox instances.
      *
      * @var MetaBox[]
@@ -98,7 +113,6 @@ abstract class Model
     {
         $this->config = $config;
         $this->cache_group = static::POST_TYPE . '_model';
-        $this->setup_hooks();
     }
 
     /**
@@ -181,36 +195,6 @@ abstract class Model
         return false;
     }
 
-    /**
-     * Setup WordPress hooks for the model.
-     *
-     * @return void
-     */
-    protected function setup_hooks(): void
-    {
-        add_action('init', [$this, 'register_post_type']);
-        add_action('save_post_' . static::POST_TYPE, [$this, 'save_post'], 10, 2);
-        add_action('delete_post', [$this, 'handle_post_deletion']);
-
-        // Admin columns hooks
-        add_filter('manage_' . static::POST_TYPE . '_posts_columns', [$this, 'setup_admin_columns']);
-        add_action('manage_' . static::POST_TYPE . '_posts_custom_column', [$this, 'render_admin_column'], 10, 2);
-        add_filter('manage_edit-' . static::POST_TYPE . '_sortable_columns', [$this, 'setup_sortable_columns']);
-        add_action('pre_get_posts', [$this, 'handle_column_sorting']);
-
-        // Quick edit hooks
-        add_action('quick_edit_custom_box', [$this, 'render_quick_edit_fields'], 10, 2);
-        add_action('wp_ajax_save_' . static::POST_TYPE . '_quick_edit', [$this, 'handle_quick_edit_save']);
-
-        // Authentication hooks
-        if (static::REQUIRES_AUTHENTICATION) {
-            add_action('template_redirect', [$this, 'handle_authentication']);
-        }
-
-        // AJAX search
-        add_action('wp_ajax_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
-        add_action('wp_ajax_nopriv_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
-    }
 
     /**
      * Register the custom post type.
@@ -1297,6 +1281,305 @@ abstract class Model
                 if (str_contains($key, 'posts_')) {
                     Cache::delete($key, $this->cache_group);
                 }
+            }
+        }
+    }
+
+    /**
+     * Run setup before the model is fully initialized.
+     * 
+     * This method can be overridden by child classes to perform custom setup.
+     * By default, it does nothing, making it optional for child classes.
+     *
+     * @return void
+     */
+    protected function before_run(): void
+    {
+        // Default implementation - can be overridden by child classes
+        // Perform any pre-initialization setup here
+    }
+
+    /**
+     * Run setup after the main initialization.
+     * 
+     * This method can be overridden by child classes to perform post-setup tasks.
+     * By default, it does nothing.
+     *
+     * @return void
+     */
+    protected function after_run(): void
+    {
+        // Default implementation - can be overridden by child classes
+        // Perform any post-initialization setup here
+    }
+
+    /**
+     * Initialize and run the model with hooks and actions.
+     * 
+     * This method ensures the model is only initialized once and prevents double-calling.
+     *
+     * @param bool $force_reinitialize Force reinitialization even if already running
+     * @return Model Returns self for method chaining
+     */
+    public function run(bool $force_reinitialize = false): Model
+    {
+        // Prevent double initialization unless forced
+        if ($this->is_running && !$force_reinitialize) {
+            return $this;
+        }
+
+        // If forcing reinitialization, deactivate first
+        if ($force_reinitialize && $this->is_running) {
+            $this->deactivate();
+        }
+
+        // Run pre-initialization setup
+        $this->before_run();
+
+        // Set up hooks and register functionality
+        $this->setup_hooks();
+
+        // Mark as running and initialized
+        $this->is_running = true;
+        $this->has_been_initialized = true;
+
+        // Run post-initialization setup
+        $this->after_run();
+
+        return $this;
+    }
+
+    /**
+     * Deactivate/pause the model by removing all registered hooks.
+     * 
+     * This allows the model to be temporarily disabled without losing instance data.
+     *
+     * @return Model Returns self for method chaining
+     */
+    public function deactivate(): Model
+    {
+        if (!$this->is_running) {
+            return $this;
+        }
+
+        // Remove all registered hooks
+        $this->remove_hooks();
+
+        // Clear the registered hooks array
+        $this->registered_hooks = [];
+
+        // Mark as not running
+        $this->is_running = false;
+
+        return $this;
+    }
+
+    /**
+     * Reactivate the model after deactivation.
+     * 
+     * This is essentially an alias for run() that makes the intent clearer.
+     *
+     * @return Model Returns self for method chaining
+     */
+    public function reactivate(): Model
+    {
+        return $this->run();
+    }
+
+    /**
+     * Pause the model temporarily.
+     * 
+     * Alias for deactivate() to make intent clearer when temporarily stopping.
+     *
+     * @return Model Returns self for method chaining
+     */
+    public function pause(): Model
+    {
+        return $this->deactivate();
+    }
+
+    /**
+     * Resume the model after pausing.
+     * 
+     * Alias for reactivate() to make intent clearer when resuming.
+     *
+     * @return Model Returns self for method chaining
+     */
+    public function resume(): Model
+    {
+        return $this->reactivate();
+    }
+
+    /**
+     * Check if the model is currently running/active.
+     *
+     * @return bool True if the model is running, false otherwise
+     */
+    public function is_running(): bool
+    {
+        return $this->is_running;
+    }
+
+    /**
+     * Check if the model has been initialized at least once.
+     *
+     * @return bool True if the model has been initialized, false otherwise
+     */
+    public function has_been_initialized(): bool
+    {
+        return $this->has_been_initialized;
+    }
+
+    /**
+     * Get the current state of the model.
+     *
+     * @return array Model state information
+     */
+    public function get_state(): array
+    {
+        return [
+            'is_running' => $this->is_running,
+            'has_been_initialized' => $this->has_been_initialized,
+            'post_type' => static::POST_TYPE,
+            'registered_hooks_count' => count($this->registered_hooks),
+            'metaboxes_count' => count($this->metaBoxes),
+            'cache_enabled' => $this->enable_cache,
+        ];
+    }
+
+    /**
+     * Enhanced setup_hooks method that tracks registered hooks for removal.
+     *
+     * @return void
+     */
+    protected function setup_hooks(): void
+    {
+        // Store hook information for later removal
+        $this->add_tracked_action('init', [$this, 'register_post_type']);
+        $this->add_tracked_action('save_post_' . static::POST_TYPE, [$this, 'save_post'], 10, 2);
+        $this->add_tracked_action('delete_post', [$this, 'handle_post_deletion']);
+
+        // Admin columns hooks
+        $this->add_tracked_filter('manage_' . static::POST_TYPE . '_posts_columns', [$this, 'setup_admin_columns']);
+        $this->add_tracked_action('manage_' . static::POST_TYPE . '_posts_custom_column', [$this, 'render_admin_column'], 10, 2);
+        $this->add_tracked_filter('manage_edit-' . static::POST_TYPE . '_sortable_columns', [$this, 'setup_sortable_columns']);
+        $this->add_tracked_action('pre_get_posts', [$this, 'handle_column_sorting']);
+
+        // Quick edit hooks
+        $this->add_tracked_action('quick_edit_custom_box', [$this, 'render_quick_edit_fields'], 10, 2);
+        $this->add_tracked_action('wp_ajax_save_' . static::POST_TYPE . '_quick_edit', [$this, 'handle_quick_edit_save']);
+
+        // Authentication hooks
+        if (static::REQUIRES_AUTHENTICATION) {
+            $this->add_tracked_action('template_redirect', [$this, 'handle_authentication']);
+        }
+
+        // AJAX search
+        $this->add_tracked_action('wp_ajax_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
+        $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
+    }
+
+    /**
+     * Add an action hook and track it for removal.
+     *
+     * @param string $hook_name Hook name
+     * @param callable $callback Callback function
+     * @param int $priority Priority level
+     * @param int $accepted_args Number of accepted arguments
+     * @return void
+     */
+    protected function add_tracked_action(string $hook_name, callable $callback, int $priority = 10, int $accepted_args = 1): void
+    {
+        add_action($hook_name, $callback, $priority, $accepted_args);
+
+        $this->registered_hooks[] = [
+            'type' => 'action',
+            'hook' => $hook_name,
+            'callback' => $callback,
+            'priority' => $priority,
+        ];
+    }
+
+    /**
+     * Add a filter hook and track it for removal.
+     *
+     * @param string $hook_name Hook name
+     * @param callable $callback Callback function
+     * @param int $priority Priority level
+     * @param int $accepted_args Number of accepted arguments
+     * @return void
+     */
+    protected function add_tracked_filter(string $hook_name, callable $callback, int $priority = 10, int $accepted_args = 1): void
+    {
+        add_filter($hook_name, $callback, $priority, $accepted_args);
+
+        $this->registered_hooks[] = [
+            'type' => 'filter',
+            'hook' => $hook_name,
+            'callback' => $callback,
+            'priority' => $priority,
+        ];
+    }
+
+    /**
+     * Remove all tracked hooks.
+     *
+     * @return void
+     */
+    protected function remove_hooks(): void
+    {
+        foreach ($this->registered_hooks as $hook_info) {
+            if ($hook_info['type'] === 'action') {
+                remove_action($hook_info['hook'], $hook_info['callback'], $hook_info['priority']);
+            } elseif ($hook_info['type'] === 'filter') {
+                remove_filter($hook_info['hook'], $hook_info['callback'], $hook_info['priority']);
+            }
+        }
+    }
+
+    /**
+     * Reset the model to its initial state.
+     * 
+     * This deactivates the model, clears caches, and resets internal state.
+     *
+     * @return Model Returns self for method chaining
+     */
+    public function reset(): Model
+    {
+        // Deactivate if running
+        if ($this->is_running) {
+            $this->deactivate();
+        }
+
+        // Clear validation errors
+        $this->validation_errors = [];
+
+        // Clear admin columns cache
+        $this->admin_columns_cache = null;
+
+        // Clear all caches for this model
+        if ($this->enable_cache) {
+            $this->clear_all_cache();
+        }
+
+        // Reset initialization state
+        $this->has_been_initialized = false;
+
+        return $this;
+    }
+
+    /**
+     * Clear all cached data for this model.
+     *
+     * @return void
+     */
+    protected function clear_all_cache(): void
+    {
+        // Get all cache keys for this group and delete them
+        $stats = Cache::get_stats($this->cache_group);
+        if (isset($stats['keys'])) {
+            foreach ($stats['keys'] as $key) {
+                Cache::delete($key, $this->cache_group);
             }
         }
     }
