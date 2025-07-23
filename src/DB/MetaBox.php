@@ -962,7 +962,7 @@ class MetaBox
 
         // Default reverse sanitization
         return match ($field['type']) {
-            'wp_media' => ($field['attributes']['multiple'] ?? false)
+            'wp_media' => ($field['attributes']['multiple'] ?? false) && is_array($value)
                 ? array_map(fn($id) => wp_get_attachment_url($id) ?: $id, (array)$value)
                 : wp_get_attachment_url($value),
             default => $value // For other types, just return the value as is
