@@ -722,7 +722,7 @@ abstract class Model
      * @param bool $include_meta Whether to include metadata for each post
      * @return array Array of post data
      */
-    public function get_posts(array $args = [], bool $include_meta = false, ?bool $strip_meta_key): array
+    public function get_posts(array $args = [], bool $include_meta = false, ?bool $strip_meta_key = null): array
     {
         // Set post type in query args
         $args['post_type'] = static::POST_TYPE;
