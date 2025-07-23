@@ -259,7 +259,7 @@ final class Config
 
         return match ($format) {
             'array' => $data,
-            'json' => $this->toJson($data),
+            'json' => $this->toJson(),
             'env' => $this->toEnvFormat($data),
             default => throw new InvalidArgumentException("Unsupported format: {$format}")
         };
