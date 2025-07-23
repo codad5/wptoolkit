@@ -88,6 +88,9 @@ class MetaBox
     /** @var array Custom sanitizers */
     private array $custom_sanitizers = [];
 
+    // private constant for input view base path
+    private const INPUT_VIEW_BASE = __DIR__ . '../../views/forms/';
+
     /**
      * Constructor for the MetaBox class.
      *
@@ -1018,18 +1021,18 @@ class MetaBox
     private function render_default_field(string $type, string $id, array $data): void
     {
         if ($type === 'wp_media') {
-            echo ViewLoader::get('forms/wp-media-field', [
+            echo ViewLoader::get('wp-media-field', [
                 'id' => $id,
                 'data' => $data,
                 'metabox' => $this
-            ]);
+            ], self::INPUT_VIEW_BASE);
         } else {
-            echo ViewLoader::get('forms/field', [
+            echo ViewLoader::get('field', [
                 'type' => $type,
                 'id' => $id,
                 'data' => $data,
                 'metabox' => $this
-            ]);
+            ], self::INPUT_VIEW_BASE);
         }
     }
 
