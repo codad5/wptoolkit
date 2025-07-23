@@ -542,7 +542,7 @@ class MetaBox
         $strip = $strip === true ? $this->meta_prefix : $strip;
         foreach ($this->fields as $field) {
             $key = $strip ? str_replace($strip, '', $field['id']) : $field['id'];
-            $value = ($field['attributes']['multiple'] ?? false) ? $post_meta[$field['id']] : $post_meta[$field['id']][0] ?? null;
+            $value = ($field['attributes']['multiple'] ?? false) ? $post_meta[$field['id']] ?? [] : ($post_meta[$field['id']][0] ?? null);
 
             // Apply reverse sanitization if needed
             if ($value !== null) {
