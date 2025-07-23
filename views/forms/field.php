@@ -26,7 +26,7 @@ $default_class = match ($type) {
     default => ''
 };
 
-$attributes['class'] = trim(($attributes['class'] ?? '') . ' ' . $default_class);
+// $attributes['class'] = trim(($attributes['class'] ?? '') . ' ' . $default_class);
 ?>
 
 <div class="form-field wptoolkit-field wptoolkit-field-<?php echo esc_attr($type); ?>" style="max-width: 500px;">
