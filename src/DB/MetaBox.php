@@ -1024,16 +1024,49 @@ class MetaBox
             echo ViewLoader::get('wp-media-field', [
                 'id' => $id,
                 'data' => $data,
-                'metabox' => $this
+                'metabox' => $this, 
+                'attributes' => $this->attributes_to_string($data['attributes'] ?? []),
             ], self::INPUT_VIEW_BASE);
         } else {
             echo ViewLoader::get('field', [
                 'type' => $type,
                 'id' => $id,
                 'data' => $data,
+                'attributes' => $this->attributes_to_string($data['attributes'] ?? []),
                 'metabox' => $this
             ], self::INPUT_VIEW_BASE);
         }
+    }
+
+    /**
+     * Convert attributes array to HTML string.
+     *
+     * @param array $attrs Attributes array
+     * @return string HTML attributes string
+     */
+
+    function attributes_to_string(array $attrs): string
+    {
+        $result = [];
+        foreach ($attrs as $key => $value) {
+            if (is_bool($value)) {
+                if ($value) $result[] = esc_attr($key);
+            } elseif (is_array($value)) {
+                // Handle array values (like style arrays)
+                if ($key === 'style') {
+                    $style_string = '';
+                    foreach ($value as $prop => $val) {
+                        $style_string .= esc_attr($prop) . ':' . esc_attr($val) . ';';
+                    }
+                    $result[] = 'style="' . $style_string . '"';
+                } else {
+                    $result[] = esc_attr($key) . '="' . esc_attr(implode(' ', $value)) . '"';
+                }
+            } else {
+                $result[] = esc_attr($key) . '="' . esc_attr($value) . '"';
+            }
+        }
+        return implode(' ', $result);
     }
 
     /**

@@ -6,13 +6,14 @@
  * @var string $type Field type
  * @var string $id Field identifier
  * @var array $data Field configuration data
+ * @var string $attributes Attributes for the field
  * @var \Codad5\WPToolkit\DB\MetaBox $metabox MetaBox instance
  */
 
 // Extract field data
 $label = esc_html($data['label'] ?? '');
 $default_value = $data['default'] ?? '';
-$attributes = $data['attributes'] ?? [];
+$attributes_string = $attributes ?? "";
 $options = $data['options'] ?? [];
 $required = !empty($data['required']) || !empty($attributes['required']);
 $description = $data['description'] ?? '';
@@ -26,33 +27,6 @@ $default_class = match ($type) {
 };
 
 $attributes['class'] = trim(($attributes['class'] ?? '') . ' ' . $default_class);
-
-// Convert attributes to string
-function attributes_to_string(array $attrs): string
-{
-    $result = [];
-    foreach ($attrs as $key => $value) {
-        if (is_bool($value)) {
-            if ($value) $result[] = esc_attr($key);
-        } elseif (is_array($value)) {
-            // Handle array values (like style arrays)
-            if ($key === 'style') {
-                $style_string = '';
-                foreach ($value as $prop => $val) {
-                    $style_string .= esc_attr($prop) . ':' . esc_attr($val) . ';';
-                }
-                $result[] = 'style="' . $style_string . '"';
-            } else {
-                $result[] = esc_attr($key) . '="' . esc_attr(implode(' ', $value)) . '"';
-            }
-        } else {
-            $result[] = esc_attr($key) . '="' . esc_attr($value) . '"';
-        }
-    }
-    return implode(' ', $result);
-}
-
-$attributes_string = attributes_to_string($attributes);
 ?>
 
 <div class="form-field wptoolkit-field wptoolkit-field-<?php echo esc_attr($type); ?>" style="max-width: 500px;">
