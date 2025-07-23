@@ -162,6 +162,17 @@ class MetaBox
         return $this;
     }
 
+    // get prefix
+    /**
+     * Get the current meta key prefix.
+     *
+     * @return string
+     */
+    public function get_prefix(): string
+    {
+        return $this->meta_prefix;
+    }
+
     /**
      * Enable or disable caching.
      *
@@ -317,7 +328,7 @@ class MetaBox
 
         $script_url = $this->config
             ? $this->config->url('assets/js/metabox-quick-edit.js')
-            : plugins_url('assets/js/metabox-quick-edit.js', __FILE__);
+            : admin_url('assets/js/metabox-quick-edit.js');
 
         wp_enqueue_script(
             "wptoolkit-metabox-{$this->id}",
@@ -817,19 +828,37 @@ class MetaBox
         foreach ($fields as $field) {
             $field_id = $field['id'];
             $value = $_POST[$field_id] ?? '';
-
-            // Apply custom sanitization
-            $sanitized_value = $this->sanitize_field_value($value, $field);
-
-            // Handle wp_media fields specially
-            if ($field['type'] === 'wp_media') {
-                $success = $success && $this->save_media_field($post_id, $field_id, $sanitized_value);
-            } else {
-                $success = $success && $this->save_regular_field($post_id, $field_id, $sanitized_value);
-            }
+            $this->save_field($post_id, $field_id, $value);
         }
 
         return $success;
+    }
+
+    // a method for saving a single field value
+    /**
+     * Save a single field value.
+     *
+     * @param int $post_id Post ID
+     * @param string $field_id Field ID
+     * @param mixed $value Field value
+     * @return bool
+     */
+    public function save_field(int $post_id, string $field_id, mixed $value): bool
+    {
+        $field = $this->get_field('id', $field_id);
+        if (!$field) {
+            return false; // Field not found
+        }
+
+        // Sanitize the value
+        $sanitized_value = $this->sanitize_field_value($value, $field);
+
+        // Handle wp_media fields specially
+        if ($field['type'] === 'wp_media') {
+            return $this->save_media_field($post_id, $field_id, $sanitized_value);
+        } else {
+            return $this->save_regular_field($post_id, $field_id, $sanitized_value);
+        }
     }
 
     /**

@@ -179,10 +179,9 @@ abstract class Model
      *         'type' => 'text|number|date|select|custom',
      *         'sortable' => true|false|callable,
      *         'allow_quick_edit' => true|false,
+     *         'metabox_id' => 'metabox_id', // Required for quick edit
+     *         'field_id' => 'field_id', // Required for quick edit
      *         'get_value' => callable|string, // Function to get the value
-     *         'save_value' => callable|string, // Function to save quick edit value
-     *         'quick_edit_type' => 'text|number|select|date', // Override for quick edit
-     *         'quick_edit_options' => [], // Options for select type
      *         'position' => 'after_title|after_date|end', // Column position
      *         'width' => '100px|10%', // Column width
      *     ]
@@ -195,7 +194,6 @@ abstract class Model
         return false;
     }
 
-
     /**
      * Register the custom post type.
      *
@@ -207,13 +205,13 @@ abstract class Model
             return new WP_Error('no_post_type', 'POST_TYPE constant must be defined in child class');
         }
 
-        $args = array_merge(static::get_post_type_args(), [
+        $args = array_merge([
             'show_in_menu' => true,
             'supports' => ['title', 'editor', 'custom-fields'],
             'public' => true,
             'has_archive' => true,
             'rewrite' => ['slug' => static::POST_TYPE],
-        ]);
+        ], static::get_post_type_args());
 
         return register_post_type(static::POST_TYPE, $args);
     }
@@ -405,211 +403,8 @@ abstract class Model
         }
     }
 
-    /**
-     * Render quick edit fields for custom columns.
-     *
-     * @param string $column_name Column name
-     * @param string $post_type Post type
-     * @return void
-     */
-    public function render_quick_edit_fields(string $column_name, string $post_type): void
-    {
-        if ($post_type !== static::POST_TYPE) {
-            return;
-        }
 
-        $admin_columns = $this->get_admin_columns();
-
-        if (!$admin_columns) {
-            return;
-        }
-
-        echo '<fieldset class="inline-edit-col-right">';
-        echo '<div class="inline-edit-col">';
-        echo '<h4>' . esc_html__('Custom Fields', $this->config->get('textdomain', 'default')) . '</h4>';
-
-        foreach ($admin_columns as $key => $config) {
-            if (!($config['allow_quick_edit'] ?? false)) {
-                continue;
-            }
-
-            $label = $config['label'] ?? ucfirst(str_replace('_', ' ', $key));
-            $type = $config['quick_edit_type'] ?? $config['type'] ?? 'text';
-
-            echo '<label>';
-            echo '<span class="title">' . esc_html($label) . '</span>';
-
-            switch ($type) {
-                case 'select':
-                    echo '<select name="' . esc_attr($key) . '">';
-                    echo '<option value="">' . esc_html__('— No Change —', $this->config->get('textdomain', 'default')) . '</option>';
-
-                    $options = $config['quick_edit_options'] ?? $config['options'] ?? [];
-                    foreach ($options as $value => $option_label) {
-                        echo '<option value="' . esc_attr($value) . '">' . esc_html($option_label) . '</option>';
-                    }
-                    echo '</select>';
-                    break;
-
-                case 'number':
-                    $attrs = '';
-                    if (isset($config['min'])) $attrs .= ' min="' . esc_attr($config['min']) . '"';
-                    if (isset($config['max'])) $attrs .= ' max="' . esc_attr($config['max']) . '"';
-                    if (isset($config['step'])) $attrs .= ' step="' . esc_attr($config['step']) . '"';
-
-                    echo '<input type="number" name="' . esc_attr($key) . '"' . $attrs . ' />';
-                    break;
-
-                case 'date':
-                    echo '<input type="date" name="' . esc_attr($key) . '" />';
-                    break;
-
-                default:
-                    echo '<input type="text" name="' . esc_attr($key) . '" />';
-                    break;
-            }
-            echo '</label>';
-        }
-
-        echo '</div>';
-        echo '</fieldset>';
-
-        // Add JavaScript to populate fields
-        $this->render_quick_edit_script();
-    }
-
-    /**
-     * Render JavaScript for quick edit functionality.
-     *
-     * @return void
-     */
-    private function render_quick_edit_script(): void
-    {
-        static $script_rendered = false;
-
-        if ($script_rendered) {
-            return;
-        }
-
-        $script_rendered = true;
-        $post_type = static::POST_TYPE;
-
-?>
-        <script type="text/javascript">
-            jQuery(document).ready(function($) {
-                // Populate quick edit fields
-                $('a.editinline').on('click', function() {
-                    var post_id = $(this).closest('tr').attr('id').replace('post-', '');
-                    var $row = $('#edit-' + post_id);
-
-                    // Get current values from the row
-                    var $current_row = $('#post-' + post_id);
-
-                    <?php
-                    $admin_columns = $this->get_admin_columns();
-                    if ($admin_columns) {
-                        foreach ($admin_columns as $key => $config) {
-                            if ($config['allow_quick_edit'] ?? false) {
-                                echo "
-                            var {$key}_value = \$current_row.find('td.{$key} .hidden').text() || \$current_row.find('td.{$key}').text();
-                            \$row.find('input[name=\"{$key}\"], select[name=\"{$key}\"]').val({$key}_value);
-                            ";
-                            }
-                        }
-                    }
-                    ?>
-                });
-
-                // Handle quick edit save
-                $('#bulk-edit').on('click', '#bulk_edit', function() {
-                    var $bulk_row = $('#bulk-edit');
-                    var post_ids = [];
-
-                    $bulk_row.find('#bulk-titles').children().each(function() {
-                        post_ids.push($(this).attr('id').replace(/^(ttle)/i, ''));
-                    });
-
-                    var data = {
-                        action: 'save_<?php echo esc_js($post_type); ?>_quick_edit',
-                        post_ids: post_ids,
-                        _wpnonce: $('#_wpnonce').val()
-                    };
-
-                    <?php
-                    if ($admin_columns) {
-                        foreach ($admin_columns as $key => $config) {
-                            if ($config['allow_quick_edit'] ?? false) {
-                                echo "data.{$key} = \$bulk_row.find('input[name=\"{$key}\"], select[name=\"{$key}\"]').val();";
-                            }
-                        }
-                    }
-                    ?>
-
-                    $.post(ajaxurl, data, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        }
-                    });
-                });
-            });
-        </script>
-<?php
-    }
-
-    /**
-     * Handle quick edit AJAX save.
-     *
-     * @return void
-     */
-    public function handle_quick_edit_save(): void
-    {
-        check_ajax_referer('bulk-posts');
-
-        if (!current_user_can('edit_posts')) {
-            wp_die(__('You do not have permission to edit posts.', $this->config->get('textdomain', 'default')));
-        }
-
-        $post_ids = array_map('intval', $_POST['post_ids'] ?? []);
-        $admin_columns = $this->get_admin_columns();
-
-        if (!$admin_columns) {
-            wp_send_json_error('No quick edit fields configured');
-        }
-
-        $updated = 0;
-
-        foreach ($post_ids as $post_id) {
-            if (!$post_id || get_post_type($post_id) !== static::POST_TYPE) {
-                continue;
-            }
-
-            foreach ($admin_columns as $key => $config) {
-                if (!($config['allow_quick_edit'] ?? false)) {
-                    continue;
-                }
-
-                $value = sanitize_text_field($_POST[$key] ?? '');
-
-                if (empty($value)) {
-                    continue;
-                }
-
-                if ($this->save_column_value($post_id, $key, $value, $config)) {
-                    $updated++;
-                }
-            }
-
-            // Clear cache
-            if ($this->enable_cache) {
-                $this->clear_post_cache($post_id);
-            }
-        }
-
-        wp_send_json_success([
-            'message' => sprintf(__('Updated %d posts successfully.', $this->config->get('textdomain', 'default')), $updated)
-        ]);
-    }
-
+   
     /**
      * Get column value for display.
      *
@@ -630,35 +425,17 @@ abstract class Model
             }
         }
 
-        // Default: try to get from meta
-        $meta_key = $this->get_meta_key_for_column($column_key, $config);
-        return get_post_meta($post_id, $meta_key, true);
-    }
-
-    /**
-     * Save column value from quick edit.
-     *
-     * @param int $post_id Post ID
-     * @param string $column_key Column key
-     * @param mixed $value Value to save
-     * @param array $config Column configuration
-     * @return bool Success status
-     */
-    protected function save_column_value(int $post_id, string $column_key, mixed $value, array $config): bool
-    {
-        if (isset($config['save_value'])) {
-            if (is_callable($config['save_value'])) {
-                return call_user_func($config['save_value'], $post_id, $value);
-            }
-
-            if (is_string($config['save_value']) && method_exists($this, $config['save_value'])) {
-                return $this->{$config['save_value']}($post_id, $value);
+        // Try to get from MetaBox if metabox_id and field_id are specified
+        if (isset($config['metabox_id']) && isset($config['field_id'])) {
+            $metabox = $this->getMetabox($config['metabox_id']);
+            if ($metabox) {
+                return $metabox->get_field_value($config['field_id'], $post_id);
             }
         }
 
-        // Default: save to meta
+        // Default: try to get from meta
         $meta_key = $this->get_meta_key_for_column($column_key, $config);
-        return update_post_meta($post_id, $meta_key, $value) !== false;
+        return get_post_meta($post_id, $meta_key, true);
     }
 
     /**
@@ -674,8 +451,19 @@ abstract class Model
             return $config['meta_key'];
         }
 
+        // If metabox and field are specified, construct the meta key
+        if (isset($config['metabox_id']) && isset($config['field_id'])) {
+            $metabox = $this->getMetabox($config['metabox_id']);
+            if ($metabox) {
+                return $metabox->get_prefix() . $config['field_id'];
+            }
+        }
+
         return static::META_PREFIX . $column_key;
     }
+    //=======================================END
+
+
 
     /**
      * Get a MetaBox by ID.
@@ -686,7 +474,7 @@ abstract class Model
     public function getMetabox(string $metabox_id): ?MetaBox
     {
         foreach ($this->metaBoxes as $metabox) {
-            if (property_exists($metabox, 'id') && $metabox->id === $metabox_id) {
+            if ($metabox->id === $metabox_id) {
                 return $metabox;
             }
         }
@@ -710,6 +498,26 @@ abstract class Model
         }
 
         return $metabox->get_field_value($field_id, $post_id);
+    }
+
+    /**
+     * Update a meta value through a specific MetaBox field.
+     *
+     * @param int $post_id Post ID
+     * @param string $metabox_id MetaBox identifier
+     * @param string $field_id Field identifier
+     * @param mixed $value New value
+     * @return bool|WP_Error Success status
+     */
+    public function updateMetaboxFieldValue(int $post_id, string $metabox_id, string $field_id, mixed $value): bool|WP_Error
+    {
+        $metabox = $this->getMetabox($metabox_id);
+
+        if (!$metabox) {
+            return new WP_Error('metabox_not_found', 'MetaBox not found');
+        }
+
+        return $metabox->save_field($post_id, $field_id, $value);
     }
 
     /**
@@ -767,7 +575,7 @@ abstract class Model
                     'type' => $field['type'],
                     'label' => $field['label'],
                     'options' => $field['options'] ?? [],
-                    'metabox_id' => property_exists($metaBox, 'id') ? $metaBox->id : 'unknown'
+                    'metabox_id' => $metaBox->id
                 ];
             }
         }
@@ -805,9 +613,9 @@ abstract class Model
             return $post_id;
         }
 
-        // Save metadata
+        // Save metadata through MetaBoxes
         if (!empty($meta_data)) {
-            $this->save_meta($post_id, $meta_data);
+            $this->save_meta_through_metaboxes($post_id, $meta_data);
         }
 
         // Clear cache
@@ -850,9 +658,9 @@ abstract class Model
             }
         }
 
-        // Update metadata
+        // Update metadata through MetaBoxes
         if (!empty($meta_data)) {
-            $this->save_meta($post_id, $meta_data);
+            $this->save_meta_through_metaboxes($post_id, $meta_data);
         }
 
         // Clear cache
@@ -1170,20 +978,6 @@ abstract class Model
     }
 
     /**
-     * Save metadata for a post.
-     *
-     * @param int $post_id Post ID
-     * @param array $meta_data Metadata to save
-     * @return void
-     */
-    protected function save_meta(int $post_id, array $meta_data): void
-    {
-        foreach ($meta_data as $key => $value) {
-            update_post_meta($post_id, $key, $value);
-        }
-    }
-
-    /**
      * Validate fields using registered MetaBoxes.
      *
      * @param array $data Data to validate
@@ -1448,6 +1242,25 @@ abstract class Model
     }
 
     /**
+     * Save metadata through registered MetaBoxes.
+     *
+     * @param int $post_id Post ID
+     * @param array $meta_data Metadata to save
+     * @return void
+     */
+    protected function save_meta_through_metaboxes(int $post_id, array $meta_data): void
+    {
+        foreach ($this->metaBoxes as $metabox) {
+            foreach ($metabox->get_fields() as $field) {
+                $field_id = $field['id'];
+                if (array_key_exists($field_id, $meta_data)) {
+                    $metabox->save_field($post_id, $field_id, $meta_data[$field_id]);
+                }
+            }
+        }
+    }
+
+    /**
      * Enhanced setup_hooks method that tracks registered hooks for removal.
      *
      * @return void
@@ -1464,10 +1277,6 @@ abstract class Model
         $this->add_tracked_action('manage_' . static::POST_TYPE . '_posts_custom_column', [$this, 'render_admin_column'], 10, 2);
         $this->add_tracked_filter('manage_edit-' . static::POST_TYPE . '_sortable_columns', [$this, 'setup_sortable_columns']);
         $this->add_tracked_action('pre_get_posts', [$this, 'handle_column_sorting']);
-
-        // Quick edit hooks
-        $this->add_tracked_action('quick_edit_custom_box', [$this, 'render_quick_edit_fields'], 10, 2);
-        $this->add_tracked_action('wp_ajax_save_' . static::POST_TYPE . '_quick_edit', [$this, 'handle_quick_edit_save']);
 
         // Authentication hooks
         if (static::REQUIRES_AUTHENTICATION) {
