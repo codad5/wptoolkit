@@ -545,8 +545,8 @@ class MetaBox
             $value = $post_meta[$field['id']][0] ?? null;
 
             // Apply reverse sanitization if needed
-            if ($value !== null && isset($field['reverse_sanitize_callback'])) {
-                $value = call_user_func($field['reverse_sanitize_callback'], $value);
+            if ($value !== null) {
+                $value = $this->reverse_sanitize_field_value($value, $field);
             }
 
             $meta[$key] = $value;
@@ -915,6 +915,8 @@ class MetaBox
         return true;
     }
 
+
+
     /**
      * Sanitize field value based on type and custom sanitizers.
      *
@@ -942,6 +944,28 @@ class MetaBox
             'textarea' => sanitize_textarea_field($value),
             'wp_media' => is_array($value) ? array_map('absint', $value) : absint($value),
             default => sanitize_text_field($value)
+        };
+    }
+
+    /**
+     * Reverse sanitize field value.
+     * @param mixed $value Value to reverse sanitize
+     * @param array $field Field configuration
+     * @return mixed Reverse sanitized value
+     */
+    public function reverse_sanitize_field_value(mixed $value, array $field): mixed
+    {
+        // Use custom reverse sanitizer if provided
+        if (isset($field['reverse_sanitize_callback']) && is_callable($field['reverse_sanitize_callback'])) {
+            return call_user_func($field['reverse_sanitize_callback'], $value);
+        }
+
+        // Default reverse sanitization
+        return match ($field['type']) {
+            'wp_media' => ($field['attributes']['multiple'] ?? false)
+                ? array_map(fn($id) => wp_get_attachment_url($id) ?: $id, (array)$value)
+                : wp_get_attachment_url($value),
+            default => $value // For other types, just return the value as is
         };
     }
 
