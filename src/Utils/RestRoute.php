@@ -101,7 +101,7 @@ class RestRoute
         ?string $base_namespace = null
     ) {
         $this->parseConfigOrSlug($config_or_slug);
-        $this->base_namespace = $base_namespace ?? str_replace('-', '_', $this->app_slug);
+        $this->base_namespace = $base_namespace ?? str_replace('_', '-', $this->app_slug);
         $this->default_version = sanitize_key($default_version);
 
         // Initialize supported versions
