@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\DB;
 
-use Codad5\WPToolkit\Utils\{Config, Cache, Notification, InputValidator};
+use Codad5\WPToolkit\Utils\{Config, Cache, InputValidator};
 use WP_Post;
 use WP_Error;
 use WP_Query;
@@ -725,7 +725,7 @@ abstract class Model
             return null;
         }
 
-        return $metabox->get_value($post_id, $field_id);
+        return $metabox->get_field_value($field_id, $post_id);
     }
 
     /**
