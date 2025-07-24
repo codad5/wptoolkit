@@ -349,6 +349,22 @@ final class MetaBox
         ]);
     }
 
+    //method to get field key
+    /**
+     * Get the field key with prefix.
+     *
+     * @param string $field_id Field ID
+     * @return string Full field key with prefix
+     */
+    public function get_field_key(string $field_id): string
+    {
+        if (!empty($this->meta_prefix) && !str_starts_with($field_id, $this->meta_prefix)) {
+            $field_id = $this->meta_prefix . $field_id;
+        }
+        return $field_id;
+    }
+    
+
     /**
      * Add a field to the meta box.
      *
@@ -368,9 +384,8 @@ final class MetaBox
         array $attributes = [],
         array $config = []
     ): self {
-        if (!empty($this->meta_prefix) && !str_starts_with($id, $this->meta_prefix)) {
-            $id = $this->meta_prefix . $id;
-        }
+        
+        $id = $this->get_field_key($id);
 
         $this->fields[] = array_merge($config, [
             'id' => $id,
