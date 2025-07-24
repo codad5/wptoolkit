@@ -391,6 +391,26 @@ final class Page
         return esc_url($base_url);
     }
 
+    // a method to get model url
+    /**
+     * Get the URL for a model page.
+     *
+     * @param Model $model_slug Model slug
+     * @param array<string, mixed> $params Additional URL parameters
+     * @return string Model page URL
+     */
+    public function getModelUrl(Model $model, array $params = []): string
+    {
+        $post_type = $model::get_instance()->get_post_type();
+        $base_url = admin_url('edit.php?post_type=' . sanitize_key($post_type));
+
+        if (!empty($params)) {
+            $base_url = add_query_arg($params, $base_url);
+        }
+
+        return esc_url($base_url);
+    }
+
     /**
      * Get the URL for a frontend page.
      *
