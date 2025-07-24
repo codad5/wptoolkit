@@ -706,18 +706,28 @@ abstract class Model
     }
 
     /**
-     * Get a post by ID with metadata.
+     * Get a post by ID with metadata and taxonomies.
      *
      * @param int $post_id Post ID
-     * @param bool $include_meta Whether to include metadata
      * @param bool $strip_meta_key Whether to strip the meta key prefix
+     * @param array $config Additional configuration options
+     * * - include_meta: Whether to include metadata (default true)
+     * * - include_taxonomies: Whether to include taxonomy terms (default false)
+     * * - full_taxonomies_terms: Whether to return full term objects instead of names (default false)
      * @return array|null Post data array or null if not found
      */
-    public function get_post(int $post_id, bool $include_meta = true, ?bool $strip_meta_key = null): ?array
+    public function get_post(int $post_id, ?bool $strip_meta_key = null, array $config = []): ?array
     {
+        $include_meta = $config['include_meta'] ?? true;
+        $include_taxonomies = $config['include_taxonomies'] ?? false;
+        $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
+
+        // Generate cache key based on configuration
+        $cache_suffix = $this->generate_cache_suffix($include_meta, $include_taxonomies, $full_taxonomies_terms);
+
         // Check cache first
         if ($this->enable_cache) {
-            $cache_key = "post_{$post_id}_" . ($include_meta ? 'with_meta' : 'no_meta');
+            $cache_key = "post_{$post_id}_{$cache_suffix}";
             $cached = Cache::get($cache_key, null, $this->cache_group);
 
             if ($cached !== null) {
@@ -731,17 +741,12 @@ abstract class Model
             return null;
         }
 
-        $result = [
-            'post' => $post,
-            'meta' => []
-        ];
-
-        if ($include_meta) {
-            $result['meta'] = $this->get_post_meta($post_id, $strip_meta_key);
-        }
+        // Build post data using the reusable method
+        $result = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms);
 
         // Cache the result
         if ($this->enable_cache) {
+            $cache_key = "post_{$post_id}_{$cache_suffix}";
             Cache::set($cache_key, $result, $this->cache_duration, $this->cache_group);
         }
 
@@ -749,27 +754,36 @@ abstract class Model
     }
 
     /**
-     * Get posts with optional filtering and metadata.
+     * Get posts with optional filtering, metadata, and taxonomies.
      *
      * @param array $args Query arguments
-     * @param bool $include_meta Whether to include metadata for each post
-     * @param bool $include_meta Whether to include metadata for each post
+     * @param bool $strip_meta_key Whether to strip the meta key prefix
+     * @param array $config Additional configuration options 
+     * * - include_meta: Whether to include metadata (default false)
+     * * - include_taxonomies: Whether to include taxonomy terms (default false)
+     * * - full_taxonomies_terms: Whether to return full term objects instead of names (default false)
      * @return array Array of post data
      */
-    public function get_posts(array $args = [], bool $include_meta = false, ?bool $strip_meta_key = null): array
+    public function get_posts(array $args = [], ?bool $strip_meta_key = null, array $config = []): array
     {
         // Set post type in query args
         $args['post_type'] = static::POST_TYPE;
+        $include_meta = $config['include_meta'] ?? false;
+        $include_taxonomies = $config['include_taxonomies'] ?? false;
+        $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
 
         // Set default number of posts
         if (!isset($args['posts_per_page'])) {
             $args['posts_per_page'] = 10;
         }
 
+        // Generate cache key based on configuration
+        $cache_suffix = $this->generate_cache_suffix($include_meta, $include_taxonomies, $full_taxonomies_terms);
+
         // Check cache for simple queries
         $cache_key = null;
         if ($this->enable_cache && count($args) <= 3) { // Simple query
-            $cache_key = 'posts_' . md5(serialize($args)) . '_' . ($include_meta ? 'with_meta' : 'no_meta');
+            $cache_key = 'posts_' . md5(serialize($args)) . "_{$cache_suffix}";
             $cached = Cache::get($cache_key, null, $this->cache_group);
 
             if ($cached !== null) {
@@ -781,13 +795,7 @@ abstract class Model
         $results = [];
 
         foreach ($posts as $post) {
-            $post_data = ['post' => $post];
-
-            if ($include_meta) {
-                $post_data['meta'] = $this->get_post_meta($post->ID, $strip_meta_key);
-            }
-
-            $results[] = $post_data;
+            $results[] = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms);
         }
 
         // Cache simple queries
@@ -798,6 +806,122 @@ abstract class Model
         return $results;
     }
 
+    /**
+     * Build post data structure with optional metadata and taxonomies.
+     * This is the reusable core method used by both get_post and get_posts.
+     *
+     * @param WP_Post $post Post object
+     * @param bool|null $strip_meta_key Whether to strip the meta key prefix
+     * @param bool $include_meta Whether to include metadata
+     * @param bool $include_taxonomies Whether to include taxonomy terms
+     * @param bool $full_taxonomies_terms Whether to return full term objects
+     * @return array Post data structure
+     */
+    protected function build_post_data(
+        WP_Post $post,
+        ?bool $strip_meta_key,
+        bool $include_meta,
+        bool $include_taxonomies,
+        bool $full_taxonomies_terms
+    ): array {
+        $post_data = ['post' => $post];
+
+        if ($include_meta) {
+            $post_data['meta'] = $this->get_post_meta($post->ID, $strip_meta_key);
+        }
+
+        if ($include_taxonomies) {
+            $post_data['taxonomies'] = $this->build_taxonomies_data($post->ID, $full_taxonomies_terms);
+        }
+
+        return $post_data;
+    }
+
+    /**
+     * Build taxonomies data for a post.
+     *
+     * @param int $post_id Post ID
+     * @param bool $full_terms Whether to return full term objects or just names
+     * @return array Taxonomies data
+     */
+    protected function build_taxonomies_data(int $post_id, bool $full_terms = false): array
+    {
+        $taxonomies_data = [];
+
+        foreach ($this->get_registered_taxonomies() as $taxonomy) {
+            $terms = $this->get_post_terms($post_id, $taxonomy->name);
+
+            if ($terms && !is_wp_error($terms)) {
+                if ($full_terms) {
+                    $taxonomies_data[$taxonomy->name] = $terms;
+                } else {
+                    $taxonomies_data[$taxonomy->name] = array_map(fn($term) => $term->name, $terms);
+                }
+            } else {
+                $taxonomies_data[$taxonomy->name] = [];
+            }
+        }
+
+        return $taxonomies_data;
+    }
+
+    /**
+     * Generate cache suffix based on configuration options.
+     *
+     * @param bool $include_meta Whether metadata is included
+     * @param bool $include_taxonomies Whether taxonomies are included
+     * @param bool $full_taxonomies_terms Whether full taxonomy terms are included
+     * @return string Cache suffix
+     */
+    protected function generate_cache_suffix(bool $include_meta, bool $include_taxonomies, bool $full_taxonomies_terms): string
+    {
+        $parts = [];
+
+        $parts[] = $include_meta ? 'with_meta' : 'no_meta';
+        $parts[] = $include_taxonomies ? 'with_taxonomies' : 'no_taxonomies';
+
+        if ($include_taxonomies) {
+            $parts[] = $full_taxonomies_terms ? 'full_terms' : 'term_names';
+        }
+
+        return implode('_', $parts);
+    }
+
+
+
+    /**
+     * Convenience method to get post with all data (metadata and taxonomies).
+     *
+     * @param int $post_id Post ID
+     * @param bool $strip_meta_key Whether to strip the meta key prefix
+     * @param bool $full_taxonomies_terms Whether to return full term objects
+     * @return array|null Complete post data or null if not found
+     */
+    public function get_full_post(int $post_id, ?bool $strip_meta_key = null, bool $full_taxonomies_terms = false): ?array
+    {
+        return $this->get_post($post_id, $strip_meta_key, [
+            'include_meta' => true,
+            'include_taxonomies' => true,
+            'full_taxonomies_terms' => $full_taxonomies_terms
+        ]);
+    }
+
+    /**
+     * Convenience method to get posts with all data (metadata and taxonomies).
+     *
+     * @param array $args Query arguments
+     * @param bool $strip_meta_key Whether to strip the meta key prefix
+     * @param bool $full_taxonomies_terms Whether to return full term objects
+     * @return array Array of complete post data
+     */
+    public function get_full_posts(array $args = [], ?bool $strip_meta_key = null, bool $full_taxonomies_terms = false): array
+    {
+        return $this->get_posts($args, $strip_meta_key, [
+            'include_meta' => true,
+            'include_taxonomies' => true,
+            'full_taxonomies_terms' => $full_taxonomies_terms
+        ]);
+    }
     /**
      * Delete a post and its metadata.
      *
@@ -828,15 +952,29 @@ abstract class Model
     }
 
     /**
-     * Search posts by title, content, or metadata.
+     * Enhanced search posts by title, content, metadata, and taxonomies.
      *
      * @param string $search_term Search term
-     * @param array $search_fields Fields to search in ('title', 'content', 'meta')
+     * @param array $search_fields Fields to search in ('title', 'content', 'meta', 'taxonomies')
      * @param array $args Additional query arguments
-     * @return array Search results
+     * @param array $config Search configuration options
+     * * - include_meta: Whether to include metadata in results (default true)
+     * * - include_taxonomies: Whether to include taxonomy terms in results (default true)
+     * * - full_taxonomies_terms: Whether to return full term objects (default false)
+     * * - strip_meta_key: Whether to strip meta key prefix (default null)
+     * @return array Search results with relevance scores
      */
-    public function search(string $search_term, array $search_fields = ['title', 'content'], array $args = []): array
-    {
+    public function search(
+        string $search_term,
+        array $search_fields = ['title', 'content'],
+        array $args = [],
+        array $config = []
+    ): array {
+        $include_meta = $config['include_meta'] ?? true;
+        $include_taxonomies = $config['include_taxonomies'] ?? true;
+        $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
+        $strip_meta_key = $config['strip_meta_key'] ?? null;
+
         $args = array_merge($args, [
             'post_type' => static::POST_TYPE,
             'posts_per_page' => $args['posts_per_page'] ?? 20,
@@ -857,6 +995,43 @@ abstract class Model
             }
         }
 
+        // Handle taxonomy search
+        if (in_array('taxonomies', $search_fields)) {
+            $tax_queries = [];
+            $registered_taxonomies = array_keys($this->get_registered_taxonomies());
+
+            foreach ($registered_taxonomies as $taxonomy) {
+                $tax_queries[] = [
+                    'taxonomy' => $taxonomy,
+                    'field' => 'name',
+                    'terms' => $search_term,
+                    'operator' => 'LIKE'
+                ];
+            }
+
+            if (!empty($tax_queries)) {
+                if (isset($args['meta_query'])) {
+                    // Combine meta and tax queries with OR relation at the top level
+                    $args['_meta_query'] = $args['meta_query']; // Backup
+                    unset($args['meta_query']);
+
+                    $args['meta_query'] = [
+                        'relation' => 'OR',
+                        $args['_meta_query'],
+                        [
+                            'relation' => 'OR',
+                            'tax_query' => $tax_queries
+                        ]
+                    ];
+                } else {
+                    $args['tax_query'] = [
+                        'relation' => 'OR',
+                        ...$tax_queries
+                    ];
+                }
+            }
+        }
+
         // Handle title/content search
         if (array_intersect(['title', 'content'], $search_fields)) {
             $args['s'] = $search_term;
@@ -866,17 +1041,79 @@ abstract class Model
         $results = [];
 
         foreach ($query->posts as $post) {
-            $results[] = [
-                'post' => $post,
-                'meta' => $this->get_post_meta($post->ID),
-                'relevance' => $this->calculate_relevance($post, $search_term, $search_fields)
-            ];
+            $post_data = $this->build_post_data(
+                $post,
+                $strip_meta_key,
+                $include_meta,
+                $include_taxonomies,
+                $full_taxonomies_terms
+            );
+
+            $post_data['relevance'] = $this->calculate_relevance($post, $search_term, $search_fields);
+            $results[] = $post_data;
         }
 
         // Sort by relevance
         usort($results, fn($a, $b) => $b['relevance'] <=> $a['relevance']);
 
         return $results;
+    }
+
+    /**
+     * Search posts with autocomplete suggestions.
+     *
+     * @param string $search_term Partial search term
+     * @param int $limit Maximum number of suggestions
+     * @param array $search_fields Fields to search in
+     * @return array Autocomplete suggestions
+     */
+    public function search_autocomplete(string $search_term, int $limit = 10, array $search_fields = ['title']): array
+    {
+        if (strlen($search_term) < 2) {
+            return [];
+        }
+
+        $args = [
+            'post_type' => static::POST_TYPE,
+            'posts_per_page' => $limit * 2, // Get more to filter
+            'post_status' => 'publish',
+        ];
+
+        // For autocomplete, we primarily search titles
+        if (in_array('title', $search_fields)) {
+            $args['s'] = $search_term;
+        }
+
+        $posts = get_posts($args);
+        $suggestions = [];
+
+        foreach ($posts as $post) {
+            $suggestion = [
+                'id' => $post->ID,
+                'title' => $post->post_title,
+                'url' => get_permalink($post->ID),
+                'relevance' => $this->calculate_relevance($post, $search_term, $search_fields)
+            ];
+
+            // Add taxonomy terms for richer suggestions
+            if (in_array('taxonomies', $search_fields)) {
+                $taxonomies = $this->build_taxonomies_data($post->ID, false);
+                $suggestion['terms'] = [];
+
+                foreach ($taxonomies as $taxonomy => $terms) {
+                    if (!empty($terms)) {
+                        $suggestion['terms'][$taxonomy] = array_slice($terms, 0, 3); // Limit terms
+                    }
+                }
+            }
+
+            $suggestions[] = $suggestion;
+        }
+
+        // Sort by relevance and limit
+        usort($suggestions, fn($a, $b) => $b['relevance'] <=> $a['relevance']);
+
+        return array_slice($suggestions, 0, $limit);
     }
 
     /**
@@ -935,29 +1172,6 @@ abstract class Model
         if ($post && $post->post_type === static::POST_TYPE && $this->enable_cache) {
             $this->clear_post_cache($post_id);
         }
-    }
-
-    /**
-     * Handle AJAX search requests.
-     *
-     * @return void
-     */
-    public function handle_ajax_search(): void
-    {
-        check_ajax_referer(static::POST_TYPE . '_search', 'nonce');
-
-        $search_term = sanitize_text_field($_POST['search'] ?? '');
-        $search_fields = array_map('sanitize_text_field', $_POST['fields'] ?? ['title', 'content']);
-
-        if (empty($search_term)) {
-            wp_send_json_error('Search term is required');
-        }
-
-        $results = $this->search($search_term, $search_fields, [
-            'posts_per_page' => 10
-        ]);
-
-        wp_send_json_success($results);
     }
 
     /**
@@ -1049,7 +1263,7 @@ abstract class Model
     }
 
     /**
-     * Calculate search relevance score.
+     * Enhanced calculate search relevance score with taxonomy support.
      *
      * @param WP_Post $post Post object
      * @param string $search_term Search term
@@ -1060,14 +1274,29 @@ abstract class Model
     {
         $score = 0;
         $term_lower = strtolower($search_term);
+        $term_words = array_filter(explode(' ', $term_lower)); // Split multi-word searches
 
         // Title relevance (highest weight)
         if (in_array('title', $search_fields)) {
             $title_lower = strtolower($post->post_title);
-            if (str_contains($title_lower, $term_lower)) {
-                $score += 10;
-                if ($title_lower === $term_lower) {
-                    $score += 20; // Exact match bonus
+
+            // Exact match gets highest score
+            if ($title_lower === $term_lower) {
+                $score += 50;
+            }
+            // Title starts with search term
+            elseif (str_starts_with($title_lower, $term_lower)) {
+                $score += 30;
+            }
+            // Contains full search term
+            elseif (str_contains($title_lower, $term_lower)) {
+                $score += 20;
+            }
+
+            // Individual word matches in title
+            foreach ($term_words as $word) {
+                if (str_contains($title_lower, $word)) {
+                    $score += 5;
                 }
             }
         }
@@ -1075,23 +1304,95 @@ abstract class Model
         // Content relevance
         if (in_array('content', $search_fields)) {
             $content_lower = strtolower($post->post_content);
-            $score += substr_count($content_lower, $term_lower) * 2;
+
+            // Full term matches
+            $full_matches = substr_count($content_lower, $term_lower);
+            $score += $full_matches * 3;
+
+            // Individual word matches
+            foreach ($term_words as $word) {
+                $word_matches = substr_count($content_lower, $word);
+                $score += $word_matches * 1;
+            }
         }
 
         // Meta relevance
         if (in_array('meta', $search_fields)) {
             $meta = get_post_meta($post->ID);
-            foreach ($meta as $values) {
+            foreach ($meta as $key => $values) {
+                // Skip WordPress internal meta
+                if (str_starts_with($key, '_') && !str_starts_with($key, static::META_PREFIX)) {
+                    continue;
+                }
+
                 foreach ($values as $value) {
-                    if (str_contains(strtolower($value), $term_lower)) {
-                        $score += 1;
+                    $value_lower = strtolower($value);
+
+                    // Exact match in meta
+                    if ($value_lower === $term_lower) {
+                        $score += 10;
+                    }
+                    // Contains full term
+                    elseif (str_contains($value_lower, $term_lower)) {
+                        $score += 3;
+                    }
+
+                    // Individual word matches
+                    foreach ($term_words as $word) {
+                        if (str_contains($value_lower, $word)) {
+                            $score += 1;
+                        }
                     }
                 }
             }
         }
 
+        // Taxonomy relevance
+        if (in_array('taxonomies', $search_fields)) {
+            $taxonomies = $this->build_taxonomies_data($post->ID, true); // Get full terms
+
+            foreach ($taxonomies as $taxonomy_terms) {
+                foreach ($taxonomy_terms as $term) {
+                    if (!is_object($term)) continue;
+
+                    $term_name_lower = strtolower($term->name);
+                    $term_desc_lower = strtolower($term->description ?? '');
+
+                    // Exact match in taxonomy term name
+                    if ($term_name_lower === $term_lower) {
+                        $score += 15;
+                    }
+                    // Contains full term in name
+                    elseif (str_contains($term_name_lower, $term_lower)) {
+                        $score += 8;
+                    }
+
+                    // Check description if available
+                    if (!empty($term_desc_lower) && str_contains($term_desc_lower, $term_lower)) {
+                        $score += 3;
+                    }
+
+                    // Individual word matches in taxonomy
+                    foreach ($term_words as $word) {
+                        if (str_contains($term_name_lower, $word)) {
+                            $score += 2;
+                        }
+                        if (!empty($term_desc_lower) && str_contains($term_desc_lower, $word)) {
+                            $score += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Boost score for newer content (time decay factor)
+        $post_age_days = (time() - strtotime($post->post_date)) / (24 * 60 * 60);
+        $freshness_boost = max(0, 5 - ($post_age_days / 30)); // Boost decreases over 150 days
+        $score += $freshness_boost;
+
         return $score;
     }
+
 
     /**
      * Clear cache for a specific post.
@@ -1101,9 +1402,13 @@ abstract class Model
      */
     protected function clear_post_cache(int $post_id): void
     {
-        // Clear specific post caches
-        Cache::delete("post_{$post_id}_with_meta", $this->cache_group);
-        Cache::delete("post_{$post_id}_no_meta", $this->cache_group);
+        // Clear specific post caches - all possible variations
+        Cache::delete("post_{$post_id}_with_meta_no_taxonomies", $this->cache_group);
+        Cache::delete("post_{$post_id}_no_meta_no_taxonomies", $this->cache_group);
+        Cache::delete("post_{$post_id}_with_meta_with_taxonomies_term_names", $this->cache_group);
+        Cache::delete("post_{$post_id}_no_meta_with_taxonomies_term_names", $this->cache_group);
+        Cache::delete("post_{$post_id}_with_meta_with_taxonomies_full_terms", $this->cache_group);
+        Cache::delete("post_{$post_id}_no_meta_with_taxonomies_full_terms", $this->cache_group);
 
         // Clear general posts cache (this is aggressive but ensures consistency)
         $stats = Cache::get_stats($this->cache_group);
@@ -1298,7 +1603,7 @@ abstract class Model
     }
 
     /**
-     * Enhanced setup_hooks method that includes taxonomy registration.
+     * Enhanced setup_hooks method that includes taxonomy registration and autocomplete AJAX.
      *
      * @return void
      */
@@ -1321,10 +1626,119 @@ abstract class Model
             $this->add_tracked_action('template_redirect', [$this, 'handle_authentication']);
         }
 
-        // AJAX search
+        // AJAX search hooks
         $this->add_tracked_action('wp_ajax_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
         $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
+
+        // AJAX autocomplete hooks
+        $this->add_tracked_action('wp_ajax_' . static::POST_TYPE . '_autocomplete', [$this, 'handle_ajax_autocomplete']);
+        $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_autocomplete', [$this, 'handle_ajax_autocomplete']);
     }
+
+    /**
+     * Enhanced handle AJAX search requests with better configuration support.
+     *
+     * @return void
+     */
+    public function handle_ajax_search(): void
+    {
+        check_ajax_referer(static::POST_TYPE . '_search', 'nonce');
+
+        $search_term = sanitize_text_field($_POST['search'] ?? '');
+        $search_fields = array_map('sanitize_text_field', $_POST['fields'] ?? ['title', 'content']);
+        $posts_per_page = (int) ($_POST['limit'] ?? 10);
+
+        // Configuration options from AJAX request
+        $config = [
+            'include_meta' => filter_var($_POST['include_meta'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'include_taxonomies' => filter_var($_POST['include_taxonomies'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            'full_taxonomies_terms' => filter_var($_POST['full_taxonomies_terms'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        ];
+
+        if (empty($search_term)) {
+            wp_send_json_error('Search term is required');
+        }
+
+        try {
+            $results = $this->search($search_term, $search_fields, [
+                'posts_per_page' => $posts_per_page
+            ], $config);
+
+            wp_send_json_success([
+                'results' => $results,
+                'total' => count($results),
+                'search_term' => $search_term,
+                'fields_searched' => $search_fields
+            ]);
+        } catch (Exception $e) {
+            wp_send_json_error('Search failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Handle AJAX autocomplete requests.
+     *
+     * @return void
+     */
+    public function handle_ajax_autocomplete(): void
+    {
+        check_ajax_referer(static::POST_TYPE . '_autocomplete', 'nonce');
+
+        $search_term = sanitize_text_field($_POST['term'] ?? '');
+        $limit = (int) ($_POST['limit'] ?? 10);
+        $search_fields = array_map('sanitize_text_field', $_POST['fields'] ?? ['title']);
+
+        if (strlen($search_term) < 2) {
+            wp_send_json_error('Search term must be at least 2 characters');
+        }
+
+        if ($limit > 50) {
+            $limit = 50; // Cap the limit for performance
+        }
+
+        try {
+            $suggestions = $this->search_autocomplete($search_term, $limit, $search_fields);
+
+            wp_send_json_success([
+                'suggestions' => $suggestions,
+                'total' => count($suggestions),
+                'search_term' => $search_term
+            ]);
+        } catch (Exception $e) {
+            wp_send_json_error('Autocomplete failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Enqueue AJAX scripts and localize data for frontend search functionality.
+     * Call this method in your theme or plugin to enable frontend AJAX search.
+     *
+     * @param bool $enqueue_autocomplete Whether to include autocomplete functionality
+     * @return void
+     */
+    public function enqueue_search_scripts(bool $enqueue_autocomplete = true): void
+    {
+        // Only enqueue on frontend or admin pages where needed
+        if (is_admin() && !wp_doing_ajax()) {
+            return;
+        }
+
+        $script_data = [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'post_type' => static::POST_TYPE,
+            'search_nonce' => wp_create_nonce(static::POST_TYPE . '_search'),
+            'autocomplete_nonce' => wp_create_nonce(static::POST_TYPE . '_autocomplete'),
+            'strings' => [
+                'searching' => __('Searching...', $this->config->get('textdomain', 'default')),
+                'no_results' => __('No results found.', $this->config->get('textdomain', 'default')),
+                'error' => __('Search error occurred.', $this->config->get('textdomain', 'default')),
+            ]
+        ];
+
+        // Localize the script data
+        wp_localize_script('jquery', static::POST_TYPE . '_search_data', $script_data);
+    }
+
 
     /**
      * Register taxonomies defined in get_taxonomies().
