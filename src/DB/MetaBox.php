@@ -1160,6 +1160,7 @@ final class MetaBox
      * @param array $attrs Attributes array
      * @return string HTML attributes string
      */
+
     function attributes_to_string(array $attrs): string
     {
         $result = [];
@@ -1167,52 +1168,21 @@ final class MetaBox
             if (is_bool($value)) {
                 if ($value) $result[] = esc_attr($key);
             } elseif (is_array($value)) {
-                // Handle array values based on the key/context
+                // Handle array values (like style arrays)
                 if ($key === 'style') {
-                    // Handle CSS style arrays
                     $style_string = '';
                     foreach ($value as $prop => $val) {
                         $style_string .= esc_attr($prop) . ':' . esc_attr($val) . ';';
                     }
                     $result[] = 'style="' . $style_string . '"';
-                } elseif ($key === 'class') {
-                    // Handle CSS class arrays
-                    $result[] = 'class="' . esc_attr(implode(' ', array_filter($value))) . '"';
-                } elseif ($key === 'data-options' || $key === 'data-config') {
-                    // Handle data attributes that should be JSON
-                    $result[] = esc_attr($key) . '="' . esc_attr(wp_json_encode($value)) . '"';
-                } elseif (in_array($key, ['fields', 'options', 'validation', 'config'], true)) {
-                    // Skip complex configuration arrays that shouldn't be HTML attributes
-                    continue;
-                } elseif ($this->is_simple_array($value)) {
-                    // Handle simple arrays (non-nested) that can be imploded
-                    $result[] = esc_attr($key) . '="' . esc_attr(implode(' ', array_filter($value))) . '"';
                 } else {
-                    // For complex arrays, convert to JSON and store as data attribute
-                    $data_key = 'data-' . str_replace('_', '-', $key);
-                    $result[] = esc_attr($data_key) . '="' . esc_attr(wp_json_encode($value)) . '"';
+                    $result[] = esc_attr($key) . '="' . esc_attr(implode(' ', $value)) . '"';
                 }
-            } elseif ($value !== null && $value !== '') {
+            } else {
                 $result[] = esc_attr($key) . '="' . esc_attr($value) . '"';
             }
         }
         return implode(' ', $result);
-    }
-
-    /**
-     * Check if an array is simple (non-nested) and can be safely imploded.
-     *
-     * @param array $array Array to check
-     * @return bool True if array is simple (all values are scalar)
-     */
-    private function is_simple_array(array $array): bool
-    {
-        foreach ($array as $value) {
-            if (!is_scalar($value) && $value !== null) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
