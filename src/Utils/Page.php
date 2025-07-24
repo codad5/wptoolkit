@@ -205,7 +205,7 @@ final class Page
 
         // Try to call a method if it exists
         if (method_exists($model, 'getPostType')) {
-            return $model->getPostType();
+            return $model->get_post_type();
         }
 
         // Fallback: derive from class name
