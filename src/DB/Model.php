@@ -171,6 +171,39 @@ abstract class Model
     abstract protected static function get_post_type_args(): array;
 
     /**
+     * Get taxonomies configuration for this model.
+     * 
+     * Child classes can override this to define custom taxonomies.
+     * 
+     * Return format:
+     * [
+     *     'taxonomy_slug' => [
+     *         'labels' => [
+     *             'name' => 'Plural Name',
+     *             'singular_name' => 'Singular Name',
+     *             // ... other labels
+     *         ],
+     *         'args' => [
+     *             'hierarchical' => true|false,
+     *             'public' => true|false,
+     *             // ... other taxonomy args
+     *         ]
+     *     ],
+     *     // OR simplified format:
+     *     'simple_taxonomy' => 'Display Name', // Uses defaults with this display name
+     * ]
+     *
+     * @return array Taxonomies configuration
+     */
+    protected function get_taxonomies(): array
+    {
+        return [];
+    }
+
+
+
+
+    /**
      * Define custom admin columns configuration.
      * 
      * Return false to use default WordPress columns, or return an array like:
@@ -1265,7 +1298,7 @@ abstract class Model
     }
 
     /**
-     * Enhanced setup_hooks method that tracks registered hooks for removal.
+     * Enhanced setup_hooks method that includes taxonomy registration.
      *
      * @return void
      */
@@ -1273,6 +1306,7 @@ abstract class Model
     {
         // Store hook information for later removal
         $this->add_tracked_action('init', [$this, 'register_post_type']);
+        $this->add_tracked_action('init', [$this, 'register_taxonomies'], 11); // After post type registration
         $this->add_tracked_action('save_post_' . static::POST_TYPE, [$this, 'save_post'], 10, 2);
         $this->add_tracked_action('delete_post', [$this, 'handle_post_deletion']);
 
@@ -1290,6 +1324,162 @@ abstract class Model
         // AJAX search
         $this->add_tracked_action('wp_ajax_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
         $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
+    }
+
+    /**
+     * Register taxonomies defined in get_taxonomies().
+     *
+     * @return array Array of registered taxonomy names or WP_Error objects
+     */
+    final public function register_taxonomies(): array
+    {
+        $taxonomies = $this->get_taxonomies();
+        $results = [];
+
+        if (empty($taxonomies)) {
+            return $results;
+        }
+
+        foreach ($taxonomies as $taxonomy_slug => $config) {
+            $result = $this->register_single_taxonomy($taxonomy_slug, $config);
+            $results[$taxonomy_slug] = $result;
+        }
+
+        return $results;
+    }
+
+
+    /**
+     * Register a single taxonomy.
+     *
+     * @param string $taxonomy_slug Taxonomy slug/identifier
+     * @param array|string $config Taxonomy configuration or simple display name
+     * @return bool|WP_Error True on success, WP_Error on failure
+     */
+    protected function register_single_taxonomy(string $taxonomy_slug, array|string $config): bool|WP_Error
+    {
+        // Handle simplified format (just a string for display name)
+        if (is_string($config)) {
+            $config = [
+                'labels' => [
+                    'name' => $config,
+                    'singular_name' => rtrim($config, 's'), // Simple singularization
+                ],
+                'args' => []
+            ];
+        }
+
+        // Validate configuration
+        if (!isset($config['labels']['name'])) {
+            return new WP_Error('missing_taxonomy_name', "Taxonomy name is required for: $taxonomy_slug");
+        }
+
+        // Generate default labels based on the name
+        $name = $config['labels']['name'];
+        $singular_name = $config['labels']['singular_name'] ?? rtrim($name, 's');
+
+        $default_labels = [
+            'name' => $name,
+            'singular_name' => $singular_name,
+            'add_new_item' => "Add New $singular_name",
+            'edit_item' => "Edit $singular_name",
+            'update_item' => "Update $singular_name",
+            'view_item' => "View $singular_name",
+            'separate_items_with_commas' => "Separate " . strtolower($name) . " with commas",
+            'add_or_remove_items' => "Add or remove " . strtolower($name),
+            'choose_from_most_used' => "Choose from the most used " . strtolower($name),
+            'popular_items' => "Popular $name",
+            'search_items' => "Search $name",
+            'not_found' => "No " . strtolower($name) . " found",
+            'no_terms' => "No $name",
+            'items_list' => "$name list",
+            'items_list_navigation' => "$name list navigation",
+        ];
+
+        // Merge provided labels with defaults
+        $labels = array_merge($default_labels, $config['labels']);
+
+        // Default taxonomy arguments
+        $default_args = [
+            'labels' => $labels,
+            'hierarchical' => false,
+            'public' => true,
+            'show_ui' => true,
+            'show_admin_column' => true,
+            'show_in_nav_menus' => true,
+            'show_tagcloud' => true,
+            'show_in_rest' => true,
+            'rewrite' => ['slug' => sanitize_title($taxonomy_slug)],
+        ];
+
+        // Merge provided args with defaults
+        $args = array_merge($default_args, $config['args'] ?? []);
+
+        // Register the taxonomy
+        $result = register_taxonomy($taxonomy_slug, static::POST_TYPE, $args);
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Get all registered taxonomies for this post type.
+     *
+     * @return array Array of taxonomy objects
+     */
+    public function get_registered_taxonomies(): array
+    {
+        return get_object_taxonomies(static::POST_TYPE, 'objects');
+    }
+
+    /**
+     * Get taxonomy terms for a specific post.
+     *
+     * @param int $post_id Post ID
+     * @param string $taxonomy Taxonomy slug
+     * @param array $args Additional arguments for get_the_terms()
+     * @return array|false|WP_Error Array of term objects, false if no terms, WP_Error on failure
+     */
+    public function get_post_terms(int $post_id, string $taxonomy, array $args = []): array|false|WP_Error
+    {
+        $post = get_post($post_id);
+
+        if (!$post || $post->post_type !== static::POST_TYPE) {
+            return new WP_Error('invalid_post', 'Post not found or invalid type');
+        }
+
+        return get_the_terms($post_id, $taxonomy);
+    }
+
+    /**
+     * Set taxonomy terms for a specific post.
+     *
+     * @param int $post_id Post ID
+     * @param string $taxonomy Taxonomy slug
+     * @param array|string $terms Terms to set (IDs, slugs, or names)
+     * @param bool $append Whether to append terms or replace existing ones
+     * @return array|WP_Error Array of term taxonomy IDs on success, WP_Error on failure
+     */
+    public function set_post_terms(int $post_id, string $taxonomy, array|string $terms, bool $append = false): array|WP_Error
+    {
+        $post = get_post($post_id);
+
+        if (!$post || $post->post_type !== static::POST_TYPE) {
+            return new WP_Error('invalid_post', 'Post not found or invalid type');
+        }
+
+        $result = wp_set_post_terms($post_id, $terms, $taxonomy, $append);
+
+        // Clear cache if successful
+        if (!is_wp_error($result) && $this->enable_cache) {
+            $this->clear_post_cache($post_id);
+        }
+
+        return $result;
     }
 
     /**
