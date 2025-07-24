@@ -982,37 +982,81 @@ final class MetaBox
         $is_multiple = $field['attributes']['multiple'] ?? false;
 
         if ($is_multiple) {
-            // Handle multiple files
+            // Handle multiple files - return array of individual items
             $ids = is_array($value) ? $value : explode(',', (string)$value);
             $ids = array_filter(array_map('absint', $ids)); // Remove empty values and convert to int
 
-            return [
-                'ids' => $ids,
-                'urls' => array_map(fn($id) => wp_get_attachment_url($id) ?: '', $ids),
-                'thumbnails' => array_map(fn($id) => wp_get_attachment_image_url($id, 'thumbnail') ?: '', $ids),
-                'alts' => array_map(fn($id) => get_post_meta($id, '_wp_attachment_image_alt', true) ?: '', $ids),
-                'captions' => array_map(fn($id) => get_post_field('post_excerpt', $id) ?: '', $ids),
-                'titles' => array_map(fn($id) => get_post_field('post_title', $id) ?: '', $ids),
-                'descriptions' => array_map(fn($id) => get_post_field('post_content', $id) ?: '', $ids),
-            ];
+            $items = [];
+            foreach ($ids as $id) {
+                $items[] = $this->get_media_item_data($id);
+            }
+
+            return $items;
         } else {
-            // Handle single file
+            // Handle single file - return single item
             $id = absint($value);
 
             if (!$id) {
                 return null;
             }
 
+            return $this->get_media_item_data($id);
+        }
+    }
+
+    /**
+     * Get complete media item data for a single attachment ID.
+     * @param int $id Attachment ID
+     * @return array Media item data
+     */
+    protected function get_media_item_data(int $id): array
+    {
+        if (!$id) {
             return [
-                'id' => $id,
-                'url' => wp_get_attachment_url($id) ?: '',
-                'thumbnail' => wp_get_attachment_image_url($id, 'thumbnail') ?: '',
-                'alt' => get_post_meta($id, '_wp_attachment_image_alt', true) ?: '',
-                'caption' => get_post_field('post_excerpt', $id) ?: '',
-                'title' => get_post_field('post_title', $id) ?: '',
-                'description' => get_post_field('post_content', $id) ?: '',
+                'id' => 0,
+                'url' => '',
+                'thumbnail' => '',
+                'medium' => '',
+                'large' => '',
+                'full' => '',
+                'alt' => '',
+                'caption' => '',
+                'title' => '',
+                'description' => '',
+                'mime_type' => '',
+                'file_size' => 0,
+                'dimensions' => ['width' => 0, 'height' => 0],
             ];
         }
+
+        // Get attachment post
+        $attachment = get_post($id);
+        if (!$attachment) {
+            return $this->get_media_item_data(0); // Return empty data
+        }
+
+        // Get attachment metadata
+        $metadata = wp_get_attachment_metadata($id);
+        $file_path = get_attached_file($id);
+
+        return [
+            'id' => $id,
+            'url' => wp_get_attachment_url($id) ?: '',
+            'thumbnail' => wp_get_attachment_image_url($id, 'thumbnail') ?: '',
+            'medium' => wp_get_attachment_image_url($id, 'medium') ?: '',
+            'large' => wp_get_attachment_image_url($id, 'large') ?: '',
+            'full' => wp_get_attachment_image_url($id, 'full') ?: '',
+            'alt' => get_post_meta($id, '_wp_attachment_image_alt', true) ?: '',
+            'caption' => $attachment->post_excerpt ?: '',
+            'title' => $attachment->post_title ?: '',
+            'description' => $attachment->post_content ?: '',
+            'mime_type' => $attachment->post_mime_type ?: '',
+            'file_size' => $file_path && file_exists($file_path) ? filesize($file_path) : 0,
+            'dimensions' => [
+                'width' => $metadata['width'] ?? 0,
+                'height' => $metadata['height'] ?? 0,
+            ],
+        ];
     }
 
     /**
