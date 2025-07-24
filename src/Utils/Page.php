@@ -175,9 +175,9 @@ final class Page
         }
 
         if ($slug_or_model instanceof Model) {
-            $post_type = $this->extractPostTypeFromModel($slug_or_model);
-            $model_config = $this->generateModelConfig($slug_or_model, $post_type);
+            $post_type = $slug_or_model::get_instance()->get_post_type();
 
+            $model_config = $this->generateModelConfig($slug_or_model, $post_type);
             return [
                 'key' => "edit.php?post_type={$post_type}",
                 'config' => array_merge($model_config, $config) // User config overrides model config
@@ -185,38 +185,6 @@ final class Page
         }
 
         throw new InvalidArgumentException('First parameter must be string or Model instance');
-    }
-
-    /**
-     * Extract post type from Model instance.
-     *
-     * @param Model $model Model instance
-     * @return string Post type
-     * @throws InvalidArgumentException If post type cannot be determined
-     */
-    protected function extractPostTypeFromModel(Model $model): string
-    {
-        // Try to get POST_TYPE constant
-        $reflection = new \ReflectionClass($model);
-
-        if ($reflection->hasConstant('POST_TYPE')) {
-            return $reflection->getConstant('POST_TYPE');
-        }
-
-        // Try to call a method if it exists
-        if (method_exists($model, 'getPostType')) {
-            return $model->get_post_type();
-        }
-
-        // Fallback: derive from class name
-        $class_name = $reflection->getShortName();
-        $post_type = strtolower(preg_replace('/Model$/', '', $class_name));
-
-        if (empty($post_type)) {
-            throw new InvalidArgumentException('Could not determine post type from Model');
-        }
-
-        return $post_type;
     }
 
     /**
@@ -243,7 +211,7 @@ final class Page
         return [
             'page_title' => sprintf(__('All %s', $this->text_domain), $plural),
             'menu_title' => $plural,
-            'capability' => $post_type_obj->cap->edit_posts ?? 'edit_posts',
+            'capability' => 'manage_options',
             'callback' => false, // WordPress handles this automatically for post type pages
             'icon' => $post_type_obj->menu_icon ?? 'dashicons-admin-post',
             'position' => $post_type_obj->menu_position ?? null,
@@ -310,27 +278,7 @@ final class Page
         }, 100); // Late priority to run after WordPress creates post type menus
     }
 
-    /**
-     * Register model-based submenu page.
-     *
-     * @param string $slug Page slug (edit.php?post_type=...)
-     * @param array<string, mixed> $config Page configuration
-     * @return void
-     */
-    protected function registerModelSubmenuPage(string $slug, array $config): void
-    {
-        $parent_slug = $config['parent_slug'];
 
-        // For model-based submenus, we add the post type page as a submenu
-        add_submenu_page(
-            $parent_slug,
-            $config['page_title'],
-            $config['menu_title'],
-            $config['capability'],
-            $slug, // Use the full edit.php?post_type=... slug
-            $config['callback'] ?: false
-        );
-    }
 
     /**
      * Find the index of a menu item in the global $menu array.
@@ -728,25 +676,22 @@ final class Page
 
         // Register submenu pages
         foreach ($this->submenu_pages as $slug => $config) {
-            if ($config['is_model_page'] ?? false) {
-                $this->registerModelSubmenuPage($slug, $config);
-            } else {
-                $parent_slug = $config['parent_slug'];
+            $parent_slug = $config['parent_slug'];
 
-                // If parent_slug doesn't include app prefix, add it
-                if (!str_contains($parent_slug ?? '', $this->app_slug . '_')) {
-                    $parent_slug = $this->app_slug . '_' . $parent_slug;
-                }
-
-                add_submenu_page(
-                    $parent_slug,
-                    $config['page_title'],
-                    $config['menu_title'],
-                    $config['capability'],
-                    $this->app_slug . '_' . $slug,
-                    $this->getPageCallback($slug, $config)
-                );
+            // If parent_slug doesn't include app prefix, add it
+            if (!str_contains($parent_slug ?? '', $this->app_slug . '_')) {
+                $parent_slug = $this->app_slug . '_' . $parent_slug;
             }
+
+            add_submenu_page(
+                $parent_slug,
+                $config['page_title'],
+                $config['menu_title'],
+                $config['capability'],
+                ($config['is_model_page'] ?? false) ? $slug : $this->app_slug . '_' . $slug,
+                $this->getPageCallback($slug, $config),
+                $config['position'] ?? null
+            );
         }
     }
 
@@ -946,11 +891,13 @@ final class Page
      * @param array<string, mixed> $config Page configuration
      * @return callable Page callback
      */
-    protected function getPageCallback(string $slug, array $config): callable
+    protected function getPageCallback(string $slug, array $config): callable|false
     {
         $callback = $config['callback'];
 
-        if (is_callable($callback)) {
+        if ($callback === false) return false;
+
+        if ($callback && is_callable($callback)) {
             return $callback;
         }
 
