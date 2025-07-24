@@ -716,7 +716,7 @@ abstract class Model
      * * - full_taxonomies_terms: Whether to return full term objects instead of names (default false)
      * @return array|null Post data array or null if not found
      */
-    public function get_post(int $post_id, ?bool $strip_meta_key = null, array $config = []): ?array
+    public function get_post(int $post_id, ?bool $strip_meta_key = true, array $config = []): ?array
     {
         $include_meta = $config['include_meta'] ?? true;
         $include_taxonomies = $config['include_taxonomies'] ?? false;
@@ -764,7 +764,7 @@ abstract class Model
      * * - full_taxonomies_terms: Whether to return full term objects instead of names (default false)
      * @return array Array of post data
      */
-    public function get_posts(array $args = [], ?bool $strip_meta_key = null, array $config = []): array
+    public function get_posts(array $args = [], ?bool $strip_meta_key = true, array $config = []): array
     {
         // Set post type in query args
         $args['post_type'] = static::POST_TYPE;
