@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
+use Codad5\WPToolkit\DB\Model;
 use InvalidArgumentException;
 
 /**
@@ -21,7 +22,7 @@ use InvalidArgumentException;
  * and frontend page routes with automatic capability checking and routing.
  * Now fully object-based with dependency injection support.
  */
-class Page
+final class Page
 {
     /**
      * Registered menu pages.
@@ -108,14 +109,16 @@ class Page
     }
 
     /**
-     * Add a main menu page.
+     * Add a main menu page with Model support.
      *
-     * @param string $slug Page slug
+     * @param string|Model $slug_or_model Page slug or Model instance
      * @param array<string, mixed> $config Page configuration
      * @return static For method chaining
      */
-    public function addMenuPage(string $slug, array $config): static
+    public function addMenuPage(string|Model $slug_or_model, array $config): static
     {
+        $slug_data = $this->resolveSlugOrModel($slug_or_model, $config);
+
         $defaults = [
             'page_title' => '',
             'menu_title' => '',
@@ -125,21 +128,22 @@ class Page
             'position' => null,
         ];
 
-        $slug = sanitize_key($slug);
-        $this->menu_pages[$slug] = array_merge($defaults, $config);
+        $this->menu_pages[$slug_data['key']] = array_merge($defaults, $slug_data['config']);
 
         return $this;
     }
 
     /**
-     * Add a submenu page.
+     * Add a submenu page with Model support.
      *
-     * @param string $slug Page slug
+     * @param string|Model $slug_or_model Page slug or Model instance
      * @param array<string, mixed> $config Page configuration
      * @return static For method chaining
      */
-    public function addSubmenuPage(string $slug, array $config): static
+    public function addSubmenuPage(string|Model $slug_or_model, array $config): static
     {
+        $slug_data = $this->resolveSlugOrModel($slug_or_model, $config);
+
         $defaults = [
             'parent_slug' => '',
             'page_title' => '',
@@ -148,11 +152,212 @@ class Page
             'callback' => null,
         ];
 
-        $slug = sanitize_key($slug);
-        $this->submenu_pages[$slug] = array_merge($defaults, $config);
+        $this->submenu_pages[$slug_data['key']] = array_merge($defaults, $slug_data['config']);
 
         return $this;
     }
+
+    /**
+     * Resolve slug or model parameter into standardized format.
+     *
+     * @param string|Model $slug_or_model Page slug or Model instance
+     * @param array<string, mixed> $config Page configuration
+     * @return array{key: string, config: array<string, mixed>} Resolved data
+     * @throws InvalidArgumentException If parameters are invalid
+     */
+    protected function resolveSlugOrModel(string|Model $slug_or_model, array $config): array
+    {
+        if (is_string($slug_or_model)) {
+            return [
+                'key' => sanitize_key($slug_or_model),
+                'config' => $config
+            ];
+        }
+
+        if ($slug_or_model instanceof Model) {
+            $post_type = $this->extractPostTypeFromModel($slug_or_model);
+            $model_config = $this->generateModelConfig($slug_or_model, $post_type);
+
+            return [
+                'key' => "edit.php?post_type={$post_type}",
+                'config' => array_merge($model_config, $config) // User config overrides model config
+            ];
+        }
+
+        throw new InvalidArgumentException('First parameter must be string or Model instance');
+    }
+
+    /**
+     * Extract post type from Model instance.
+     *
+     * @param Model $model Model instance
+     * @return string Post type
+     * @throws InvalidArgumentException If post type cannot be determined
+     */
+    protected function extractPostTypeFromModel(Model $model): string
+    {
+        // Try to get POST_TYPE constant
+        $reflection = new \ReflectionClass($model);
+
+        if ($reflection->hasConstant('POST_TYPE')) {
+            return $reflection->getConstant('POST_TYPE');
+        }
+
+        // Try to call a method if it exists
+        if (method_exists($model, 'getPostType')) {
+            return $model->getPostType();
+        }
+
+        // Fallback: derive from class name
+        $class_name = $reflection->getShortName();
+        $post_type = strtolower(preg_replace('/Model$/', '', $class_name));
+
+        if (empty($post_type)) {
+            throw new InvalidArgumentException('Could not determine post type from Model');
+        }
+
+        return $post_type;
+    }
+
+    /**
+     * Generate configuration from Model instance.
+     *
+     * @param Model $model Model instance
+     * @param string $post_type Post type
+     * @return array<string, mixed> Generated configuration
+     */
+    protected function generateModelConfig(Model $model, string $post_type): array
+    {
+        // Get post type object for labels
+        $post_type_obj = get_post_type_object($post_type);
+
+        if (!$post_type_obj) {
+            // Fallback to basic configuration
+            $singular = ucfirst(str_replace(['_', '-'], ' ', $post_type));
+            $plural = $singular . 's';
+        } else {
+            $singular = $post_type_obj->labels->singular_name ?? ucfirst($post_type);
+            $plural = $post_type_obj->labels->name ?? $singular . 's';
+        }
+
+        return [
+            'page_title' => sprintf(__('All %s', $this->text_domain), $plural),
+            'menu_title' => $plural,
+            'capability' => $post_type_obj->cap->edit_posts ?? 'edit_posts',
+            'callback' => false, // WordPress handles this automatically for post type pages
+            'icon' => $post_type_obj->menu_icon ?? 'dashicons-admin-post',
+            'position' => $post_type_obj->menu_position ?? null,
+            'is_model_page' => true,
+            'post_type' => $post_type,
+            'model_instance' => $model,
+            'menu_callback' => null, // Custom callback for menu customization
+        ];
+    }
+
+
+    /**
+     * Register model-based menu page.
+     *
+     * @param string $slug Page slug
+     * @param array<string, mixed> $config Page configuration
+     * @return void
+     */
+    protected function registerModelMenuPage(string $slug, array $config): void
+    {
+        // For model menu pages, we need to customize the existing WordPress post type menu
+        add_action('admin_menu', function () use ($slug, $config) {
+            global $menu, $submenu;
+
+            $post_type = $config['post_type'];
+
+            // Find the existing menu item for this post type
+            $menu_slug = "edit.php?post_type={$post_type}";
+            $menu_index = $this->findMenuIndex($menu_slug);
+
+            if ($menu_index !== false) {
+                // Customize existing menu item
+                if (isset($config['menu_title'])) {
+                    $menu[$menu_index][0] = $config['menu_title'];
+                }
+
+                if (isset($config['icon'])) {
+                    $menu[$menu_index][6] = $config['icon'];
+                }
+
+                if (isset($config['position'])) {
+                    // Move menu item to new position
+                    $menu_item = $menu[$menu_index];
+                    unset($menu[$menu_index]);
+                    $menu[$config['position']] = $menu_item;
+                }
+
+                // Execute custom callback if provided
+                if (isset($config['menu_callback']) && is_callable($config['menu_callback'])) {
+                    call_user_func($config['menu_callback'], $menu_slug, $config);
+                }
+            } else {
+                // If WordPress hasn't created the menu yet, create it ourselves
+                add_menu_page(
+                    $config['page_title'],
+                    $config['menu_title'],
+                    $config['capability'],
+                    $menu_slug,
+                    '', // No callback needed for post type pages
+                    $config['icon'],
+                    $config['position']
+                );
+            }
+        }, 100); // Late priority to run after WordPress creates post type menus
+    }
+
+    /**
+     * Register model-based submenu page.
+     *
+     * @param string $slug Page slug (edit.php?post_type=...)
+     * @param array<string, mixed> $config Page configuration
+     * @return void
+     */
+    protected function registerModelSubmenuPage(string $slug, array $config): void
+    {
+        $parent_slug = $config['parent_slug'];
+
+        // For model-based submenus, we add the post type page as a submenu
+        add_submenu_page(
+            $parent_slug,
+            $config['page_title'],
+            $config['menu_title'],
+            $config['capability'],
+            $slug, // Use the full edit.php?post_type=... slug
+            $config['callback'] ?: false
+        );
+    }
+
+    /**
+     * Find the index of a menu item in the global $menu array.
+     *
+     * @param string $menu_slug Menu slug to find
+     * @return int|false Menu index or false if not found
+     */
+    protected function findMenuIndex(string $menu_slug): int|false
+    {
+        global $menu;
+
+        if (!is_array($menu)) {
+            return false;
+        }
+
+        foreach ($menu as $index => $menu_item) {
+            if (isset($menu_item[2]) && $menu_item[2] === $menu_slug) {
+                return $index;
+            }
+        }
+
+        return false;
+    }
+
+
+
+
 
     /**
      * Add a frontend page/route.
@@ -212,7 +417,7 @@ class Page
     }
 
     /**
-     * Get the URL for an admin page.
+     * Enhanced URL generation with Model support.
      *
      * @param string $slug Page slug
      * @param array<string, mixed> $params Additional URL parameters
@@ -220,7 +425,16 @@ class Page
      */
     public function getAdminUrl(string $slug, array $params = []): string
     {
-        $base_url = admin_url('admin.php?page=' . sanitize_key($slug));
+        // Check if it's a model page
+        $page_config = $this->menu_pages[$slug] ?? $this->submenu_pages[$slug] ?? null;
+
+        if ($page_config && ($page_config['is_model_page'] ?? false)) {
+            // For model pages, use the direct slug (edit.php?post_type=...)
+            $base_url = admin_url($slug);
+        } else {
+            // Regular page
+            $base_url = admin_url('admin.php?page=' . sanitize_key($slug));
+        }
 
         if (!empty($params)) {
             $base_url = add_query_arg($params, $base_url);
@@ -487,7 +701,7 @@ class Page
     }
 
     /**
-     * Register admin pages with WordPress.
+     * Enhanced admin page registration with Model support.
      *
      * @return void
      */
@@ -495,34 +709,44 @@ class Page
     {
         // Register main menu pages
         foreach ($this->menu_pages as $slug => $config) {
-            add_menu_page(
-                $config['page_title'],
-                $config['menu_title'],
-                $config['capability'],
-                $this->app_slug . '_' . $slug,
-                $this->getPageCallback($slug, $config),
-                $config['icon'],
-                $config['position']
-            );
+            if ($config['is_model_page'] ?? false) {
+                // For model pages, we don't add_menu_page since WordPress handles post type menus
+                // But we can still hook into the menu system if needed
+                $this->registerModelMenuPage($slug, $config);
+            } else {
+                add_menu_page(
+                    $config['page_title'],
+                    $config['menu_title'],
+                    $config['capability'],
+                    $this->app_slug . '_' . $slug,
+                    $this->getPageCallback($slug, $config),
+                    $config['icon'],
+                    $config['position']
+                );
+            }
         }
 
         // Register submenu pages
         foreach ($this->submenu_pages as $slug => $config) {
-            $parent_slug = $config['parent_slug'];
+            if ($config['is_model_page'] ?? false) {
+                $this->registerModelSubmenuPage($slug, $config);
+            } else {
+                $parent_slug = $config['parent_slug'];
 
-            // If parent_slug doesn't include app prefix, add it
-            if (!str_contains($parent_slug ?? '', $this->app_slug . '_')) {
-                $parent_slug = $this->app_slug . '_' . $parent_slug;
+                // If parent_slug doesn't include app prefix, add it
+                if (!str_contains($parent_slug ?? '', $this->app_slug . '_')) {
+                    $parent_slug = $this->app_slug . '_' . $parent_slug;
+                }
+
+                add_submenu_page(
+                    $parent_slug,
+                    $config['page_title'],
+                    $config['menu_title'],
+                    $config['capability'],
+                    $this->app_slug . '_' . $slug,
+                    $this->getPageCallback($slug, $config)
+                );
             }
-
-            add_submenu_page(
-                $parent_slug,
-                $config['page_title'],
-                $config['menu_title'],
-                $config['capability'],
-                $this->app_slug . '_' . $slug,
-                $this->getPageCallback($slug, $config)
-            );
         }
     }
 
@@ -651,16 +875,41 @@ class Page
     }
 
     /**
-     * Detect current page information.
+     * Enhanced current page detection with Model support.
      *
      * @return void
      */
     protected function detectCurrentPage(): void
     {
         if (is_admin()) {
-            $page = sanitize_text_field($_GET['page'] ?? '');
+            // Check for model-based pages first
+            $post_type = sanitize_text_field($_GET['post_type'] ?? '');
+            if ($post_type) {
+                $model_slug = "edit.php?post_type={$post_type}";
 
-            // Remove app prefix to get clean slug
+                if (isset($this->menu_pages[$model_slug])) {
+                    $this->current_page = [
+                        'type' => 'admin',
+                        'slug' => $model_slug,
+                        'config' => $this->menu_pages[$model_slug],
+                        'is_model_page' => true,
+                        'post_type' => $post_type,
+                    ];
+                    return;
+                } elseif (isset($this->submenu_pages[$model_slug])) {
+                    $this->current_page = [
+                        'type' => 'admin',
+                        'slug' => $model_slug,
+                        'config' => $this->submenu_pages[$model_slug],
+                        'is_model_page' => true,
+                        'post_type' => $post_type,
+                    ];
+                    return;
+                }
+            }
+
+            // Fallback to regular page detection
+            $page = sanitize_text_field($_GET['page'] ?? '');
             $clean_page = str_replace($this->app_slug . '_', '', $page);
 
             if (isset($this->menu_pages[$clean_page])) {
@@ -677,6 +926,7 @@ class Page
                 ];
             }
         } else {
+            // Frontend page detection (unchanged)
             $plugin_page = get_query_var($this->app_slug . '_page');
 
             if ($plugin_page && isset($this->frontend_pages[$plugin_page])) {

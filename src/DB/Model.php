@@ -128,11 +128,12 @@ abstract class Model
      * @param Config $config Configuration instance
      * @return static Singleton instance of the model
      */
-    public static function get_instance(Config $config): static
+    public static function get_instance(?Config $config = null): static
     {
         $class = static::class;
 
         if (!isset(self::$instances[$class])) {
+            if ($config === null) throw new Exception("Config instance is required for model instantiation: $class");
             self::$instances[$class] = new static($config);
         }
 
@@ -404,7 +405,7 @@ abstract class Model
     }
 
 
-   
+
     /**
      * Get column value for display.
      *

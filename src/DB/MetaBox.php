@@ -28,7 +28,7 @@ use WP_Error;
  * - Template system integration
  * - Caching support
  */
-class MetaBox
+final class MetaBox
 {
     /** @var string Unique identifier for the meta box */
     readonly string $id;
@@ -962,11 +962,57 @@ class MetaBox
 
         // Default reverse sanitization
         return match ($field['type']) {
-            'wp_media' => ($field['attributes']['multiple'] ?? false) && is_array($value)
-                ? array_map(fn($id) => wp_get_attachment_url($id) ?: $id, (array)$value)
-                : wp_get_attachment_url($value),
+            'wp_media' => $this->reverse_sanitize_media_field($value, $field),
             default => $value // For other types, just return the value as is
         };
+    }
+
+    /**
+     * Reverse sanitize media field value.
+     * @param mixed $value Media field value (ID or array of IDs)
+     * @param array $field Field configuration
+     * @return mixed Processed media data
+     */
+    protected function reverse_sanitize_media_field(mixed $value, array $field): mixed
+    {
+        if (empty($value)) {
+            return $field['attributes']['multiple'] ?? false ? [] : null;
+        }
+
+        $is_multiple = $field['attributes']['multiple'] ?? false;
+
+        if ($is_multiple) {
+            // Handle multiple files
+            $ids = is_array($value) ? $value : explode(',', (string)$value);
+            $ids = array_filter(array_map('absint', $ids)); // Remove empty values and convert to int
+
+            return [
+                'ids' => $ids,
+                'urls' => array_map(fn($id) => wp_get_attachment_url($id) ?: '', $ids),
+                'thumbnails' => array_map(fn($id) => wp_get_attachment_image_url($id, 'thumbnail') ?: '', $ids),
+                'alts' => array_map(fn($id) => get_post_meta($id, '_wp_attachment_image_alt', true) ?: '', $ids),
+                'captions' => array_map(fn($id) => get_post_field('post_excerpt', $id) ?: '', $ids),
+                'titles' => array_map(fn($id) => get_post_field('post_title', $id) ?: '', $ids),
+                'descriptions' => array_map(fn($id) => get_post_field('post_content', $id) ?: '', $ids),
+            ];
+        } else {
+            // Handle single file
+            $id = absint($value);
+
+            if (!$id) {
+                return null;
+            }
+
+            return [
+                'id' => $id,
+                'url' => wp_get_attachment_url($id) ?: '',
+                'thumbnail' => wp_get_attachment_image_url($id, 'thumbnail') ?: '',
+                'alt' => get_post_meta($id, '_wp_attachment_image_alt', true) ?: '',
+                'caption' => get_post_field('post_excerpt', $id) ?: '',
+                'title' => get_post_field('post_title', $id) ?: '',
+                'description' => get_post_field('post_content', $id) ?: '',
+            ];
+        }
     }
 
     /**
