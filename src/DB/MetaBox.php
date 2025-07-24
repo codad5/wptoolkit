@@ -349,7 +349,6 @@ final class MetaBox
         ]);
     }
 
-    //method to get field key
     /**
      * Get the field key with prefix.
      *
@@ -363,7 +362,37 @@ final class MetaBox
         }
         return $field_id;
     }
-    
+
+
+    /**
+     * Get the current post request data for all fields.
+     *
+     * @return array Associative array of field IDs and their values
+     */
+    public function get_post_request_data(): array
+    {
+        $data = [];
+        foreach ($this->fields as $field) {
+            $field_id = $this->get_field_key($field['id']);
+            if (isset($_POST[$field_id])) {
+                $data[$field_id] = $_POST[$field_id];
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * Get the current post request data for a single field.
+     *
+     * @param string $field_id Field ID
+     * @return mixed|null Field value or null if not set
+     */
+    public function get_post_request_field_data(string $field_id): mixed
+    {
+        $field_id = $this->get_field_key($field_id);
+        return $_POST[$field_id] ?? null;
+    }
+
 
     /**
      * Add a field to the meta box.
@@ -384,7 +413,7 @@ final class MetaBox
         array $attributes = [],
         array $config = []
     ): self {
-        
+
         $id = $this->get_field_key($id);
 
         $this->fields[] = array_merge($config, [
