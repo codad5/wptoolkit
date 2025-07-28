@@ -122,12 +122,14 @@ abstract class Model
      */
     private static array $instances = [];
 
-    /**
-     * Get the singleton instance of this model.
-     *
-     * @param Config $config Configuration instance
-     * @return static Singleton instance of the model
-     */
+	/**
+	 * Get the singleton instance of this model.
+	 *
+	 * @param Config|null $config Configuration instance
+	 *
+	 * @return static Singleton instance of the model
+	 * @throws Exception
+	 */
     public static function get_instance(?Config $config = null): static
     {
         $class = static::class;
@@ -768,7 +770,7 @@ abstract class Model
     {
         // Set post type in query args
         $args['post_type'] = static::POST_TYPE;
-        $include_meta = $config['include_meta'] ?? false;
+        $include_meta = $config['include_meta'] ?? true;
         $include_taxonomies = $config['include_taxonomies'] ?? false;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
 

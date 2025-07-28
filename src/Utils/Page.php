@@ -82,6 +82,28 @@ final class Page
      */
     protected string $template_dir;
 
+	/**
+	 * Asset manager instance for handling scripts and styles.
+	 */
+	protected ?EnqueueManager $asset_manager = null;
+
+	/**
+	 * Default asset groups for different page types.
+	 *
+	 * @var array<string, array<string, string[]>>
+	 */
+	protected array $default_asset_groups = [
+		'admin' => [
+			'groups' => [],
+			'handles' => []
+		],
+		'frontend' => [
+			'groups' => [],
+			'handles' => []
+		]
+	];
+
+
     /**
      * Constructor for creating a new Page instance.
      *
@@ -105,16 +127,18 @@ final class Page
      */
     public static function create(Config|string $config_or_slug, ?string $template_dir = null): static
     {
-        return new static($config_or_slug, $template_dir);
+        return new Page($config_or_slug, $template_dir);
     }
 
-    /**
-     * Add a main menu page with Model support.
-     *
-     * @param string|Model $slug_or_model Page slug or Model instance
-     * @param array<string, mixed> $config Page configuration
-     * @return static For method chaining
-     */
+	/**
+	 * Add a main menu page with Model support.
+	 *
+	 * @param string|Model $slug_or_model Page slug or Model instance
+	 * @param array<string, mixed> $config Page configuration
+	 *
+	 * @return static For method chaining
+	 * @throws \Exception
+	 */
     public function addMenuPage(string|Model $slug_or_model, array $config): static
     {
         $slug_data = $this->resolveSlugOrModel($slug_or_model, $config);
@@ -133,13 +157,15 @@ final class Page
         return $this;
     }
 
-    /**
-     * Add a submenu page with Model support.
-     *
-     * @param string|Model $slug_or_model Page slug or Model instance
-     * @param array<string, mixed> $config Page configuration
-     * @return static For method chaining
-     */
+	/**
+	 * Add a submenu page with Model support.
+	 *
+	 * @param string|Model $slug_or_model Page slug or Model instance
+	 * @param array<string, mixed> $config Page configuration
+	 *
+	 * @return static For method chaining
+	 * @throws \Exception
+	 */
     public function addSubmenuPage(string|Model $slug_or_model, array $config): static
     {
         $slug_data = $this->resolveSlugOrModel($slug_or_model, $config);
@@ -163,31 +189,95 @@ final class Page
      * @param string|Model $slug_or_model Page slug or Model instance
      * @param array<string, mixed> $config Page configuration
      * @return array{key: string, config: array<string, mixed>} Resolved data
-     * @throws InvalidArgumentException If parameters are invalid
+     * @throws InvalidArgumentException|\Exception If parameters are invalid
      */
-    protected function resolveSlugOrModel(string|Model $slug_or_model, array $config): array
-    {
-        if (is_string($slug_or_model)) {
-            return [
-                'key' => sanitize_key($slug_or_model),
-                'config' => $config
-            ];
-        }
+	protected function resolveSlugOrModel(string|Model $slug_or_model, array $config): array
+	{
+		if (is_string($slug_or_model)) {
+			return [
+				'key' => sanitize_key($slug_or_model),
+				'config' => $this->mergeAssetConfig($config, 'admin')
+			];
+		}
 
-        if ($slug_or_model instanceof Model) {
-            $post_type = $slug_or_model::get_instance()->get_post_type();
+		if ($slug_or_model instanceof Model) {
+			$post_type = $slug_or_model::get_instance()->get_post_type();
 
-            $model_config = $this->generateModelConfig($slug_or_model, $post_type);
-            return [
-                'key' => "edit.php?post_type={$post_type}",
-                'config' => array_merge($model_config, $config) // User config overrides model config
-            ];
-        }
+			$model_config = $this->generateModelConfig($slug_or_model, $post_type);
+			return [
+				'key' => "edit.php?post_type={$post_type}",
+				'config' => array_merge(
+					$model_config,
+					$this->mergeAssetConfig($config, 'admin')
+				)
+			];
+		}
 
-        throw new InvalidArgumentException('First parameter must be string or Model instance');
-    }
+		throw new InvalidArgumentException('First parameter must be string or Model instance');
+	}
 
-    /**
+	/**
+	 * Merge asset configuration with page config.
+	 *
+	 * @param array $config Page configuration
+	 * @param string $page_type Page type (admin/frontend)
+	 * @return array Merged configuration
+	 */
+	protected function mergeAssetConfig(array $config, string $page_type): array
+	{
+		// Add default asset groups if not specified
+		if (!isset($config['asset_groups']) && !isset($config['asset_handles'])) {
+			$defaults = $this->default_asset_groups[$page_type] ?? [];
+
+			if (!empty($defaults['groups'])) {
+				$config['asset_groups'] = $defaults['groups'];
+			}
+
+			if (!empty($defaults['handles'])) {
+				$config['asset_handles'] = $defaults['handles'];
+			}
+		}
+
+		return $config;
+	}
+
+	/**
+	 * Enqueue assets for a page configuration.
+	 *
+	 * @param array $page_config Page configuration
+	 * @return void
+	 */
+	protected function enqueuePageAssets(array $page_config): void
+	{
+		if (!$this->hasAssetManager()) {
+			return;
+		}
+
+		// Enqueue asset groups
+		if (isset($page_config['asset_groups']) && is_array($page_config['asset_groups'])) {
+			foreach ($page_config['asset_groups'] as $group_name) {
+				$this->asset_manager->enqueueGroup($group_name);
+			}
+		}
+
+		// Enqueue individual handles
+		if (isset($page_config['asset_handles']) && is_array($page_config['asset_handles'])) {
+			$this->asset_manager->enqueueByHandles($page_config['asset_handles']);
+		}
+
+		// Single group support (backward compatibility)
+		if (isset($page_config['asset_group']) && is_string($page_config['asset_group'])) {
+			$this->asset_manager->enqueueGroup($page_config['asset_group']);
+		}
+
+		// Single handle support (backward compatibility)
+		if (isset($page_config['asset_handle']) && is_string($page_config['asset_handle'])) {
+			$this->asset_manager->enqueueByHandles([$page_config['asset_handle']]);
+		}
+	}
+
+
+	/**
      * Generate configuration from Model instance.
      *
      * @param Model $model Model instance
@@ -307,37 +397,38 @@ final class Page
 
 
 
-    /**
-     * Add a frontend page/route.
-     *
-     * @param string $slug Page slug
-     * @param array<string, mixed> $config Page configuration
-     * @return static For method chaining
-     */
-    public function addFrontendPage(string $slug, array $config): static
-    {
-        $defaults = [
-            'title' => '',
-            'template' => null,
-            'callback' => null,
-            'public' => true,
-            'rewrite' => true,
-            'query_vars' => [],
-            'capability' => null, // null means public access
-        ];
+	public function addFrontendPage(string $slug, array $config): static
+	{
+		$defaults = [
+			'title' => '',
+			'template' => null,
+			'callback' => null,
+			'public' => true,
+			'rewrite' => true,
+			'query_vars' => [],
+			'capability' => null,
+			'path' => null, // Custom path override
+			'use_app_prefix' => true, // Whether to use app_slug prefix
+		];
 
-        $slug = sanitize_key($slug);
-        $this->frontend_pages[$slug] = array_merge($defaults, $config);
+		$slug = sanitize_key($slug);
+		$this->frontend_pages[$slug] = array_merge(
+			$defaults,
+			$this->mergeAssetConfig($config, 'frontend')
+		);
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * Register multiple admin pages at once.
-     *
-     * @param array<string, array<string, mixed>> $pages Pages configuration
-     * @return static For method chaining
-     */
+
+	/**
+	 * Register multiple admin pages at once.
+	 *
+	 * @param array<string, array<string, mixed>> $pages Pages configuration
+	 *
+	 * @return static For method chaining
+	 * @throws \Exception
+	 */
     public function addAdminPages(array $pages): static
     {
         foreach ($pages as $slug => $config) {
@@ -665,6 +756,7 @@ final class Page
         add_action('init', [$this, 'registerFrontendPages']);
         add_action('template_redirect', [$this, 'handleFrontendRouting']);
 
+
         $this->hooks_registered = true;
     }
 
@@ -904,13 +996,14 @@ final class Page
         }
     }
 
-    /**
-     * Get page callback function.
-     *
-     * @param string $slug Page slug
-     * @param array<string, mixed> $config Page configuration
-     * @return callable Page callback
-     */
+	/**
+	 * Get page callback function.
+	 *
+	 * @param string $slug Page slug
+	 * @param array<string, mixed> $config Page configuration
+	 *
+	 * @return callable|false Page callback
+	 */
     protected function getPageCallback(string $slug, array $config): callable|false
     {
         $callback = $config['callback'];
@@ -939,105 +1032,103 @@ final class Page
      * @param array<string, mixed> $data Template data
      * @return void
      */
-    protected function renderAdminPage(string $slug, array $config, array $data = []): void
-    {
-        // Check capability
-        if (!current_user_can($config['capability'])) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', $this->text_domain));
-        }
+	protected function renderAdminPage(string $slug, array $config, array $data = []): void
+	{
+		// Check capability
+		if (!current_user_can($config['capability'])) {
+			wp_die(esc_html__('You do not have sufficient permissions to access this page.', $this->text_domain));
+		}
 
-        // Set page title
-        $GLOBALS['title'] = $config['page_title'];
+		// Enqueue page assets
+		$this->enqueuePageAssets($config);
 
-        // Add app-specific data
-        $data = array_merge($data, [
-            'app_slug' => $this->app_slug,
-            'app_name' => $this->app_name,
-            'page_slug' => $slug,
-            'page_config' => $config,
-        ]);
+		// Set page title
+		$GLOBALS['title'] = $config['page_title'];
 
-        // Use callback if provided
-        if (isset($config['callback']) && is_callable($config['callback'])) {
-            call_user_func($config['callback'], $data);
-            return;
-        }
+		// Add app-specific data
+		$data = array_merge($data, [
+			'app_slug' => $this->app_slug,
+			'app_name' => $this->app_name,
+			'page_slug' => $slug,
+			'page_config' => $config,
+		]);
 
-        // Use template if provided
-        $template = $config['template'] ?? null;
-        if ($template) {
-            $this->loadTemplate($template, $data);
-            return;
-        }
+		// Use callback if provided
+		if (isset($config['callback']) && is_callable($config['callback'])) {
+			call_user_func($config['callback'], $data);
+			return;
+		}
 
-        // Default admin page content
-        printf(
-            '<div class="wrap %s-page"><h1>%s</h1><p>%s</p></div>',
-            esc_attr($this->app_slug),
-            esc_html($config['page_title']),
-            esc_html__('This page has no content configured.', $this->text_domain)
-        );
-    }
+		// Use template if provided
+		$template = $config['template'] ?? null;
+		if ($template) {
+			$this->loadTemplate($template, $data);
+			return;
+		}
 
-    /**
-     * Render a frontend page.
-     *
-     * @param string $slug Page slug
-     * @param array<string, mixed> $config Page configuration
-     * @param array<string, mixed> $data Template data
-     * @return void
-     */
-    protected function renderFrontendPage(string $slug, array $config, array $data = []): void
-    {
-        // Add app-specific data
-        $data = array_merge($data, [
-            'app_slug' => $this->app_slug,
-            'app_name' => $this->app_name,
-            'page_slug' => $slug,
-            'page_config' => $config,
-            'page_path' => get_query_var($this->app_slug . '_path', ''),
-        ]);
+		// Default admin page content
+		printf(
+			'<div class="wrap %s-page"><h1>%s</h1><p>%s</p></div>',
+			esc_attr($this->app_slug),
+			esc_html($config['page_title']),
+			esc_html__('This page has no content configured.', $this->text_domain)
+		);
+	}
 
-        // Use callback if provided
-        if (isset($config['callback']) && is_callable($config['callback'])) {
-            call_user_func($config['callback'], $data);
-            return;
-        }
+	protected function renderFrontendPage(string $slug, array $config, array $data = []): void
+	{
+		// Enqueue page assets
+		$this->enqueuePageAssets($config);
 
-        // Use template if provided
-        $template = $config['template'] ?? null;
-        if ($template) {
-            $this->loadTemplate($template, $data);
-            return;
-        }
+		// Add app-specific data
+		$data = array_merge($data, [
+			'app_slug' => $this->app_slug,
+			'app_name' => $this->app_name,
+			'page_slug' => $slug,
+			'page_config' => $config,
+			'page_path' => get_query_var($this->app_slug . '_path', ''),
+		]);
 
-        // Set page title for WordPress
-        add_filter('wp_title', function ($title) use ($config) {
-            return ($config['title'] ?? 'Plugin Page') . ' | ' . get_bloginfo('name');
-        });
+		// Use callback if provided
+		if (isset($config['callback']) && is_callable($config['callback'])) {
+			call_user_func($config['callback'], $data);
+			return;
+		}
 
-        add_filter('document_title_parts', function ($title_parts) use ($config) {
-            $title_parts['title'] = $config['title'] ?? 'Plugin Page';
-            return $title_parts;
-        });
+		// Use template if provided
+		$template = $config['template'] ?? null;
+		if ($template) {
+			$this->loadTemplate($template, $data);
+			return;
+		}
 
-        // Load theme header
-        get_header();
+		// Set page title for WordPress
+		add_filter('wp_title', function ($title) use ($config) {
+			return ($config['title'] ?? 'Plugin Page') . ' | ' . get_bloginfo('name');
+		});
 
-        // Default frontend page content
-        printf(
-            '<div class="plugin-page %s-page %s-page-%s"><div class="container"><h1>%s</h1><p>%s</p></div></div>',
-            esc_attr($this->app_slug),
-            esc_attr($this->app_slug),
-            esc_attr($slug),
-            esc_html($config['title'] ?? 'Plugin Page'),
-            esc_html__('This page has no content configured.', $this->text_domain)
-        );
+		add_filter('document_title_parts', function ($title_parts) use ($config) {
+			$title_parts['title'] = $config['title'] ?? 'Plugin Page';
+			return $title_parts;
+		});
 
-        // Load theme footer
-        get_footer();
-        exit;
-    }
+		// Load theme header
+		get_header();
+
+		// Default frontend page content
+		printf(
+			'<div class="plugin-page %s-page %s-page-%s"><div class="container"><h1>%s</h1><p>%s</p></div></div>',
+			esc_attr($this->app_slug),
+			esc_attr($this->app_slug),
+			esc_attr($slug),
+			esc_html($config['title'] ?? 'Plugin Page'),
+			esc_html__('This page has no content configured.', $this->text_domain)
+		);
+
+		// Load theme footer
+		get_footer();
+		exit;
+	}
 
     /**
      * Load a template file.
@@ -1087,6 +1178,68 @@ final class Page
             );
         }
     }
+
+	/**
+	 * Set the asset manager instance.
+	 *
+	 * @param EnqueueManager $asset_manager Asset manager instance
+	 * @param array $default_groups Default asset groups configuration
+	 * @return static For method chaining
+	 */
+	public function setAssetManager(
+		EnqueueManager $asset_manager,
+		array $default_groups = []
+	): static {
+		$this->asset_manager = $asset_manager;
+
+		// Merge with existing default groups
+		if (!empty($default_groups)) {
+			$this->default_asset_groups = array_merge_recursive(
+				$this->default_asset_groups,
+				$default_groups
+			);
+		}
+
+		return $this;
+	}
+
+// 3. ADD THESE HELPER METHODS
+
+	/**
+	 * Get the asset manager instance.
+	 *
+	 * @return EnqueueManager|null Asset manager instance or null
+	 */
+	public function getAssetManager(): ?EnqueueManager
+	{
+		return $this->asset_manager;
+	}
+
+	/**
+	 * Check if asset manager is available.
+	 *
+	 * @return bool Whether asset manager is set
+	 */
+	public function hasAssetManager(): bool
+	{
+		return $this->asset_manager !== null;
+	}
+
+	/**
+	 * Set default asset groups for page types.
+	 *
+	 * @param array $groups Asset groups configuration
+	 * @return static For method chaining
+	 */
+	public function setDefaultAssetGroups(array $groups): static
+	{
+		$this->default_asset_groups = array_merge_recursive(
+			$this->default_asset_groups,
+			$groups
+		);
+
+		return $this;
+	}
 
     /**
      * Get the flush rules option key.
