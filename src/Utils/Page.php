@@ -103,7 +103,6 @@ final class Page
 		]
 	];
 
-
     /**
      * Constructor for creating a new Page instance.
      *
@@ -406,9 +405,7 @@ final class Page
 			'public' => true,
 			'rewrite' => true,
 			'query_vars' => [],
-			'capability' => null,
-			'path' => null, // Custom path override
-			'use_app_prefix' => true, // Whether to use app_slug prefix
+			'capability' => null, // null means public access
 		];
 
 		$slug = sanitize_key($slug);
@@ -755,7 +752,6 @@ final class Page
         add_action('admin_menu', [$this, 'registerAdminPages']);
         add_action('init', [$this, 'registerFrontendPages']);
         add_action('template_redirect', [$this, 'handleFrontendRouting']);
-
 
         $this->hooks_registered = true;
     }
