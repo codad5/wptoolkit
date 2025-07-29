@@ -302,7 +302,7 @@ That's it! You now have:
 
 ## 📚 Complete Example: Todo List Plugin
 
-Check out our complete [Todo List Plugin](sample-plugins/todo/) that demonstrates:
+Check out our complete [Todo List Plugin](sample-plugins/Todo/) that demonstrates:
 
 ### Real-World Features
 - **Custom Post Type** with advanced MetaBox fields
@@ -455,7 +455,7 @@ $ajax->addAction('save_data', [$controller, 'saveData'], [
 ## 🎓 Learning Path
 
 ### Beginner
-1. **[Todo Plugin](sample-plugins/todo/)** - Complete CRUD application
+1. **[Todo Plugin](sample-plugins/Todo/)** - Complete CRUD application
 2. **Basic Model** - Custom post types with MetaBoxes
 3. **Settings Pages** - Configuration management
 4. **Admin Columns** - Custom admin interface
