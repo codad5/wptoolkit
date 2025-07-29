@@ -17,9 +17,9 @@ if (!defined('ABSPATH')) {
 
 
 use Codad5\SamplePlugins\PluginEngine;
-use Codad5\WPToolkit\Utils\{Config, Settings, Page, Notification, Ajax, EnqueueManager, Cache};
-use Exception;
+use Codad5\WPToolkit\Utils\{Config, Debugger, Settings, Page, Notification, Ajax, EnqueueManager, Cache};
 use Codad5\WPToolkit\Registry;
+use Exception;
 use function  wp_create_nonce;
 
 
@@ -38,7 +38,8 @@ class WPToolkitTodoPlugin extends  PluginEngine
 	 *
 	 * @return WPToolkitTodoPlugin
 	 */
-	public static function getInstance(): static {
+	public static function getInstance(): static
+	{
 		if (!isset(self::$instance)) {
 			self::$instance = new self();
 		}
@@ -49,20 +50,23 @@ class WPToolkitTodoPlugin extends  PluginEngine
 	/**
 	 * @throws Exception
 	 */
-	 function run(): static {
+	function run(): static
+	{
 		// Create configuration
 		$this->config = Config::plugin('wptk-todo', __FILE__, [
 			'name' => __('WPToolkit Todo List', 'wptk-todo'),
 			'version' => '1.0.0',
-			'text_domain' => 'wptk-todo'
+			'text_domain' => 'wptk-todo',
+			'environment' => 'development', // Change to 'production' in live environments
 		]);
 
+		Debugger::initFromConfig($this->config);
 		// Register with service registry
 		Registry::registerApp($this->config);
 
 		$this->init_services();
 		$this->setup_hooks();
-        return $this;
+		return $this;
 	}
 
 	/**
@@ -92,36 +96,42 @@ class WPToolkitTodoPlugin extends  PluginEngine
 			]
 		], $this->config);
 
+		$plugin_url = plugin_dir_url(__FILE__);
 		// Update your existing asset manager setup
-		$assets = EnqueueManager::create($this->config, __DIR__.'/assets/');
+		$assets = EnqueueManager::create($this->config, $plugin_url . '/assets/', version: rand(1000, 9999));
 
-// Keep your existing admin group
+		// Keep your existing admin group
 		$assets->createScriptGroup('test-admin-pages')
-		       ->addScriptToGroup('test-admin-pages', 'my-test-admin-script', 'js/test.js');
-
-// Add new frontend group
+			->addScriptToGroup('test-admin-pages', 'my-test-admin-script', 'js/test.js');
+		// Add localization for admin script
+		// Add new frontend group
+		// Update your existing asset group
 		$assets->createScriptGroup('frontend-todos', [
-			'condition' => function() {
+			'condition' => function () {
 				return !is_admin() && get_query_var('wptk-todo_page') === 'list';
 			}
 		])
-       ->addScriptToGroup('frontend-todos', 'todo-frontend-js', 'js/frontend-todo.js', ['jquery'])
-       ->addStyleToGroup('frontend-todos', 'todo-frontend-css', 'css/frontend-todo.css');
-
-// Add localization for AJAX
-		$assets->addLocalization('todo-frontend-js', 'wptkTodoAjax', [
-			'ajax_url' => admin_url('admin-ajax.php'),
-			'nonces' => [
-				'get_todos' => 'sample_todo_ajax_nonce_get_todos',
-				'add_todo' => 'wptk_todo_ajax_nonce_add_todo',
-				'toggle_status' => 'wptk_todo_ajax_nonce_toggle_status',
-				'delete_todo' => 'wptk_todo_ajax_nonce_delete_todo',
-			]
-		]);
+			//TODO: i put in a force url for the ajax handler because i am using symlink and ths wont load the originall one well so note tat some bugs occur when using symlink
+			->addScriptToGroup('frontend-todos', Ajax::getAjaxHelperScriptHandle(), 'http://pau.local/wp-content/plugins/codad5-wptoolkit/assets/js/wptoolkit-ajax.js', ['jquery']) // Add this line
+			->addScriptToGroup('frontend-todos', 'todo-frontend-js', 'js/frontend-todo.js', [Ajax::getAjaxHelperScriptHandle()]) // Add this line
+			->addStyleToGroup('frontend-todos', 'todo-frontend-css', 'css/frontend-todo.css');
+		// Add localization for AJAX
+		add_action('init', function () use ($assets) {
+			$assets->addLocalization('todo-frontend-js', 'wptkTodoAjax', [
+				'ajax_url' => admin_url('admin-ajax.php'),
+				'app_slug' => 'wptk-todo',
+				'nonces' => [
+					'get_todos' => wp_create_nonce('sample_todo_ajax_nonce_get_todos'),
+					'add_todo' => wp_create_nonce('wptk_todo_ajax_nonce_add_todo'),
+					'toggle_status' => wp_create_nonce('wptk_todo_ajax_nonce_toggle_status'),
+					'delete_todo' => wp_create_nonce('wptk_todo_ajax_nonce_delete_todo'),
+				]
+			]);
+		});
 		$this->todo_model = TodoModel::get_instance($this->config)->run();
 		$this->page = Page::create($this->config, __DIR__ . '/templates/');
 
-        $this->page->setAssetManager($assets);
+		$this->page->setAssetManager($assets);
 
 		$this->page->addMenuPage('todo', [
 			'page_title' => __('Todo List', 'wptk-todo'),
@@ -139,6 +149,25 @@ class WPToolkitTodoPlugin extends  PluginEngine
 			'path' => 'todo-list',
 			'asset_groups' => ['frontend-todos']
 		]);
+
+		$this->page->addFrontendPage('category_product', [
+			'title' => 'Product in Category',
+			'regex' => '^shop/([a-z0-9-]+)/([a-z0-9-]+)/?$',
+			'query_mapping' => [
+				'category_slug' => '$matches[1]',
+				'product_slug' => '$matches[2]'
+			],
+			'asset_groups' => ['frontend-todos'],
+			'template' => 'frontend/category-product.php',
+			//			'callback' => function($data) {
+			//				$category = get_query_var('category_slug');
+			//				$product = get_query_var('product_slug');
+			//
+			//				// Your logic here
+			//				echo "<h1>Product: {$product} in Category: {$category}</h1>";
+			//			}
+		]);
+		// URLs: /shop/electronics/smartphone/, /shop/clothing/t-shirt/
 
 
 
@@ -164,14 +193,15 @@ class WPToolkitTodoPlugin extends  PluginEngine
 
 
 		if ($settings->get('show_stats_dashboard', true)) {
-			$this->page->addDashboardWidget('wptk_todo_stats', "Todo Statistics", [$this, 'render_dashboard_widget'], );
+			$this->page->addDashboardWidget('wptk_todo_stats', "Todo Statistics", [$this, 'render_dashboard_widget'],);
 		}
 
 		// Notification system
 		$notification = Notification::create($this->config, 'Todo List');
 
 		// AJAX handler
-		$ajax = Ajax::create($this->config);
+		$ajax = Ajax::create($this->config, false);
+		$ajax::enqueueAjaxHelperScript();
 		$ajax->addAction('toggle_status', [$this, 'ajax_toggle_status'], [
 			'capability' => 'edit_posts',
 			'validate_nonce' => true
@@ -184,6 +214,12 @@ class WPToolkitTodoPlugin extends  PluginEngine
 
 		$ajax->addAction('delete_todo', [$this, 'ajax_delete_todo'], [
 			'capability' => 'delete_posts',
+			'validate_nonce' => true
+		]);
+
+		// Add this in your init_services() method after the other AJAX actions
+		$ajax->addAction('get_todos', [$this, 'ajax_get_todos'], [
+			'capability' => 'edit_posts',
 			'validate_nonce' => true
 		]);
 
@@ -220,20 +256,17 @@ class WPToolkitTodoPlugin extends  PluginEngine
 
 	public function render_settings_page(): void
 	{
+		/** * @var Settings $settings */
 		$settings = Registry::get('wptk-todo', 'settings');
-
 		if ($_POST && check_admin_referer('wptk_todo_settings')) {
-			foreach (['default_priority', 'show_stats_dashboard'] as $key) {
-				if (isset($_POST[$key])) {
-					$settings->set($key, $_POST[$key]);
-				}
-			}
-
+			$settings->saveFromPost($_POST, fields: ['default_priority', 'show_stats_dashboard']);
 			$notification = Registry::get('wptk-todo', 'notification');
 			$notification->success(__('Settings saved successfully!', 'wptk-todo'));
 		}
 
-		?>
+		//        wp_die();
+
+?>
 		<div class="wrap">
 			<h1><?php _e('Todo Settings', 'wptk-todo'); ?></h1>
 			<form method="post">
@@ -251,13 +284,13 @@ class WPToolkitTodoPlugin extends  PluginEngine
 				<?php submit_button(); ?>
 			</form>
 		</div>
-		<?php
+	<?php
 	}
 
 	public function render_dashboard_page(): void
 	{
 		$stats = $this->todo_model->get_stats();
-		?>
+	?>
 		<div class="wrap">
 			<h1><?php _e('Todo Dashboard', 'wptk-todo'); ?></h1>
 
@@ -311,39 +344,39 @@ class WPToolkitTodoPlugin extends  PluginEngine
 			if ($recent_todos): ?>
 				<table class="wp-list-table widefat fixed striped">
 					<thead>
-					<tr>
-						<th><?php _e('Title', 'wptk-todo'); ?></th>
-						<th><?php _e('Priority', 'wptk-todo'); ?></th>
-						<th><?php _e('Status', 'wptk-todo'); ?></th>
-						<th><?php _e('Due Date', 'wptk-todo'); ?></th>
-					</tr>
+						<tr>
+							<th><?php _e('Title', 'wptk-todo'); ?></th>
+							<th><?php _e('Priority', 'wptk-todo'); ?></th>
+							<th><?php _e('Status', 'wptk-todo'); ?></th>
+							<th><?php _e('Due Date', 'wptk-todo'); ?></th>
+						</tr>
 					</thead>
 					<tbody>
-					<?php foreach ($recent_todos as ["post" => $todo, 'meta' => ['todo_details' => $todo_details]]): ?>
-						<tr>
-							<td>
-								<a href="<?php echo get_edit_post_link($todo->ID); ?>">
-									<?php echo esc_html($todo->post_title); ?>
-								</a>
-							</td>
-							<td><?php echo ucfirst($todo_details['priority'] ?? 'medium'); ?></td>
-							<td><?php echo ucfirst(str_replace('_', ' ', $todo_details['status'] ?? 'pending')); ?></td>
-							<td><?php echo $todo_details['due_date'] ?? __('No due date', 'wptk-todo');  ?></td>
-						</tr>
-					<?php endforeach; ?>
+						<?php foreach ($recent_todos as ["post" => $todo, 'meta' => ['todo_details' => $todo_details]]): ?>
+							<tr>
+								<td>
+									<a href="<?php echo get_edit_post_link($todo->ID); ?>">
+										<?php echo esc_html($todo->post_title); ?>
+									</a>
+								</td>
+								<td><?php echo ucfirst($todo_details['priority'] ?? 'medium'); ?></td>
+								<td><?php echo ucfirst(str_replace('_', ' ', $todo_details['status'] ?? 'pending')); ?></td>
+								<td><?php echo $todo_details['due_date'] ?? __('No due date', 'wptk-todo');  ?></td>
+							</tr>
+						<?php endforeach; ?>
 					</tbody>
 				</table>
 			<?php else: ?>
 				<p><?php _e('No todos found. Create your first todo!', 'wptk-todo'); ?></p>
 			<?php endif; ?>
 		</div>
-		<?php
+	<?php
 	}
 
 	public function render_dashboard_widget(): void
 	{
 		$stats = $this->todo_model->get_stats();
-		?>
+	?>
 		<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: center;">
 			<div>
 				<div style="font-size: 1.5em; font-weight: bold; color: #0073aa;"><?php echo $stats['total']; ?></div>
@@ -367,7 +400,7 @@ class WPToolkitTodoPlugin extends  PluginEngine
 				<?php _e('Manage Todos', 'wptk-todo'); ?>
 			</a>
 		</p>
-		<?php
+<?php
 	}
 
 	public function ajax_toggle_status(): void
@@ -395,6 +428,8 @@ class WPToolkitTodoPlugin extends  PluginEngine
 
 	public function ajax_get_todos(): void
 	{
+		/** * @var TodoModel $todo_model
+		 */
 		$ajax = Registry::get('wptk-todo', 'ajax');
 
 		$filters = $_POST['filters'] ?? [];
@@ -443,6 +478,8 @@ class WPToolkitTodoPlugin extends  PluginEngine
 
 	public function ajax_add_todo(): void
 	{
+        /* @var Ajax $ajax
+         */
 		$ajax = Registry::get('wptk-todo', 'ajax');
 
 		$title = sanitize_text_field($_POST['title'] ?? '');
@@ -455,16 +492,22 @@ class WPToolkitTodoPlugin extends  PluginEngine
 		}
 
 		$todo_data = [
-			'title' => $title,
-			'content' => $description,
-			'status' => 'publish'
+			'post_title' => $title,
+			'post_content' => $description,
+			'post_status' => 'publish'
 		];
 
 		$meta_data = [
-			'priority' => $priority,
-			'status' => 'pending',
-			'due_date' => $due_date
+			'todo_details_wptk_todo_priority' => $priority,
+            'todo_details_wptk_todo_status' => 'pending',
+            'todo_details_wptk_todo_due_date' => $due_date,
 		];
+
+        $validation_errors = $this->todo_model->get_error_fields($meta_data);
+
+        if (!empty($validation_errors)) {
+            $ajax->error(implode(', ', $validation_errors), $validation_errors);
+        }
 
 		$result = $this->todo_model->create($todo_data, $meta_data);
 

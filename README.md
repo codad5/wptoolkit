@@ -10,9 +10,8 @@
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-blue.svg)](https://php.net)
 [![WordPress](https://img.shields.io/badge/WordPress-%3E%3D5.0-blue.svg)](https://wordpress.org)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
-[![Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen.svg)]()
 
-[**📖 Documentation**](docs/) • [**🚀 Quick Start**](#-quick-start) • [**💡 Examples**](EXAMPLES.md) • [**🔧 API Reference**](API.md)
+[**📖 Documentation**](API.md) • [**🚀 Quick Start**](#-quick-start) • [**💡 Examples**](sample-plugins/) • [**🔧 API Reference**](API.md)
 
 </div>
 
@@ -38,6 +37,9 @@ function save_my_meta_boxes($post_id) {
 ### After WPToolkit 🚀
 ```php
 // Modern, maintainable, enterprise-ready
+use Codad5\WPToolkit\DB\{Model, MetaBox};
+use Codad5\WPToolkit\Utils\Cache;
+
 class ProductModel extends Model {
     protected const POST_TYPE = 'product';
 
@@ -98,7 +100,7 @@ ProductModel::get_instance($config)->run();
 - **Input Validation** - Comprehensive sanitization
 - **Permission Management** - Role-based access control
 - **XSS Protection** - Built-in output escaping
-- **SQL Injection Prevention** - Prepared statements only
+- **Nonce Verification** - Automatic CSRF protection
 
 </td>
 </tr>
@@ -110,8 +112,18 @@ ProductModel::get_instance($config)->run();
 
 ### 1. Installation
 
+**Via Composer (Recommended)**
 ```bash
+# Add repository to composer.json
+composer config repositories.wptoolkit vcs https://github.com/codad5/wptoolkit.git
 composer require codad5/wptoolkit
+```
+
+**Manual Installation**
+```bash
+git clone https://github.com/codad5/wptoolkit.git
+# Include autoloader in your plugin
+require_once 'wptoolkit/vendor/autoload.php';
 ```
 
 ### 2. Basic Setup
@@ -149,12 +161,11 @@ add_action('plugins_loaded', function() use ($config) {
 // src/App.php
 namespace MyPlugin;
 
-use Codad5\WPToolkit\Utils\{Config, Settings, RestRoute};
+use Codad5\WPToolkit\Utils\{Config, Settings, Ajax, Page};
 use Codad5\WPToolkit\Registry;
 
 final class App {
     private static ?Config $config = null;
-    private static ?Settings $settings = null;
     
     public static function init(Config $config): void {
         self::$config = $config;
@@ -170,7 +181,8 @@ final class App {
     }
     
     private static function initializeServices(): void {
-        self::$settings = Settings::create([
+        // Settings management
+        $settings = Settings::create([
             'api_key' => [
                 'type' => 'password',
                 'label' => __('API Key', 'textdomain'),
@@ -178,16 +190,22 @@ final class App {
             ]
         ], self::$config);
         
+        // Page management
+        $page = Page::create(self::$config, __DIR__ . '/templates/');
+        
+        // AJAX handler
+        $ajax = Ajax::create(self::$config);
+        
         Registry::addMany(self::$config, [
-            'settings' => self::$settings,
-            'api' => RestRoute::create(self::$config),
-            'cache' => new CacheService()
+            'settings' => $settings,
+            'page' => $page,
+            'ajax' => $ajax
         ]);
     }
     
     // Type-safe accessors
     public static function getSettings(): Settings {
-        return self::$settings;
+        return Registry::get(self::$config->slug, 'settings');
     }
 }
 ```
@@ -199,15 +217,14 @@ final class App {
 // src/Models/ProductModel.php
 namespace MyPlugin\Models;
 
-use Codad5\WPToolkit\Model;
-use Codad5\WPToolkit\Utils\MetaBox;
+use Codad5\WPToolkit\DB\{Model, MetaBox};
+use Codad5\WPToolkit\Utils\Cache;
 
 class ProductModel extends Model {
     protected const POST_TYPE = 'product';
     
     protected function before_run(): void {
         $this->setup_metaboxes();
-        $this->setup_admin_columns();
     }
     
     protected static function get_post_type_args(): array {
@@ -235,10 +252,12 @@ class ProductModel extends Model {
                 'validate_callback' => [$this, 'validate_unique_sku']
             ])
             ->onSuccess(function($post_id) {
-                wp_cache_delete("product_{$post_id}", 'products');
+                Cache::delete("product_{$post_id}", 'products');
                 do_action('product_updated', $post_id);
             })
             ->setup_actions();
+            
+        $this->register_metabox($metabox);
     }
     
     protected function get_admin_columns(): array {
@@ -274,10 +293,75 @@ class ProductModel extends Model {
 
 That's it! You now have:
 - ✅ Type-safe models with validation
-- ✅ Custom admin interface
-- ✅ Automatic caching
-- ✅ Error handling
+- ✅ Custom admin interface with sortable columns
+- ✅ Automatic caching with smart invalidation
+- ✅ Error handling and user feedback
 - ✅ Enterprise architecture
+
+---
+
+## 📚 Complete Example: Todo List Plugin
+
+Check out our complete [Todo List Plugin](sample-plugins/todo/) that demonstrates:
+
+### Real-World Features
+- **Custom Post Type** with advanced MetaBox fields
+- **Admin Dashboard** with statistics and widgets
+- **Frontend Interface** with AJAX functionality
+- **Settings Management** with validation
+- **Asset Management** with conditional loading
+- **Multi-page routing** with dynamic URLs
+
+### Key Implementation Highlights
+
+```php
+// TodoModel with comprehensive validation
+class TodoModel extends Model {
+    protected const POST_TYPE = 'wptk_todo';
+    
+    private function setup_metaboxes(): void {
+        MetaBox::create('todo_details', __('Todo Details', 'wptk-todo'), self::POST_TYPE, $this->config)
+            ->add_field('priority', __('Priority', 'wptk-todo'), 'select', [
+                'low' => __('Low', 'wptk-todo'),
+                'medium' => __('Medium', 'wptk-todo'),
+                'high' => __('High', 'wptk-todo'),
+                'urgent' => __('Urgent', 'wptk-todo')
+            ])
+            ->add_field('due_date', __('Due Date', 'wptk-todo'), 'date')
+            ->add_field('status', __('Status', 'wptk-todo'), 'select', [
+                'pending' => __('Pending', 'wptk-todo'),
+                'in_progress' => __('In Progress', 'wptk-todo'),
+                'completed' => __('Completed', 'wptk-todo')
+            ])
+            ->onSuccess(function($post_id, $metabox) {
+                Cache::delete("todo_stats", 'wptk_todos');
+                $notification = Registry::get('wptk-todo', 'notification');
+                $notification->success(__('Todo saved successfully!', 'wptk-todo'));
+            })
+            ->setup_actions();
+    }
+}
+```
+
+**Frontend AJAX with WPToolkit**
+```javascript
+// Modern JavaScript integration
+class TodoManager {
+    constructor() {
+        this.ajax = new WPToolkitAjax(window.wptkTodoAjax);
+    }
+    
+    async addTodo(todoData) {
+        try {
+            const response = await this.ajax.post('add_todo', todoData);
+            this.showMessage('Todo added successfully!', 'success');
+            this.loadTodos();
+        } catch (error) {
+            console.error('Failed to add todo:', error);
+        }
+    }
+}
+```
 
 ---
 
@@ -295,56 +379,62 @@ Registry::addMany($config, [
 
 // Access anywhere in your application
 $mailer = Registry::get('my-plugin', 'mailer');
-$payment = App::getService('payment');
 ```
 
-### Multi-Version REST API
+### Advanced Caching with Groups
 
 ```php
-$api = RestRoute::create($config, ['v1', 'v2'], 'v1');
-
-// Version 1
-$api->get('v1', '/products', [ProductController::class, 'index']);
-
-// Version 2 with new features
-$api->get('v2', '/products', [ProductV2Controller::class, 'index']);
-
-// Deprecate old versions gracefully
-$api->deprecateVersion('v1', '2024-12-31', '2025-06-30', 'v2');
-```
-
-### Advanced Caching
-
-```php
-// Smart caching with groups
+// Smart caching with automatic invalidation
 Cache::remember('expensive_query', function() {
     return perform_complex_database_operation();
 }, 3600, 'database');
 
-// Bulk operations
+// Group operations
 Cache::set_many([
     'user_1' => $user1_data,
     'user_2' => $user2_data
 ], 1800, 'users');
 
-// Group invalidation
+// Clear entire groups
 Cache::clear_group('users'); // Clear all user caches
 ```
 
-### Template System with Inheritance
+### Multi-Page Management
 
 ```php
-// Base template with sections
-ViewLoader::layout('layouts/admin', 'admin/products', [
-    'products' => $products,
-    'page_title' => 'Product Management'
+$page = Page::create($config, __DIR__ . '/templates/');
+
+// Admin pages
+$page->addMenuPage('dashboard', [
+    'page_title' => 'Plugin Dashboard',
+    'menu_title' => 'My Plugin',
+    'icon' => 'dashicons-chart-pie',
+    'template' => 'admin/dashboard.php'
 ]);
 
-// Template inheritance
-// layouts/admin.php
-echo ViewLoader::section('header');
-echo ViewLoader::section('content');
-echo ViewLoader::section('footer');
+// Frontend pages with dynamic routing
+$page->addFrontendPage('user_profile', [
+    'title' => 'User Profile',
+    'regex' => '^profile/([a-z0-9-]+)/?$',
+    'query_mapping' => ['username' => '$matches[1]'],
+    'template' => 'frontend/profile.php'
+]);
+```
+
+### AJAX with Built-in Security
+
+```php
+$ajax = Ajax::create($config);
+
+$ajax->addAction('save_data', [$controller, 'saveData'], [
+    'logged_in_only' => true,
+    'capability' => 'edit_posts',
+    'validate_nonce' => true,
+    'args' => [
+        'title' => ['required' => true, 'type' => 'string'],
+        'content' => ['sanitize_callback' => 'wp_kses_post']
+    ]
+]);
 ```
 
 ---
@@ -362,160 +452,61 @@ echo ViewLoader::section('footer');
 
 ---
 
-## 🔧 Advanced Examples
+## 🎓 Learning Path
 
-<details>
-<summary><strong>🛒 E-commerce Plugin Architecture</strong></summary>
+### Beginner
+1. **[Todo Plugin](sample-plugins/todo/)** - Complete CRUD application
+2. **Basic Model** - Custom post types with MetaBoxes
+3. **Settings Pages** - Configuration management
+4. **Admin Columns** - Custom admin interface
 
-```php
-// Complete e-commerce solution structure
-class ECommerceApp {
-    public static function init(Config $config): void {
-        // Models
-        ProductModel::get_instance($config)->run();
-        OrderModel::get_instance($config)->run();
-        CustomerModel::get_instance($config)->run();
-        
-        // Services
-        Registry::addMany($config, [
-            'cart' => new CartService(),
-            'payment' => PaymentGatewayFactory::create(),
-            'shipping' => new ShippingCalculator(),
-            'inventory' => new InventoryManager(),
-            'analytics' => new AnalyticsService()
-        ]);
-        
-        // API
-        $api = RestRoute::create($config, ['v1'], 'v1');
-        $api->get('v1', '/products', [ProductController::class, 'index']);
-        $api->post('v1', '/orders', [OrderController::class, 'create']);
-        $api->get('v1', '/analytics/sales', [AnalyticsController::class, 'sales']);
-    }
-}
-```
-</details>
+### Intermediate
+5. **AJAX Integration** - Frontend/backend communication
+6. **Asset Management** - Conditional script/style loading
+7. **Page Routing** - Frontend page management
+8. **Caching Strategies** - Performance optimization
 
-<details>
-<summary><strong>📝 Content Management System</strong></summary>
-
-```php
-// Advanced CMS with workflow
-class CMSModel extends Model {
-    protected function before_run(): void {
-        // Content workflow metabox
-        MetaBox::create('workflow', 'Content Workflow', self::POST_TYPE, $this->config)
-            ->add_field('status', 'Status', 'select', [
-                'draft' => 'Draft',
-                'review' => 'Under Review',
-                'approved' => 'Approved',
-                'published' => 'Published'
-            ])
-            ->add_field('reviewer', 'Reviewer', 'user_select')
-            ->add_field('publish_date', 'Scheduled Publish', 'datetime')
-            ->onSuccess([$this, 'handle_workflow_change'])
-            ->setup_actions();
-    }
-    
-    public function handle_workflow_change($post_id, $metabox): void {
-        $status = $metabox->get_field_value('status', $post_id);
-        
-        switch ($status) {
-            case 'review':
-                $this->notify_reviewers($post_id);
-                break;
-            case 'approved':
-                $this->schedule_publication($post_id);
-                break;
-        }
-    }
-}
-```
-</details>
-
-<details>
-<summary><strong>🎓 Learning Management System</strong></summary>
-
-```php
-// LMS with progress tracking
-class CourseModel extends Model {
-    protected function setup_progress_tracking(): void {
-        MetaBox::create('course_settings', 'Course Settings', self::POST_TYPE, $this->config)
-            ->add_field('duration', 'Duration (hours)', 'number')
-            ->add_field('difficulty', 'Difficulty', 'select', [
-                'beginner' => 'Beginner',
-                'intermediate' => 'Intermediate',
-                'advanced' => 'Advanced'
-            ])
-            ->add_field('prerequisites', 'Prerequisites', 'course_multiselect')
-            ->setup_actions();
-    }
-    
-    public function enroll_student(int $course_id, int $user_id): bool {
-        return $this->track_progress($course_id, $user_id, 'enrolled');
-    }
-    
-    public function complete_lesson(int $course_id, int $user_id, int $lesson_id): bool {
-        $progress = $this->get_user_progress($course_id, $user_id);
-        $progress['completed_lessons'][] = $lesson_id;
-        
-        return $this->update_progress($course_id, $user_id, $progress);
-    }
-}
-```
-</details>
+### Advanced
+9. **Service Registry** - Dependency injection patterns
+10. **Multi-App Architecture** - Plugin ecosystem management
+11. **Custom Validation** - Advanced form handling
+12. **Performance Tuning** - Enterprise-scale optimization
 
 ---
 
-## 🛠️ Development Tools
+## 🛠️ Framework Components
 
-### Built-in Debugging
+### Core Classes
 
-```php
-// Development mode features
-if ($config->isDevelopment()) {
-    Debugger::initFromConfig($config);
-    
-    // API debugging endpoint
-    $api->get('v1', '/debug/queries', function() {
-        global $wpdb;
-        return ['queries' => $wpdb->queries ?? []];
-    });
-}
-```
+| Component | Namespace | Purpose |
+|-----------|-----------|---------|
+| **Config** | `Utils\Config` | Immutable configuration management |
+| **Registry** | `Registry` | Service container & DI |
+| **Model** | `DB\Model` | Custom post type base class |
+| **MetaBox** | `DB\MetaBox` | Advanced custom fields |
+| **Settings** | `Utils\Settings` | WordPress settings API |
+| **Page** | `Utils\Page` | Admin & frontend page management |
+| **Ajax** | `Utils\Ajax` | Secure AJAX handling |
+| **Cache** | `Utils\Cache` | Multi-level caching system |
 
-### Testing Support
+### Utility Classes
 
-```php
-// Unit testing with WPToolkit
-class ProductModelTest extends WP_UnitTestCase {
-    private ProductModel $model;
-    
-    public function setUp(): void {
-        parent::setUp();
-        $this->model = ProductModel::get_instance($this->get_test_config());
-    }
-    
-    public function test_create_product_with_validation(): void {
-        $result = $this->model->create([
-            'post_title' => 'Test Product'
-        ], [
-            'price' => 99.99,
-            'sku' => 'TEST-001'
-        ]);
-        
-        $this->assertIsInt($result);
-        $this->assertGreaterThan(0, $result);
-    }
-}
-```
+| Component | Purpose |
+|-----------|---------|
+| **Autoloader** | PSR-4 compliant class loading |
+| **Requirements** | System requirements validation |
+| **Debugger** | Development debugging tools |
+| **Notification** | Admin notification system |
+| **EnqueueManager** | Asset management & loading |
+
 ---
 
-## 💼 Production Deployments
+## 💼 Production Ready
 
-WPToolkit powers enterprise WordPress applications with:
+WPToolkit powers enterprise WordPress applications:
 
 - **🏥 Healthcare Systems** - HIPAA-compliant patient management
-- **🏦 Financial Platforms** - SEC-compliant trading interfaces  
+- **🏦 Financial Platforms** - SEC-compliant trading interfaces
 - **🎓 Educational Portals** - Multi-tenant learning management
 - **🛒 E-commerce Solutions** - High-traffic retail platforms
 - **📰 Publishing Networks** - Multi-site content management
@@ -524,15 +515,7 @@ WPToolkit powers enterprise WordPress applications with:
 
 ## 🤝 Contributing
 
-We welcome contributions from the WordPress community! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** your feature branch (`git checkout -b feature/amazing-feature`)
-3. **Write tests** for your changes
-4. **Ensure** all tests pass (`composer test`)
-5. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-6. **Push** to your branch (`git push origin feature/amazing-feature`)
-7. **Open** a Pull Request
+We welcome contributions from the WordPress community!
 
 ### Development Setup
 
@@ -543,41 +526,15 @@ composer install
 composer test
 ```
 
----
+### Contributing Guidelines
 
-## 📚 Documentation
-
-<table>
-<tr>
-<td width="33%">
-
-### 📖 **Getting Started**
-- [Installation Guide](docs/installation.md)
-- [Quick Start Tutorial](docs/quick-start.md)
-- [Architecture Overview](docs/architecture.md)
-- [Migration Guide](docs/migration.md)
-
-</td>
-<td width="33%">
-
-### 🔧 **API Reference**
-- [Complete API Documentation](API.md)
-- [Model System](docs/models.md)
-- [MetaBox Framework](docs/metaboxes.md)
-- [Service Registry](docs/registry.md)
-
-</td>
-<td width="33%">
-
-### 💡 **Examples**
-- [Real-world Examples](EXAMPLES.md)
-- [Best Practices](docs/best-practices.md)
-- [Performance Tips](docs/performance.md)
-- [Security Guidelines](docs/security.md)
-
-</td>
-</tr>
-</table>
+1. **Fork** the repository
+2. **Create** your feature branch (`git checkout -b feature/amazing-feature`)
+3. **Write tests** for your changes
+4. **Ensure** all tests pass (`composer test`)
+5. **Follow** PSR-12 coding standards
+6. **Update** documentation as needed
+7. **Submit** a Pull Request
 
 ---
 

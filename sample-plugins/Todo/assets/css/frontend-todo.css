@@ -461,3 +461,56 @@
         flex-direction: column;
     }
 }
+
+.todo-item {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.todo-content {
+    flex: 1;
+}
+
+.todo-title {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+}
+
+.todo-description {
+    color: #666;
+    margin: 0 0 10px 0;
+}
+
+.todo-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+}
+
+.todo-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.status-completed {
+    opacity: 0.6;
+}
+
+.status-completed .todo-title {
+    text-decoration: line-through;
+}
+
+.message {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}

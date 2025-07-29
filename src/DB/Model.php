@@ -644,12 +644,10 @@ abstract class Model
 
         // Create the post
         $post_id = wp_insert_post($post_data, true);
-
         if (is_wp_error($post_id)) {
             return $post_id;
         }
 
-        // Save metadata through MetaBoxes
         if (!empty($meta_data)) {
             $this->save_meta_through_metaboxes($post_id, $meta_data);
         }
@@ -1238,6 +1236,18 @@ abstract class Model
      */
     protected function validate_fields(array $data): bool
     {
+        return empty($this->get_error_fields($data));
+    }
+
+	/**
+	 * Get error fields from the provided data.
+	 * @param array $data
+	 *
+	 * @return array Array of validation errors with field IDs as keys
+	 */
+
+     public function get_error_fields(array $data): array
+    {
         $this->validation_errors = [];
         $expected_fields = $this->get_expected_fields();
 
@@ -1261,7 +1271,7 @@ abstract class Model
             }
         }
 
-        return empty($this->validation_errors);
+        return $this->validation_errors;
     }
 
     /**

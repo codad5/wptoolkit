@@ -103,7 +103,6 @@ final class Page
 		]
 	];
 
-
     /**
      * Constructor for creating a new Page instance.
      *
@@ -249,6 +248,7 @@ final class Page
 	 */
 	protected function enqueuePageAssets(array $page_config): void
 	{
+
 		if (!$this->hasAssetManager()) {
 			return;
 		}
@@ -409,6 +409,8 @@ final class Page
 			'capability' => null,
 			'path' => null, // Custom path override
 			'use_app_prefix' => true, // Whether to use app_slug prefix
+			'regex' => null, // For dynamic routing
+			'query_mapping' => [], // For extracting values from regex matches
 		];
 
 		$slug = sanitize_key($slug);
@@ -754,8 +756,7 @@ final class Page
 
         add_action('admin_menu', [$this, 'registerAdminPages']);
         add_action('init', [$this, 'registerFrontendPages']);
-        add_action('template_redirect', [$this, 'handleFrontendRouting']);
-
+	    add_filter('template_include', [$this, 'handleFrontendTemplateInclude']);
 
         $this->hooks_registered = true;
     }
@@ -812,46 +813,125 @@ final class Page
      *
      * @return void
      */
-    public function registerFrontendPages(): void
-    {
-        foreach ($this->frontend_pages as $slug => $config) {
-            if ($config['rewrite']) {
-                // Add rewrite rules for frontend pages
-                add_rewrite_rule(
-                    '^' . $this->app_slug . '/' . $slug . '/?$',
-                    'index.php?' . $this->app_slug . '_page=' . $slug,
-                    'top'
-                );
+	public function registerFrontendPages(): void
+	{
+		foreach ($this->frontend_pages as $slug => $config) {
+			if ($config['rewrite']) {
+				$this->addFrontendRewriteRule($slug, $config);
+			}
 
-                add_rewrite_rule(
-                    '^' . $this->app_slug . '/' . $slug . '/(.+)/?$',
-                    'index.php?' . $this->app_slug . '_page=' . $slug . '&' . $this->app_slug . '_path=$matches[1]',
-                    'top'
-                );
-            }
+			// Add custom query vars
+			foreach ($config['query_vars'] as $var) {
+				add_filter('query_vars', function ($vars) use ($var) {
+					if (!in_array($var, $vars)) {
+						$vars[] = $var;
+					}
+					return $vars;
+				});
+			}
 
-            // Add custom query vars
-            foreach ($config['query_vars'] as $var) {
-                add_filter('query_vars', function ($vars) use ($var) {
-                    $vars[] = $var;
-                    return $vars;
-                });
-            }
-        }
+			// Add query vars from regex mapping
+			if (!empty($config['query_mapping'])) {
+				foreach (array_keys($config['query_mapping']) as $var) {
+					add_filter('query_vars', function ($vars) use ($var) {
+						if (!in_array($var, $vars)) {
+							$vars[] = $var;
+						}
+						return $vars;
+					});
+				}
+			}
+		}
 
-        // Add our main query vars
-        add_filter('query_vars', function ($vars) {
-            $vars[] = $this->app_slug . '_page';
-            $vars[] = $this->app_slug . '_path';
-            return $vars;
-        });
+		// Add our main query vars
+		add_filter('query_vars', function ($vars) {
+			$vars[] = $this->app_slug . '_page';
+			$vars[] = $this->app_slug . '_path';
+			return $vars;
+		});
 
-        // Flush rewrite rules if needed
-        if (get_option($this->getFlushRulesOption()) !== '1') {
-            flush_rewrite_rules();
-            update_option($this->getFlushRulesOption(), '1');
-        }
-    }
+		// Flush rewrite rules if needed
+		if (get_option($this->getFlushRulesOption()) !== '1') {
+			flush_rewrite_rules();
+			update_option($this->getFlushRulesOption(), '1');
+		}
+	}
+
+	/**
+	 * Add rewrite rule for a frontend page.
+	 *
+	 * @param string $slug Page slug
+	 * @param array $config Page configuration
+	 * @return void
+	 */
+	protected function addFrontendRewriteRule(string $slug, array $config): void
+	{
+		$query_parts = [];
+
+		// Handle custom regex patterns (dynamic routing)
+		if (!empty($config['regex'])) {
+			$regex = $config['regex'];
+
+			// Add main page identifier
+			$query_parts[] = $this->app_slug . '_page=' . $slug;
+
+			// Add regex-based query mappings
+			if (!empty($config['query_mapping'])) {
+				foreach ($config['query_mapping'] as $var => $match_index) {
+					$query_parts[] = $var . '=' . $match_index;
+				}
+			}
+
+			$query_string = implode('&', $query_parts);
+			add_rewrite_rule($regex, 'index.php?' . $query_string, 'top');
+
+			return;
+		}
+
+		// Handle static routing
+		$path = $this->getFrontendPagePath($slug, $config);
+
+		// Simple page rule
+		$query_parts[] = $this->app_slug . '_page=' . $slug;
+		$simple_query = 'index.php?' . implode('&', $query_parts);
+
+		add_rewrite_rule(
+			'^' . $path . '/?$',
+			$simple_query,
+			'top'
+		);
+
+		// Page with additional path segments
+		add_rewrite_rule(
+			'^' . $path . '/(.+)/?$',
+			$simple_query . '&' . $this->app_slug . '_path=$matches[1]',
+			'top'
+		);
+	}
+
+
+	/**
+	 * Get the URL path for a frontend page.
+	 *
+	 * @param string $slug Page slug
+	 * @param array $config Page configuration
+	 * @return string URL path
+	 */
+	protected function getFrontendPagePath(string $slug, array $config): string
+	{
+		// If custom path is provided, use it
+		if (!empty($config['path'])) {
+			return trim($config['path'], '/');
+		}
+
+		// If use_app_prefix is false, use only the slug
+		if ($config['use_app_prefix'] === false) {
+			return $slug;
+		}
+
+		// Default: app_slug/page_slug
+		return $this->app_slug . '/' . $slug;
+	}
 
     /**
      * Handle frontend page routing.
@@ -884,6 +964,183 @@ final class Page
         // Handle the request
         $this->renderFrontendPage($plugin_page, $config);
     }
+
+
+	/**
+	 * Handle frontend template inclusion.
+	 *
+	 * @param string $template Original template
+	 * @return string Template to use
+	 */
+	public function handleFrontendTemplateInclude(string $template): string
+	{
+		$plugin_page = get_query_var($this->app_slug . '_page');
+
+		if (empty($plugin_page) || !isset($this->frontend_pages[$plugin_page])) {
+			return $template; // Not our page, continue with normal template
+		}
+
+		$config = $this->frontend_pages[$plugin_page];
+
+		// Check capability if required
+		if ($config['capability'] && !current_user_can($config['capability'])) {
+			wp_safe_redirect(wp_login_url(get_permalink()));
+			exit;
+		}
+
+		// Set current page info
+		$this->current_page = [
+			'type' => 'frontend',
+			'slug' => $plugin_page,
+			'config' => $config,
+		];
+
+		// For regex-based pages, populate query vars from matches
+		if (!empty($config['regex']) && !empty($config['query_mapping'])) {
+			global $wp;
+			$request_path = $wp->request;
+
+			if (preg_match('#^' . trim($config['regex'], '^$') . '#', $request_path, $matches)) {
+				foreach ($config['query_mapping'] as $var => $match_index) {
+					if (isset($matches[(int)str_replace('$matches[', '', str_replace(']', '', $match_index))])) {
+						$GLOBALS['wp_query']->set($var, $matches[(int)str_replace('$matches[', '', str_replace(']', '', $match_index))]);
+					}
+				}
+			}
+		}
+
+		// Handle the request and return custom template
+		return $this->getFrontendTemplate($plugin_page, $config);
+	}
+
+	/**
+	 * Get frontend template for rendering.
+	 *
+	 * @param string $slug Page slug
+	 * @param array $config Page configuration
+	 * @return string Template path
+	 */
+	protected function getFrontendTemplate(string $slug, array $config): string
+	{
+		// Enqueue page assets
+		$this->enqueuePageAssets($config);
+
+		$data = [
+			'app_slug' => $this->app_slug,
+			'app_name' => $this->app_name,
+			'page_slug' => $slug,
+			'page_config' => $config,
+			'page_path' => get_query_var($this->app_slug . '_path', ''),
+		];
+
+		// Add regex query vars to data
+		if (!empty($config['query_mapping'])) {
+			foreach (array_keys($config['query_mapping']) as $var) {
+				$data[$var] = get_query_var($var, '');
+			}
+		}
+
+		// Use callback if provided
+//		if (isset($config['callback']) && is_callable($config['callback'])) {
+//			// Create a temporary template file for callback
+//			return $this->createCallbackTemplate($config['callback'], $data);
+//		}
+
+		// Use template if provided
+		$template = $config['template'] ?? null;
+		if ($template) {
+			$template_path = $this->findTemplate($template);
+			if ($template_path) {
+				// Store data    globally for template access
+				$GLOBALS['wptoolkit_page_data'] = $data;
+				return $template_path;
+			}
+		}
+
+		// Create default template
+		return $this->createDefaultFrontendTemplate($slug, $config, $data);
+	}
+
+	/**
+	 * Find template file.
+	 *
+	 * @param string $template Template name
+	 * @return string|false Template path or false
+	 */
+	protected function findTemplate(string $template): string|false
+	{
+		// Try plugin template directory
+		$template_path = $this->template_dir . '/' . ltrim($template, '/');
+		if (file_exists($template_path)) {
+			return $template_path;
+		}
+
+		// Try theme template override
+		$theme_template = locate_template([
+			$this->app_slug . '-templates/' . basename($template),
+			'plugin-templates/' . basename($template)
+		]);
+
+		return $theme_template ?: false;
+	}
+
+	/**
+	 * Create callback template.
+	 *
+	 * @param callable $callback Callback function
+	 * @param array $data Template data
+	 * @return string Template path
+	 */
+	protected function createCallbackTemplate(callable $callback, array $data): string
+	{
+		$temp_file = wp_upload_dir()['basedir'] . '/' . $this->app_slug . '_temp_' . md5(serialize($callback)) . '.php';
+
+		if (!file_exists($temp_file)) {
+			$template_content = '<?php 
+        $data = $GLOBALS["wptoolkit_page_data"] ?? [];
+        extract($data);
+        call_user_func($GLOBALS["wptoolkit_callback"], $data);
+        ?>';
+
+			file_put_contents($temp_file, $template_content);
+		}
+
+		$GLOBALS['wptoolkit_callback'] = $callback;
+		return $temp_file;
+	}
+
+	/**
+	 * Create default frontend template.
+	 *
+	 * @param string $slug Page slug
+	 * @param array $config Page configuration
+	 * @param array $data Template data
+	 * @return string Template path
+	 */
+	protected function createDefaultFrontendTemplate(string $slug, array $config, array $data): string
+	{
+		$temp_file = wp_upload_dir()['basedir'] . '/' . $this->app_slug . '_default_' . $slug . '.php';
+
+		$template_content = '<?php
+		    get_header();
+		    $data = $GLOBALS["wptoolkit_page_data"] ?? [];
+		    ?>
+		    <div class="plugin-page <?php echo esc_attr($data["app_slug"]); ?>-page <?php echo esc_attr($data["app_slug"]); ?>-page-<?php echo esc_attr($data["page_slug"]); ?>">
+		        <div class="container">
+		            <h1><?php echo esc_html($data["page_config"]["title"] ?? "Plugin Page"); ?></h1>
+		            <p><?php _e("This page has no content configured.", $data["app_slug"]); ?></p>
+		        </div>
+		    </div>
+		    <?php
+		    get_footer();
+		    ?>';
+
+		if (!file_exists($temp_file)) {
+			file_put_contents($temp_file, $template_content);
+		}
+
+		return $temp_file;
+	}
 
     /**
      * Parse config or slug parameter and set instance properties.
