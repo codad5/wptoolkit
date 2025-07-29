@@ -18,8 +18,8 @@ if (!defined('ABSPATH')) {
 
 use Codad5\SamplePlugins\PluginEngine;
 use Codad5\WPToolkit\Utils\{Config, Debugger, Settings, Page, Notification, Ajax, EnqueueManager, Cache};
-use Exception;
 use Codad5\WPToolkit\Registry;
+use Exception;
 use function  wp_create_nonce;
 
 
@@ -109,7 +109,7 @@ class WPToolkitTodoPlugin extends  PluginEngine
 				return !is_admin() && get_query_var('wptk-todo_page') === 'list';
 			}
 		])
-            //TODO: What is meant to be
+            //TODO: i put in a force url for the ajax handler because i am using symlink and ths wont load the originall one well so note tat some bugs occur when using symlink
        ->addScriptToGroup('frontend-todos', Ajax::getAjaxHelperScriptHandle(), 'http://pau.local/wp-content/plugins/codad5-wptoolkit/assets/js/wptoolkit-ajax.js', ['jquery']) // Add this line
        ->addScriptToGroup('frontend-todos', 'todo-frontend-js', 'js/frontend-todo.js', [Ajax::getAjaxHelperScriptHandle()]) // Add this line
        ->addStyleToGroup('frontend-todos', 'todo-frontend-css', 'css/frontend-todo.css');
