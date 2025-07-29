@@ -726,6 +726,7 @@ final class EnqueueManager
 
         $group_data = $this->script_groups[$group_name];
 
+
         if (!$this->shouldLoadGroup($group_data['config'])) {
             return;
         }
@@ -766,7 +767,6 @@ final class EnqueueManager
                 return;
             }
         }
-
         wp_enqueue_script(
             $handle,
             $config['src'],
@@ -882,26 +882,31 @@ final class EnqueueManager
     /**
      * Output global localization data.
      */
-    public static function outputGlobalLocalization(): void
-    {
-        if (self::$global_localization_output || empty(self::$global_localization)) {
-            return;
-        }
+	public static function outputGlobalLocalization(): void
+	{
+		if (self::$global_localization_output || empty(self::$global_localization)) {
+			return;
+		}
 
-        $script = 'window.wpToolkit = window.wpToolkit || {};';
-        foreach (self::$global_localization as $app_slug => $data) {
-            $script .= sprintf(
-                'window.wpToolkit.%s = %s;',
-                $app_slug,
-                wp_json_encode($data)
-            );
-        }
+		// Build the full data array to be assigned to window.wpToolkit
+		$localization_data = [];
 
-        wp_add_inline_script('jquery', $script, 'before');
-        self::$global_localization_output = true;
-    }
+		foreach (self::$global_localization as $app_slug => $data) {
+			$localization_data[$app_slug] = $data;
+		}
 
-    /**
+		// Encode the entire array once
+		$json = wp_json_encode($localization_data);
+
+		// Output the script that assigns it to window.wpToolkit
+		$script = sprintf('window.wpToolkit = %s;', $json);
+
+		wp_add_inline_script('jquery', $script, 'before');
+		self::$global_localization_output = true;
+	}
+
+
+	/**
      * Parse config or slug parameter and set instance properties.
      */
     protected function parseConfigOrSlug(Config|string $config_or_slug): void

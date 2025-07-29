@@ -248,6 +248,7 @@ final class Page
 	 */
 	protected function enqueuePageAssets(array $page_config): void
 	{
+
 		if (!$this->hasAssetManager()) {
 			return;
 		}

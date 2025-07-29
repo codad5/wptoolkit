@@ -1001,4 +1001,83 @@ class Settings
 
         return implode(' ', $attrs);
     }
+
+	/**
+	 * Save multiple settings from an array.
+	 *
+	 * @param array<string, mixed> $data Settings data to save
+	 * @param bool $validate Whether to validate before saving
+	 * @return array<string, bool> Results keyed by setting key (true = success, false = failed)
+	 */
+	public function saveFromArray(array $data, bool $validate = true): array
+	{
+		$results = [];
+
+		foreach ($data as $key => $value) {
+			// Only process settings that are actually configured
+			if (!isset($this->settings[$key])) {
+				$results[$key] = false;
+				continue;
+			}
+
+			$results[$key] = $this->set($key, $value);
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Save settings from $_POST data.
+	 *
+	 * @param array<string, mixed> $post_data The $_POST data (pass $_POST here)
+	 * @param string|null $nonce_field Name of nonce field to verify (optional)
+	 * @param string|null $nonce_action Nonce action to verify against (optional)
+	 * @param array<string>|null $fields Array of specific field keys to save (optional)
+	 * @return array<string, bool> Results keyed by setting key
+	 */
+	public function saveFromPost(array $post_data, ?string $nonce_field = null, ?string $nonce_action = null, ?array $fields = null): array
+	{
+		// Verify nonce if provided
+		if ($nonce_field && $nonce_action) {
+			$nonce = sanitize_text_field($post_data[$nonce_field] ?? '');
+			if (!wp_verify_nonce($nonce, $nonce_action)) {
+				return []; // Return empty array on nonce failure
+			}
+		}
+
+		// Determine which fields to process
+		$fields_to_process = $fields ?? array_keys($this->settings);
+
+		// Prepare settings data
+		$settings_data = [];
+
+		foreach ($fields_to_process as $field_key) {
+			// Skip if field is not configured
+			if (!isset($this->settings[$field_key])) {
+				continue;
+			}
+
+			$option_name_with_prefix = $this->getOptionName($field_key);
+			$field_config = $this->settings[$field_key];
+
+			// Check if field exists in POST data
+			if (isset($post_data[$option_name_with_prefix])) {
+				$settings_data[$field_key] = $post_data[$option_name_with_prefix];
+			} elseif (isset($post_data[$field_key])) {
+				// Also check without prefix (in case form uses clean field names)
+				$settings_data[$field_key] = $post_data[$field_key];
+			} else {
+				// Handle missing fields based on their type
+				$field_type = $field_config['type'] ?? 'text';
+
+				if ($field_type === 'checkbox') {
+					// Checkboxes not in POST data means they're unchecked
+					$settings_data[$field_key] = false;
+				}
+				// For other field types, skip if not present in POST data
+			}
+		}
+		// Use the array save method
+		return $this->saveFromArray($settings_data);
+	}
 }

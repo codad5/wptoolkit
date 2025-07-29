@@ -1,4 +1,6 @@
-
+<?php
+get_header();
+?>
 <div class="wptk-todo-container">
 	<header class="wptk-todo-header">
 		<h1><?php _e('My Todo List', 'wptk-todo'); ?></h1>
@@ -75,3 +77,6 @@
 		</div>
 	</div>
 </div>
+<?php
+get_footer();
+?>

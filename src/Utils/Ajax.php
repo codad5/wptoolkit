@@ -226,30 +226,30 @@ final class Ajax
         return admin_url('admin-ajax.php');
     }
 
-    /**
-     * Get JavaScript data for localization.
-     *
-     * @param array<string> $actions Specific actions to include (empty = all)
-     * @return array<string, mixed> Localization data
-     */
-    public function getJavaScriptData(array $actions = []): array
-    {
-        $actions_to_include = empty($actions) ? array_keys($this->actions) : $actions;
-        $nonces = [];
+	// Find this method and update the script_url line
 
-        foreach ($actions_to_include as $action) {
-            if (isset($this->actions[$action]) && $this->actions[$action]['nonce_action']) {
-                $nonces[$action] = $this->getNonce($action);
-            }
-        }
+	/**
+	 * @throws Exception
+	 */
+	public function getJavaScriptData(array $actions = []): array
+	{
+		$actions_to_include = empty($actions) ? array_keys($this->actions) : $actions;
+		$nonces = [];
 
-        return [
-            'ajax_url' => $this->getAjaxUrl(),
-            'nonces' => $nonces,
-            'app_slug' => $this->app_slug,
-            'actions' => $actions_to_include,
-        ];
-    }
+		foreach ($actions_to_include as $action) {
+			if (isset($this->actions[$action]) && $this->actions[$action]['nonce_action']) {
+				$nonces[$action] = $this->getNonce($action);
+			}
+		}
+
+		return [
+			'ajax_url' => $this->getAjaxUrl(),
+			'nonces' => $nonces,
+			'app_slug' => $this->app_slug,
+			'actions' => $actions_to_include,
+			'script_url' => self::getAjaxHelperScriptUrl(), // Change this line
+		];
+	}
 
     /**
      * Create a success response.
@@ -258,7 +258,7 @@ final class Ajax
      * @param string $message Success message
      * @return never
      */
-    public function success(mixed $data = null, string $message = ''): never
+    public function success(mixed $data = null, string $message = '')
     {
         $response = ['success' => true];
 
@@ -281,7 +281,7 @@ final class Ajax
      * @param int $code Error code
      * @return never
      */
-    public function error(string $message, mixed $data = null, int $code = 400): never
+    public function error(string $message, mixed $data = null, int $code = 400)
     {
         $response = [
             'error' => true,
@@ -683,4 +683,103 @@ final class Ajax
             default => true,
         };
     }
+
+	/**
+	 * Get URL to the Ajax helper JavaScript file.
+	 *
+	 * @return string URL to ajax.js helper script
+	 * @throws Exception
+	 */
+	private static function getAjaxHelperScriptUrl(): string
+	{
+		static $script_url = null;
+
+		if ($script_url !== null) {
+			return $script_url;
+		}
+
+		// Get current file path (e.g., C:/laragon/www/wp-content/plugins/my-plugin/src/Utils/Ajax.php)
+		$current_file_path = __FILE__;
+
+
+		// Find wp-content position and extract the relative path
+		$wp_content_pos = strpos($current_file_path, 'wp-content');
+
+		if ($wp_content_pos === false) {
+			throw new Exception('Could not locate wp-content directory in path: ' . $current_file_path);
+		}
+
+		// Get the part from wp-content onwards (e.g., wp-content/plugins/my-plugin/src/Utils/Ajax.php)
+		$relative_path = substr($current_file_path, $wp_content_pos);
+
+		// Navigate from Ajax.php location to assets/js/ajax.js
+		$path_parts = explode('/', dirname($relative_path));
+
+		// Remove the last 2 parts (src/Utils) to get to root
+		array_pop($path_parts); // Remove 'Utils'
+		array_pop($path_parts); // Remove 'src'
+
+		// Build the script path
+		$script_relative_path = implode('/', $path_parts) . '/assets/js/ajax.js';
+
+		// Convert to full URL
+		$script_url = site_url('/' . $script_relative_path);
+
+		return $script_url;
+	}
+
+	/**
+	 * Get the script handle for the Ajax helper script.
+	 *
+	 * @return string Script handle
+	 */
+	public static function getAjaxHelperScriptHandle(): string
+	{
+		return 'wptoolkit-ajax-helper';
+	}
+
+	/**
+	 * Enqueue the Ajax helper script if not already enqueued.
+	 *
+	 * @param array $dependencies Script dependencies
+	 * @param string|bool|null $version Script version
+	 * @param bool $in_footer Whether to load in footer
+	 * @return bool True if enqueued or already enqueued, false on error
+	 */
+	public static function enqueueAjaxHelperScript(
+		array $dependencies = ['jquery'],
+		string|bool|null $version = '1.0.0',
+		bool $in_footer = true
+	): bool {
+		$handle = self::getAjaxHelperScriptHandle();
+
+		// Check if already enqueued or registered
+		if (wp_script_is($handle, 'enqueued') || wp_script_is($handle, 'registered')) {
+			// If only registered, enqueue it
+			if (!wp_script_is($handle, 'enqueued')) {
+				wp_enqueue_script($handle);
+			}
+			return true;
+		}
+
+		try {
+			$script_url = self::getAjaxHelperScriptUrl();
+
+			wp_enqueue_script(
+				$handle,
+				$script_url,
+				$dependencies,
+				$version,
+				$in_footer
+			);
+
+			return true;
+		} catch (Exception $e) {
+			// Log error if WP_DEBUG is enabled
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('WPToolkit Ajax Helper Script Error: ' . $e->getMessage());
+			}
+			return false;
+		}
+	}
 }
