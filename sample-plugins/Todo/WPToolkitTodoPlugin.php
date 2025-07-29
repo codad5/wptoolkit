@@ -140,6 +140,24 @@ class WPToolkitTodoPlugin extends  PluginEngine
 			'asset_groups' => ['frontend-todos']
 		]);
 
+		$this->page->addFrontendPage('category_product', [
+			'title' => 'Product in Category',
+			'regex' => '^shop/([a-z0-9-]+)/([a-z0-9-]+)/?$',
+			'query_mapping' => [
+				'category_slug' => '$matches[1]',
+				'product_slug' => '$matches[2]'
+			],
+			'template' => 'frontend/category-product.php',
+//			'callback' => function($data) {
+//				$category = get_query_var('category_slug');
+//				$product = get_query_var('product_slug');
+//
+//				// Your logic here
+//				echo "<h1>Product: {$product} in Category: {$category}</h1>";
+//			}
+		]);
+// URLs: /shop/electronics/smartphone/, /shop/clothing/t-shirt/
+
 
 
 		// Add settings page
