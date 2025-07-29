@@ -3,26 +3,26 @@
 ## Table of Contents
 
 ### Core Framework
-- [Configuration](#configuration)
-- [Registry](#registry)
-- [Model](#model)
-- [Autoloader](#autoloader)
-- [Requirements](#requirements)
+- [Registry](#registry) - Service container and dependency injection
+- [Config](#config) - Immutable configuration management
+- [Requirements](#requirements) - System requirements validation
 
-### User Interface Components
-- [MetaBox](#metabox)
-- [Settings](#settings)
-- [ViewLoader](#viewloader)
+### Database Layer (`Codad5\WPToolkit\DB`)
+- [Model](#model) - Custom post type base class with enterprise features
+- [MetaBox](#metabox) - Advanced custom fields framework
 
-### HTTP & API
-- [RestRoute](#restroute)
+### Utilities (`Codad5\WPToolkit\Utils`)
+- [Settings](#settings) - WordPress settings API wrapper
+- [Page](#page) - Admin and frontend page management
+- [Ajax](#ajax) - Secure AJAX handling with validation
+- [Cache](#cache) - Multi-level caching system
+- [EnqueueManager](#enqueuemanager) - Asset management and loading
+- [Notification](#notification) - Admin notification system
+- [Debugger](#debugger) - Development debugging utilities
+- [Autoloader](#autoloader) - PSR-4 compliant class loading
 
-### Utilities
-- [Cache](#cache)
-- [Debugger](#debugger)
+---
 
-### Interfaces & Contracts
-- [Interfaces](#interfaces)
 
 ---
 
