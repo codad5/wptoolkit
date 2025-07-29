@@ -4887,6 +4887,16 @@ Called before model initialization.
 #### `after_run(): void`
 Called after model initialization.
 
+### Error Management
+
+for getting from errors during save operations:
+
+#### `get_error_fields(array $meta_fields)): array`
+Get fields with errors from last save operation.
+
+#### `validate_fields(array $meta_fields): bool`
+Validate fields with registered validation callbacks.
+
 ### Implementation Guide
 
 #### Step 1: Create Model Class
