@@ -497,7 +497,7 @@ final class Page
             $base_url = admin_url($slug);
         } else {
             // Regular page
-            $base_url = admin_url('admin.php?page=' . sanitize_key($slug));
+            $base_url = admin_url('admin.php?page=' . sanitize_key($this->app_slug . '_' . $slug));
         }
 
         if (!empty($params)) {
