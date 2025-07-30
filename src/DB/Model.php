@@ -230,6 +230,19 @@ abstract class Model
         return false;
     }
 
+	private function show_post_row(array $actions, WP_Post $post):array {
+		// if the post type is not the current post type, return the actions as is
+		if ($post->post_type !== static::POST_TYPE) {
+			return $this->get_post_row($actions, $post);
+		}
+		return $actions;
+	}
+
+
+	protected  function get_post_row(array $actions, WP_Post $post): array {
+		return $actions;
+	}
+
     /**
      * Register the custom post type.
      *
@@ -1633,6 +1646,8 @@ abstract class Model
         $this->add_tracked_filter('manage_edit-' . static::POST_TYPE . '_sortable_columns', [$this, 'setup_sortable_columns']);
         $this->add_tracked_action('pre_get_posts', [$this, 'handle_column_sorting']);
 
+		//post row actions
+        $this->add_tracked_filter('post_row_actions', [$this, 'show_post_row'], 10, 2);
         // Authentication hooks
         if (static::REQUIRES_AUTHENTICATION) {
             $this->add_tracked_action('template_redirect', [$this, 'handle_authentication']);
