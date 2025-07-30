@@ -236,7 +236,7 @@ abstract class Model
 	 * @param WP_Post $post Current post object
 	 * @return array Modified post row actions
 	 */
-	public function show_post_row(array $actions, WP_Post $post): array
+	final function show_post_row(array $actions, WP_Post $post): array
 	{
 		// If the post type is not the current post type, return the actions as is
 		if ($post->post_type !== static::POST_TYPE) {
