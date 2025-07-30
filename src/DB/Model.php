@@ -230,15 +230,30 @@ abstract class Model
         return false;
     }
 
-	private function show_post_row(array $actions, WP_Post $post):array {
-		// if the post type is not the current post type, return the actions as is
+	/* * Show post row actions in the admin list table.
+	 *
+	 * @param array $actions Array of post row actions
+	 * @param WP_Post $post Current post object
+	 * @return array Modified post row actions
+	 */
+	public function show_post_row(array $actions, WP_Post $post): array
+	{
+		// If the post type is not the current post type, return the actions as is
 		if ($post->post_type !== static::POST_TYPE) {
-			return $this->get_post_row($actions, $post);
+			return $actions;
 		}
-		return $actions;
+
+		// Call the method to get the post row actions
+		return $this->get_post_row($actions, $post);
 	}
 
 
+	/*	 * Filter to modify the post row actions in the admin list table.
+	 *
+	 * @param array $actions Array of post row actions
+	 * @param WP_Post $post Current post object
+	 * @return array Modified post row actions
+	 */
 	protected  function get_post_row(array $actions, WP_Post $post): array {
 		return $actions;
 	}

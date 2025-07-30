@@ -103,6 +103,13 @@ final class Page
 		]
 	];
 
+	/**
+	 * Registered standalone admin pages (no menu).
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	protected array $admin_pages = [];
+
     /**
      * Constructor for creating a new Page instance.
      *
@@ -181,6 +188,32 @@ final class Page
 
         return $this;
     }
+
+	/**
+	 * Add a standalone admin page (no menu entry).
+	 * Page will be accessible via direct URL but won't appear in admin menu.
+	 *
+	 * @param string|Model $slug_or_model Page slug or Model instance
+	 * @param array<string, mixed> $config Page configuration
+	 *
+	 * @return static For method chaining
+	 * @throws \Exception
+	 */
+	public function addAdminPage(string|Model $slug_or_model, array $config): static
+	{
+		$slug_data = $this->resolveSlugOrModel($slug_or_model, $config);
+
+		$defaults = [
+			'page_title' => '',
+			'capability' => 'manage_options',
+			'callback' => null,
+			'template' => null,
+		];
+
+		$this->admin_pages[$slug_data['key']] = array_merge($defaults, $slug_data['config']);
+
+		return $this;
+	}
 
     /**
      * Resolve slug or model parameter into standardized format.
@@ -466,6 +499,14 @@ final class Page
      */
     public function getAdminUrl(string $slug, array $params = []): string
     {
+
+	    if (isset($this->admin_pages[$slug])) {
+		    $base_url = admin_url('admin.php?page=' . sanitize_key($this->app_slug . '_' . $slug));
+		    if (!empty($params)) {
+			    $base_url = add_query_arg($params, $base_url);
+		    }
+		    return esc_url($base_url);
+	    }
         // Check if it's a model page
         $page_config = $this->menu_pages[$slug] ?? $this->submenu_pages[$slug] ?? null;
 
@@ -567,7 +608,7 @@ final class Page
 
         $current = $this->getCurrentPage();
         $is_plugin_page = ($current['type'] ?? '') === 'admin' &&
-            in_array($current['slug'] ?? '', array_keys(array_merge($this->menu_pages, $this->submenu_pages)), true);
+            in_array($current['slug'] ?? '', array_keys(array_merge($this->menu_pages, $this->submenu_pages, $this->admin_pages)), true);
 
         if ($slug !== null) {
             return $is_plugin_page && ($current['slug'] ?? '') === $slug;
@@ -602,10 +643,11 @@ final class Page
      */
     public function getAdminPageSlugs(): array
     {
-        return array_merge(
-            array_keys($this->menu_pages),
-            array_keys($this->submenu_pages)
-        );
+	    return array_merge(
+		    array_keys($this->menu_pages),
+		    array_keys($this->submenu_pages),
+		    array_keys($this->admin_pages)
+	    );
     }
 
     /**
@@ -637,6 +679,21 @@ final class Page
             $this->renderAdminPage($slug, $this->submenu_pages[$slug], $data);
             return;
         }
+
+
+		if (isset($this->admin_pages[$slug])) {
+			$this->renderAdminPage($slug, $this->admin_pages[$slug], $data);
+			return;
+		}
+
+		// Check model pages
+		if (isset($this->menu_pages[$slug]) && ($this->menu_pages[$slug]['is_model_page'] ?? false)) {
+			$model = $this->menu_pages[$slug]['model_instance'] ?? null;
+			if ($model instanceof Model) {
+				$model->render($data);
+				return;
+			}
+		}
 
         // Check frontend pages
         if (isset($this->frontend_pages[$slug])) {
@@ -1219,7 +1276,16 @@ final class Page
                         'post_type' => $post_type,
                     ];
                     return;
-                }
+                }elseif (isset($this->admin_pages[$model_slug])) {
+					$this->current_page = [
+						'type' => 'admin',
+						'slug' => $model_slug,
+						'config' => $this->admin_pages[$model_slug],
+						'is_model_page' => true,
+						'post_type' => $post_type,
+					];
+					return;
+				}
             }
 
             // Fallback to regular page detection
@@ -1239,6 +1305,13 @@ final class Page
                     'config' => $this->submenu_pages[$clean_page],
                 ];
             }
+			elseif (isset($this->admin_pages[$clean_page])) {
+				$this->current_page = [
+					'type' => 'admin',
+					'slug' => $clean_page,
+					'config' => $this->admin_pages[$clean_page],
+				];
+			}
         } else {
             // Frontend page detection (unchanged)
             $plugin_page = get_query_var($this->app_slug . '_page');
