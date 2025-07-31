@@ -724,6 +724,9 @@ final class Ajax
 		// Convert to full URL
 		$script_url = site_url('/' . $script_relative_path);
 
+		//return a clean url all backward slashes would be replaced with forward slashes
+		$script_url = str_replace('\\', '/', $script_url);
+
 		return $script_url;
 	}
 
