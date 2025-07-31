@@ -700,7 +700,7 @@ final class Ajax
 
 		// Get current file path (e.g., C:/laragon/www/wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$current_file_path = __FILE__;
-        $script_path = '/assets/js/wptoolkit-ajax.js';
+        $script_path = '/../..//assets/js/wptoolkit-ajax.js';
 
         Debugger::varDump( 'nile-ent', [
             'current_file_path' => $current_file_path,
@@ -720,12 +720,8 @@ final class Ajax
 		// Navigate from Ajax.php location to assets/js/ajax.js
 		$path_parts = explode('/', dirname($relative_path));
 
-        //Remove 'Utils' and 'src'
+        //Remove the last occurrence of 'Utils' and 'src' as that is the one closest to the main script
 
-        // if path parts contains 'Utils' and 'src', remove them
-        $path_parts = array_filter($path_parts, function ($part) {
-            return $part !== 'Utils' && $part !== 'src';
-        });
 
 		// Build the script path
 		$script_relative_path = implode('/', $path_parts) . $script_path ;
