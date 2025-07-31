@@ -862,8 +862,27 @@ abstract class Model
             $post_data['taxonomies'] = $this->build_taxonomies_data($post->ID, $full_taxonomies_terms);
         }
 
-        return $post_data;
+        return $this->transform_post_data($post_data);
     }
+
+	/**
+	 * Transform post data into a custom format for this model.
+	 *
+	 * Override this method in child classes to customize how post data
+	 * is structured when returned by get_post(), get_posts(), and search() methods.
+	 *
+	 * @param array $post_data Raw post data containing:
+	 *   - 'post' => WP_Post object
+	 *   - 'meta' => array (if include_meta is true)
+	 *   - 'taxonomies' => array (if include_taxonomies is true)
+	 * @return array Transformed post data in your desired format
+	 */
+	protected function transform_post_data(array $post_data): array
+	{
+		// Default implementation - return as-is
+		// Child classes should override this method to customize the output format
+		return $post_data;
+	}
 
     /**
      * Build taxonomies data for a post.
