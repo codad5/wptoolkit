@@ -674,11 +674,10 @@ final class Ajax
     {
         return match ($type) {
             'string' => is_string($value),
-            'int', 'integer' => is_numeric($value),
-            'float', 'number' => is_numeric($value),
+            'int', 'integer', 'float', 'number' => is_numeric($value),
             'bool', 'boolean' => in_array($value, [true, false, 'true', 'false', '1', '0', 1, 0], true),
             'array' => is_array($value),
-            'email' => is_email($value),
+            'email' => is_email($value) == true,
             'url' => filter_var($value, FILTER_VALIDATE_URL) !== false,
             default => true,
         };
