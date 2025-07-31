@@ -712,6 +712,9 @@ final class Ajax
 		// Get the part from wp-content onwards (e.g., wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$relative_path = substr($current_file_path, $wp_content_pos);
 
+		// replace all backslashes with forward slashes
+		$relative_path = str_replace('\\', '/', $relative_path);
+
 		// Navigate from Ajax.php location to assets/js/ajax.js
 		$path_parts = explode('/', dirname($relative_path));
 
@@ -725,10 +728,7 @@ final class Ajax
 		// Convert to full URL
 		$script_url = site_url('/' . $script_relative_path);
 
-		//return a clean url all backward slashes would be replaced with forward slashes
-		$script_url = str_replace('\\', '/', $script_url);
-
-		return $script_url;
+		return str_replace('\\', '/', $script_url);
 	}
 
 	/**
