@@ -690,7 +690,7 @@ final class Ajax
 	 * @return string URL to ajax.js helper script
 	 * @throws Exception
 	 */
-	private static function getAjaxHelperScriptUrl(): string
+	public static function getAjaxHelperScriptUrl(): string
 	{
 		static $script_url = null;
 
