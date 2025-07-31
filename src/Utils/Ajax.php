@@ -700,7 +700,7 @@ final class Ajax
 
 		// Get current file path (e.g., C:/laragon/www/wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$current_file_path = __FILE__;
-
+		$script_path = '/../../assets/js/wptoolkit-ajax.js';
 
 		// Find wp-content position and extract the relative path
 		$wp_content_pos = strpos($current_file_path, 'wp-content');
@@ -715,12 +715,11 @@ final class Ajax
 		// Navigate from Ajax.php location to assets/js/ajax.js
 		$path_parts = explode('/', dirname($relative_path));
 
-		// Remove the last 2 parts (src/Utils) to get to root
-		array_pop($path_parts); // Remove 'Utils'
-		array_pop($path_parts); // Remove 'src'
+		//Remove the last occurrence of 'Utils' and 'src' as that is the one closest to the main script
+
 
 		// Build the script path
-		$script_relative_path = implode('/', $path_parts) . '/assets/js/wptoolkit-ajax.js';
+		$script_relative_path = implode('/', $path_parts) . $script_path ;
 
 		// Convert to full URL
 		$script_url = site_url('/' . $script_relative_path);
