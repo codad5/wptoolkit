@@ -845,7 +845,7 @@ abstract class Model
      * @param bool $full_taxonomies_terms Whether to return full term objects
      * @return array Post data structure
      */
-    protected function build_post_data(
+    final protected function build_post_data(
         WP_Post $post,
         ?bool $strip_meta_key,
         bool $include_meta,
@@ -877,7 +877,7 @@ abstract class Model
 	 *   - 'taxonomies' => array (if include_taxonomies is true)
 	 * @return array Transformed post data in your desired format
 	 */
-	protected function transform_post_data(array $post_data): array
+	static function transform_post_data(array $post_data): array
 	{
 		// Default implementation - return as-is
 		// Child classes should override this method to customize the output format
