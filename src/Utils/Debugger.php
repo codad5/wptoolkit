@@ -313,7 +313,7 @@ class Debugger
             esc_html($caller['line'])
         );
 
-        echo '<pre style="margin: 0; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 3px; overflow: auto; max-height: 400px;">';
+        echo '<pre style="margin: 0; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 3px; overflow: auto; max-height: 400px;color : black;">';
 
         ob_start();
         var_dump($data);
