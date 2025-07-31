@@ -719,7 +719,8 @@ final class Ajax
 
 
 		// Build the script path
-		$script_relative_path = implode('/', $path_parts) . $script_path ;
+		// get system directory separator
+		$script_relative_path = implode(DIRECTORY_SEPARATOR, $path_parts) . $script_path ;
 
 		// Convert to full URL
 		$script_url = site_url('/' . $script_relative_path);
