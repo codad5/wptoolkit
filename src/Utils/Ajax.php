@@ -690,7 +690,7 @@ final class Ajax
 	 * @return string URL to ajax.js helper script
 	 * @throws Exception
 	 */
-	public static function getAjaxHelperScriptUrl(): string
+	final static function getAjaxHelperScriptUrl(): string
 	{
 		static $script_url = null;
 
@@ -720,7 +720,7 @@ final class Ajax
 		array_pop($path_parts); // Remove 'src'
 
 		// Build the script path
-		$script_relative_path = implode('/', $path_parts) . '/assets/js/ajax.js';
+		$script_relative_path = implode('/', $path_parts) . '/assets/js/wptoolkit-ajax.js';
 
 		// Convert to full URL
 		$script_url = site_url('/' . $script_relative_path);
