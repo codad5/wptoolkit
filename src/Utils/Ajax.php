@@ -697,38 +697,28 @@ final class Ajax
 			return $script_url;
 		}
 
-		// Get current file path (e.g., C:/laragon/www/wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$current_file_path = __FILE__;
 		$script_path = '/../../assets/js/wptoolkit-ajax.js';
 
-		// Find wp-content position and extract the relative path
 		$wp_content_pos = strpos($current_file_path, 'wp-content');
-
 		if ($wp_content_pos === false) {
 			throw new Exception('Could not locate wp-content directory in path: ' . $current_file_path);
 		}
 
-		// Get the part from wp-content onwards (e.g., wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$relative_path = substr($current_file_path, $wp_content_pos);
+		$relative_path = str_replace('\\', '/', $relative_path); // Normalize for URL
 
-		// replace all backslashes with forward slashes
-		$relative_path = str_replace('\\', '/', $relative_path);
-
-		// Navigate from Ajax.php location to assets/js/ajax.js
 		$path_parts = explode('/', dirname($relative_path));
 
-		//Remove the last occurrence of 'Utils' and 'src' as that is the one closest to the main script
+		$script_relative_path = implode('/', $path_parts) . $script_path;
 
-
-		// Build the script path
-		// get system directory separator
-		$script_relative_path = implode(DIRECTORY_SEPARATOR, $path_parts) . $script_path ;
-
-		// Convert to full URL
+		// Normalize again for URL, resolving ".." if needed
+		$script_relative_path = str_replace('//', '/', $script_relative_path);
 		$script_url = site_url('/' . $script_relative_path);
 
-		return str_replace('\\', '/', $script_url);
+		return str_replace('\\', '/', $script_url); // Extra safety
 	}
+
 
 	/**
 	 * Get the script handle for the Ajax helper script.
