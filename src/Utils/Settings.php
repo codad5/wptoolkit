@@ -950,6 +950,16 @@ class Settings
     {
         $choices = $config['choices'] ?? [];
 
+	    // check if choice is callable
+	    if (is_callable($choices)) {
+		    $_choices = call_user_func($choices);
+		    if (is_array($_choices)) {
+			    $choices = $_choices;
+		    } else {
+			    throw new InvalidArgumentException('Choices must return an array');
+		    }
+	    }
+
         $attrs = $this->buildAttributes(array_merge([
             'name' => $name,
             'id' => $name,
