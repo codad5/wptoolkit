@@ -76,6 +76,13 @@ class Settings
      */
     protected bool $hooks_registered = false;
 
+	/**
+	 * Hook priority for WordPress actions.
+	 *
+	 * Default is 10, can be overridden using setPriority().
+	 */
+	protected int $hook_priority = 10;
+
     /**
      * Constructor for creating a new Settings instance.
      *
@@ -548,24 +555,49 @@ class Settings
         return $this->config;
     }
 
-    /**
-     * Register WordPress hooks.
-     *
-     * @return void
-     */
-    protected function registerHooks(): void
-    {
-        if ($this->hooks_registered) {
-            return;
-        }
 
-        add_action('admin_init', [$this, 'registerSettingsWithWordPress']);
-        add_action('admin_post_' . $this->getClearCacheAction(), [$this, 'handleClearCache']);
 
-        $this->hooks_registered = true;
-    }
+	/**
+	 * Register or re-register WordPress hooks.
+	 *
+	 * @param bool $forceReregister Optional. If true, removes existing hooks before re-adding them.
+	 * @return void
+	 */
+	protected function registerHooks(bool $forceReregister = false): void
+	{
+		// If hooks are already registered and no re-registration is requested, skip.
+		if ($this->hooks_registered && !$forceReregister) {
+			return;
+		}
 
-    /**
+		// If hooks are already registered but re-registration is requested, remove them first.
+		if ($this->hooks_registered && $forceReregister) {
+			remove_action('admin_init', [$this, 'registerSettingsWithWordPress']);
+			remove_action('admin_post_' . $this->getClearCacheAction(), [$this, 'handleClearCache']);
+		}
+
+		// Register hooks with the specified priority
+		add_action('admin_init', [$this, 'registerSettingsWithWordPress'], $this->hook_priority);
+		add_action('admin_post_' . $this->getClearCacheAction(), [$this, 'handleClearCache'], $this->hook_priority);
+
+		$this->hooks_registered = true;
+	}
+
+	/**
+	 * Set hook priority and re-register hooks.
+	 *
+	 * @param int $priority The priority value to set.
+	 * @return void
+	 */
+	public function setPriority(int $priority): void
+	{
+		$this->hook_priority = $priority;
+		$this->registerHooks(true); // Force re-registration
+	}
+
+
+
+	/**
      * Register settings with WordPress Settings API.
      *
      * @return void
