@@ -31,7 +31,7 @@ use WP_Error;
 final class MetaBox
 {
     /** @var string Unique identifier for the meta box */
-    readonly string $id;
+    protected string $id;
 
     /** @var string Title displayed at the top of the meta box */
     private string $title;
