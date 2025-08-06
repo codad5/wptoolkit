@@ -437,7 +437,12 @@ abstract class Model
 		<script type="text/javascript">
             jQuery(document).ready(function($) {
                 const customButtons = <?php echo wp_json_encode($button_html); ?>;
-                $('.wrap .page-title-action').last().after(customButtons);
+                let selector = $('.wrap .page-title-action').last();
+                // if no element then use  `.wp-heading-inline`
+                if (selector.length === 0) {
+                    selector = $('.wp-heading-inline').last();
+                }
+                selector.after(customButtons);
 
                 // Add some basic styling
                 $('.wptk-admin-buttons-header .wptk-admin-button').css({
