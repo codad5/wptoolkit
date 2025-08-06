@@ -262,7 +262,207 @@ abstract class Model
 		return $actions;
 	}
 
+	/**
+	 * Define custom admin buttons configuration.
+	 *
+	 * Return an array of button configurations:
+	 * [
+	 *     'button_id' => [
+	 *         'order' => 10, // Lower numbers appear first
+	 *         'pages' => ['list', 'edit'], // Which pages to show on
+	 *         'callback' => callable|string, // Function to render the button
+	 *         'condition' => callable|null, // Optional condition check
+	 *         'position' => 'after_title'|'header'|'notices', // Where to place
+	 *     ]
+	 * ]
+	 *
+	 * @return array Admin buttons configuration
+	 */
+	protected function get_admin_buttons(): array
+	{
+		return [];
+	}
 
+	/**
+	 * Show admin buttons based on configuration.
+	 *
+	 * @param string $page Current page type ('list', 'edit', 'new')
+	 * @param string $position Button position ('header', 'after_title', 'notices')
+	 * @param mixed $context Additional context (post object for edit pages, etc.)
+	 * @return void
+	 */
+	final public function show_admin_buttons(string $page, string $position, mixed $context = null): void
+	{
+		$buttons = $this->get_admin_buttons();
+
+		if (empty($buttons)) {
+			return;
+		}
+
+		// Filter buttons for current page and position
+		$filtered_buttons = [];
+		foreach ($buttons as $button_id => $config) {
+			// Check if button should show on this page
+			$pages = $config['pages'] ?? ['list', 'edit'];
+			if (!in_array($page, $pages, true)) {
+				continue;
+			}
+
+			// Check position
+			$button_position = $config['position'] ?? 'header';
+			if ($button_position !== $position) {
+				continue;
+			}
+
+			// Check condition if specified
+			if (isset($config['condition']) && is_callable($config['condition'])) {
+				if (!call_user_func($config['condition'], $page, $context, $this)) {
+					continue;
+				}
+			}
+
+			$filtered_buttons[$button_id] = $config;
+		}
+
+		if (empty($filtered_buttons)) {
+			return;
+		}
+
+		// Sort by order
+		uasort($filtered_buttons, fn($a, $b) => ($a['order'] ?? 10) <=> ($b['order'] ?? 10));
+
+		// Render buttons
+		echo '<div class="wptk-admin-buttons wptk-admin-buttons-' . esc_attr($position) . '">';
+		foreach ($filtered_buttons as $button_id => $config) {
+			echo '<div class="wptk-admin-button" id="wptk-admin-button-' . esc_attr($button_id) . '">';
+
+			if (is_callable($config['callback'])) {
+				call_user_func($config['callback'], $page, $context, $this);
+			} elseif (is_string($config['callback']) && method_exists($this, $config['callback'])) {
+				$this->{$config['callback']}($page, $context);
+			}
+
+			echo '</div>';
+		}
+		echo '</div>';
+	}
+
+	/**
+	 * Handle admin buttons for list page.
+	 *
+	 * @return void
+	 */
+	public function handle_list_page_buttons(): void
+	{
+		$screen = get_current_screen();
+
+		if (!$screen || $screen->post_type !== static::POST_TYPE) {
+			return;
+		}
+
+		// Header buttons (next to "Add New")
+		$this->show_admin_buttons('list', 'header');
+
+		// Notice area buttons
+		$this->show_admin_buttons('list', 'notices');
+	}
+
+	/**
+	 * Handle admin buttons for edit/new pages.
+	 *
+	 * @param WP_Post $post Current post object
+	 * @return void
+	 */
+	public function handle_edit_page_buttons(WP_Post $post): void
+	{
+		if ($post->post_type !== static::POST_TYPE) {
+			return;
+		}
+
+		$page_type = $post->post_status === 'auto-draft' ? 'new' : 'edit';
+
+		// Header buttons
+		$this->show_admin_buttons($page_type, 'header', $post);
+
+		// After title buttons
+		$this->show_admin_buttons($page_type, 'after_title', $post);
+	}
+
+	/**
+	 * Handle admin buttons for notices area.
+	 *
+	 * @return void
+	 */
+	public function handle_admin_notices_buttons(): void
+	{
+		$screen = get_current_screen();
+
+		if (!$screen || $screen->post_type !== static::POST_TYPE) {
+			return;
+		}
+
+		$page_type = 'list';
+		if ($screen->base === 'post') {
+			global $post;
+			$page_type = ($post && $post->post_status === 'auto-draft') ? 'new' : 'edit';
+		}
+
+		$this->show_admin_buttons($page_type, 'notices', $screen);
+	}
+
+	/**
+	 * Inject header buttons using JavaScript (for list page).
+	 *
+	 * @return void
+	 */
+	public function inject_list_header_buttons(): void
+	{
+		$screen = get_current_screen();
+
+		if (!$screen || $screen->post_type !== static::POST_TYPE || $screen->base !== 'edit') {
+			return;
+		}
+
+		// Capture button output
+		ob_start();
+		$this->show_admin_buttons('list', 'header');
+		$button_html = ob_get_clean();
+
+		if (empty(trim($button_html))) {
+			return;
+		}
+
+		// Inject via JavaScript
+		?>
+		<script type="text/javascript">
+            jQuery(document).ready(function($) {
+                const customButtons = <?php echo wp_json_encode($button_html); ?>;
+                $('.wrap .page-title-action').last().after(customButtons);
+
+                // Add some basic styling
+                $('.wptk-admin-buttons-header .wptk-admin-button').css({
+                    display: 'inline-block',
+                    marginLeft: '5px'
+                });
+            });
+		</script>
+		<style>
+            .wptk-admin-buttons {
+                display: inline-block;
+            }
+            .wptk-admin-buttons-header .wptk-admin-button {
+                display: inline-block;
+                margin-left: 5px;
+            }
+            .wptk-admin-buttons-after_title {
+                margin: 10px 0;
+            }
+            .wptk-admin-buttons-notices {
+                margin-bottom: 15px;
+            }
+		</style>
+		<?php
+	}
 
     /**
      * Register the custom post type.
@@ -1685,6 +1885,11 @@ abstract class Model
         $this->add_tracked_action('manage_' . static::POST_TYPE . '_posts_custom_column', [$this, 'render_admin_column'], 10, 2);
         $this->add_tracked_filter('manage_edit-' . static::POST_TYPE . '_sortable_columns', [$this, 'setup_sortable_columns']);
         $this->add_tracked_action('pre_get_posts', [$this, 'handle_column_sorting']);
+
+	    // Admin buttons hooks
+	    $this->add_tracked_action('admin_head', [$this, 'inject_list_header_buttons']);
+	    $this->add_tracked_action('edit_form_after_title', [$this, 'handle_edit_page_buttons']);
+	    $this->add_tracked_action('all_admin_notices', [$this, 'handle_admin_notices_buttons']);
 
 		//post row actions
         $this->add_tracked_filter('post_row_actions', [$this, 'show_post_row'], 10, 2);
