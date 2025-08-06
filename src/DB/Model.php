@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\DB;
 
-use Codad5\WPToolkit\Utils\{Config, Cache, InputValidator};
+use Codad5\WPToolkit\Utils\{Config, Cache, Filesystem, InputValidator};
 use WP_Post;
 use WP_Error;
 use WP_Query;
@@ -103,6 +103,10 @@ abstract class Model
      * Cached admin columns configuration.
      */
     private ?array $admin_columns_cache = null;
+
+	protected static Filesystem $filesystem ;
+
+
 
     /**
      * Constructor - protected to enforce singleton pattern.
@@ -257,6 +261,8 @@ abstract class Model
 	protected  function get_post_row(array $actions, WP_Post $post): array {
 		return $actions;
 	}
+
+
 
     /**
      * Register the custom post type.
@@ -2061,4 +2067,374 @@ abstract class Model
             }
         }
     }
+
+	/**
+	 * Export posts data to file with filtering capabilities.
+	 *
+	 * @param array $args Export configuration
+	 * * - format: 'json'|'csv' (default: 'json')
+	 * * - file_path: string|null (default: null for auto-generated)
+	 * * - file_name: string|null (default: auto-generated with timestamp)
+	 * * - query_args: array (filters for get_posts method)
+	 * * - include_meta: bool (default: true)
+	 * * - include_taxonomies: bool (default: true)
+	 * * - full_taxonomies_terms: bool (default: false)
+	 * * - strip_meta_key: bool (default: true)
+	 * * - meta_filters: array (specific meta key filters)
+	 * * - fields: array|null (specific fields to export, null = all)
+	 * @return array|WP_Error Export result with file info or error
+	 */
+	public function export(array $args = []): array|WP_Error
+	{
+		$defaults = [
+			'format' => 'json',
+			'file_path' => null,
+			'file_name' => null,
+			'query_args' => [],
+			'include_meta' => true,
+			'include_taxonomies' => true,
+			'full_taxonomies_terms' => false,
+			'strip_meta_key' => true,
+			'meta_filters' => [],
+			'fields' => null, // null = all fields
+		];
+
+		$config = array_merge($defaults, $args);
+
+		// Validate format
+		if (!in_array($config['format'], ['json', 'csv'], true)) {
+			return new WP_Error('invalid_format', 'Export format must be json or csv');
+		}
+
+		// Apply meta filters to query args
+		if (!empty($config['meta_filters'])) {
+			$meta_query = $config['query_args']['meta_query'] ?? [];
+
+			foreach ($config['meta_filters'] as $key => $value) {
+				$meta_query[] = [
+					'key' => $key,
+					'value' => $value,
+					'compare' => is_array($value) ? 'IN' : '='
+				];
+			}
+
+			if (!empty($meta_query)) {
+				$config['query_args']['meta_query'] = $meta_query;
+				if (count($meta_query) > 1) {
+					$config['query_args']['meta_query']['relation'] = 'AND';
+				}
+			}
+		}
+
+		// Get posts data
+		$posts_data = $this->get_posts(
+			$config['query_args'],
+			$config['strip_meta_key'],
+			[
+				'include_meta' => $config['include_meta'],
+				'include_taxonomies' => $config['include_taxonomies'],
+				'full_taxonomies_terms' => $config['full_taxonomies_terms']
+			]
+		);
+
+		if (empty($posts_data)) {
+			return new WP_Error('no_data', 'No data found to export');
+		}
+
+		// Filter fields if specified
+		if ($config['fields'] !== null) {
+			$posts_data = $this->filterExportFields($posts_data, $config['fields']);
+		}
+
+		// Generate file path and name
+		$file_info = $this->generateExportFilePath($config);
+		if (is_wp_error($file_info)) {
+			return $file_info;
+		}
+
+		// Format and save data
+		$export_result = $this->formatAndSaveExportData(
+			$posts_data,
+			$file_info['full_path'],
+			$config['format']
+		);
+
+		if (is_wp_error($export_result)) {
+			return $export_result;
+		}
+
+		// Return export information
+		return [
+			'success' => true,
+			'file_path' => $file_info['full_path'],
+			'file_url' => $file_info['url'],
+			'file_name' => $file_info['filename'],
+			'format' => $config['format'],
+			'records_exported' => count($posts_data),
+			'file_size' => $this->getFilesystem()->getFileSize($file_info['full_path']),
+			'created_at' => current_time('mysql'),
+		];
+	}
+
+	/**
+	 * Filter export data to include only specified fields.
+	 *
+	 * @param array $posts_data Posts data
+	 * @param array $fields Fields to include
+	 * @return array Filtered data
+	 */
+	protected function filterExportFields(array $posts_data, array $fields): array
+	{
+		$filtered_data = [];
+
+		foreach ($posts_data as $post_data) {
+			$filtered_item = [];
+
+			foreach ($fields as $field) {
+				// Handle dot notation for nested fields (e.g., 'post.post_title', 'meta.price')
+				$field_parts = explode('.', $field);
+				$value = $post_data;
+
+				foreach ($field_parts as $part) {
+					if (is_array($value) && isset($value[$part])) {
+						$value = $value[$part];
+					} elseif (is_object($value) && isset($value->$part)) {
+						$value = $value->$part;
+					} else {
+						$value = null;
+						break;
+					}
+				}
+
+				$filtered_item[$field] = $value;
+			}
+
+			$filtered_data[] = $filtered_item;
+		}
+
+		return $filtered_data;
+	}
+
+	/**
+	 * Generate export file path and information.
+	 *
+	 * @param array $config Export configuration
+	 * @return array|WP_Error File information or error
+	 */
+	protected function generateExportFilePath(array $config): array|WP_Error
+	{
+		$filesystem = $this->getFilesystem();
+
+		// Generate filename if not provided
+		if (!$config['file_name']) {
+			$timestamp = current_time('Y-m-d_H-i-s');
+			$config['file_name'] = sprintf(
+				'%s_export_%s.%s',
+				static::POST_TYPE,
+				$timestamp,
+				$config['format']
+			);
+		}
+
+		// Ensure proper file extension
+		$file_extension = '.' . $config['format'];
+		if (!str_ends_with($config['file_name'], $file_extension)) {
+			$config['file_name'] .= $file_extension;
+		}
+
+		// Use custom path or create app-specific directory
+		if ($config['file_path']) {
+			$directory = dirname($config['file_path']);
+			if (!$filesystem->fileExists($directory)) {
+				if (!$filesystem->createDirectory($directory)) {
+					return new WP_Error('directory_creation_failed', 'Could not create export directory');
+				}
+			}
+			$full_path = $config['file_path'];
+		} else {
+			$export_dir = $filesystem->createAppUploadDir('exports');
+			if (!$export_dir) {
+				return new WP_Error('directory_creation_failed', 'Could not create export directory');
+			}
+			$full_path = $export_dir['path'] . '/' . $config['file_name'];
+		}
+
+		// Make filename unique
+		$unique_filename = $filesystem->getUniqueFilename(basename($full_path), dirname($full_path));
+		$full_path = dirname($full_path) . '/' . $unique_filename;
+
+		// Generate URL for the file
+		$upload_dir = $filesystem->getUploadDir();
+		$relative_path = str_replace($upload_dir['path'], '', $full_path);
+		$file_url = $upload_dir['url'] . $relative_path;
+
+		return [
+			'full_path' => $full_path,
+			'filename' => basename($full_path),
+			'url' => $file_url,
+		];
+	}
+
+	/**
+	 * Format data and save to file.
+	 *
+	 * @param array $data Data to export
+	 * @param string $file_path File path to save to
+	 * @param string $format Export format
+	 * @return bool|WP_Error Success status or error
+	 */
+	protected function formatAndSaveExportData(array $data, string $file_path, string $format): bool|WP_Error
+	{
+		$filesystem = $this->getFilesystem();
+
+		try {
+			switch ($format) {
+				case 'json':
+					$content = wp_json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+					if ($content === false) {
+						return new WP_Error('json_encoding_failed', 'Failed to encode data as JSON');
+					}
+					break;
+
+				case 'csv':
+					$content = $this->formatDataAsCsv($data);
+					if ($content === false) {
+						return new WP_Error('csv_formatting_failed', 'Failed to format data as CSV');
+					}
+					break;
+
+				default:
+					return new WP_Error('unsupported_format', "Unsupported export format: {$format}");
+			}
+
+			if (!$filesystem->putContents($file_path, $content)) {
+				return new WP_Error('file_write_failed', 'Failed to write export file');
+			}
+
+			return true;
+		} catch (Exception $e) {
+			return new WP_Error('export_error', 'Export error: ' . $e->getMessage());
+		}
+	}
+
+	/**
+	 * Format data as CSV content.
+	 *
+	 * @param array $data Data to format
+	 * @return string|false CSV content or false on failure
+	 */
+	protected function formatDataAsCsv(array $data): string|false
+	{
+		if (empty($data)) {
+			return '';
+		}
+
+		$output = fopen('php://temp', 'r+');
+		if ($output === false) {
+			return false;
+		}
+
+		// Flatten data for CSV format
+		$flattened_data = $this->flattenDataForCsv($data);
+
+		if (empty($flattened_data)) {
+			fclose($output);
+			return false;
+		}
+
+		// Write CSV header
+		$headers = array_keys($flattened_data[0]);
+		fputcsv($output, $headers);
+
+		// Write data rows
+		foreach ($flattened_data as $row) {
+			fputcsv($output, $row);
+		}
+
+		rewind($output);
+		$csv_content = stream_get_contents($output);
+		fclose($output);
+
+		return $csv_content;
+	}
+
+	/**
+	 * Flatten nested data structure for CSV export.
+	 *
+	 * @param array $data Nested data
+	 * @return array Flattened data
+	 */
+	protected function flattenDataForCsv(array $data): array
+	{
+		$flattened = [];
+
+		foreach ($data as $item) {
+			$flat_item = [];
+
+			// Flatten post data
+			if (isset($item['post'])) {
+				foreach ($item['post'] as $key => $value) {
+					$flat_item["post_{$key}"] = $this->formatCsvValue($value);
+				}
+			}
+
+			// Flatten meta data
+			if (isset($item['meta'])) {
+				foreach ($item['meta'] as $metabox_id => $meta_fields) {
+					if (is_array($meta_fields)) {
+						foreach ($meta_fields as $field_key => $field_value) {
+							$flat_item["meta_{$field_key}"] = $this->formatCsvValue($field_value);
+						}
+					}
+				}
+			}
+
+			// Flatten taxonomy data
+			if (isset($item['taxonomies'])) {
+				foreach ($item['taxonomies'] as $taxonomy => $terms) {
+					if (is_array($terms)) {
+						$flat_item["taxonomy_{$taxonomy}"] = $this->formatCsvValue($terms);
+					}
+				}
+			}
+
+			$flattened[] = $flat_item;
+		}
+
+		return $flattened;
+	}
+
+	/**
+	 * Format value for CSV output.
+	 *
+	 * @param mixed $value Value to format
+	 * @return string Formatted value
+	 */
+	protected function formatCsvValue(mixed $value): string
+	{
+		if (is_array($value)) {
+			return implode('; ', array_map('strval', $value));
+		}
+
+		if (is_object($value)) {
+			return wp_json_encode($value);
+		}
+
+		return (string) $value;
+	}
+
+	/**
+	 * Get Filesystem instance for file operations.
+	 *
+	 * @return Filesystem Filesystem instance
+	 */
+	protected function getFilesystem(): Filesystem
+	{
+
+		if (!isset(static::$filesystem)) {
+			static::$filesystem = new Filesystem($this->config ?? static::POST_TYPE);
+		}
+
+		return static::$filesystem;
+	}
 }
