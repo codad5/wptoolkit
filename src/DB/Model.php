@@ -955,6 +955,7 @@ abstract class Model
         $include_meta = $config['include_meta'] ?? true;
         $include_taxonomies = $config['include_taxonomies'] ?? false;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
+        $transform_post_data = $config['transform_post_data'] ?? true;
 
         // Generate cache key based on configuration
         $cache_suffix = $this->generate_cache_suffix($include_meta, $include_taxonomies, $full_taxonomies_terms);
@@ -976,7 +977,7 @@ abstract class Model
         }
 
         // Build post data using the reusable method
-        $result = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms);
+        $result = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms, $transform_post_data);
 
         // Cache the result
         if ($this->enable_cache) {
@@ -1005,6 +1006,7 @@ abstract class Model
         $include_meta = $config['include_meta'] ?? true;
         $include_taxonomies = $config['include_taxonomies'] ?? false;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
+        $transform_post_data = $config['transform_post_data'] ?? true;
 
         // Set default number of posts
         if (!isset($args['posts_per_page'])) {
@@ -1028,8 +1030,9 @@ abstract class Model
         $posts = get_posts($args);
         $results = [];
 
+
         foreach ($posts as $post) {
-            $results[] = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms);
+            $results[] = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms, $transform_post_data);
         }
 
         // Cache simple queries
@@ -1056,7 +1059,8 @@ abstract class Model
         ?bool $strip_meta_key,
         bool $include_meta,
         bool $include_taxonomies,
-        bool $full_taxonomies_terms
+        bool $full_taxonomies_terms,
+        bool $transform_post_data = true
     ): array {
         $post_data = ['post' => $post];
 
@@ -1068,7 +1072,7 @@ abstract class Model
             $post_data['taxonomies'] = $this->build_taxonomies_data($post->ID, $full_taxonomies_terms);
         }
 
-        return $this->transform_post_data($post_data);
+        return $transform_post_data ? $this->transform_post_data($post_data) : $post_data;
     }
 
 	/**
@@ -1227,6 +1231,7 @@ abstract class Model
         $include_taxonomies = $config['include_taxonomies'] ?? true;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
         $strip_meta_key = $config['strip_meta_key'] ?? null;
+        $transform_post_data = $config['transform_post_data'] ?? true;
 
         $args = array_merge($args, [
             'post_type' => static::POST_TYPE,
@@ -1299,7 +1304,8 @@ abstract class Model
                 $strip_meta_key,
                 $include_meta,
                 $include_taxonomies,
-                $full_taxonomies_terms
+                $full_taxonomies_terms,
+                $transform_post_data
             );
 
             $post_data['relevance'] = $this->calculate_relevance($post, $search_term, $search_fields);
@@ -2338,7 +2344,8 @@ abstract class Model
 			[
 				'include_meta' => $config['include_meta'],
 				'include_taxonomies' => $config['include_taxonomies'],
-				'full_taxonomies_terms' => $config['full_taxonomies_terms']
+				'full_taxonomies_terms' => $config['full_taxonomies_terms'],
+                'transform_post_data' => false, // Disable default transformation
 			]
 		);
 
@@ -2346,10 +2353,6 @@ abstract class Model
 			return new WP_Error('no_data', 'No data found to export');
 		}
 
-		// Filter fields if specified
-		if ($config['fields'] !== null) {
-			$posts_data = $this->filterExportFields($posts_data, $config['fields']);
-		}
 
 		// Generate file path and name
 		$file_info = $this->generateExportFilePath($config);
@@ -2361,7 +2364,8 @@ abstract class Model
 		$export_result = $this->formatAndSaveExportData(
 			$posts_data,
 			$file_info['full_path'],
-			$config['format']
+			$config['format'],
+			$config['fields'] ?? null
 		);
 
 		if (is_wp_error($export_result)) {
@@ -2411,11 +2415,13 @@ abstract class Model
 					}
 				}
 
+
 				$filtered_item[$field] = $value;
 			}
 
 			$filtered_data[] = $filtered_item;
 		}
+
 
 		return $filtered_data;
 	}
@@ -2488,9 +2494,13 @@ abstract class Model
 	 * @param string $format Export format
 	 * @return bool|WP_Error Success status or error
 	 */
-	protected function formatAndSaveExportData(array $data, string $file_path, string $format): bool|WP_Error
+	protected function formatAndSaveExportData(array $data, string $file_path, string $format, array|null $fields = null): bool|WP_Error
 	{
 		$filesystem = $this->getFilesystem();
+
+		// Filter fields if specified
+		$data = $fields !== null && count( $fields ) > 0 ? $this->filterExportFields( $data, $fields ) : ( $format === 'csv' ? $this->flattenDataForCsv( $data ) : $data );
+
 
 		try {
 			switch ($format) {
@@ -2540,12 +2550,7 @@ abstract class Model
 		}
 
 		// Flatten data for CSV format
-		$flattened_data = $this->flattenDataForCsv($data);
-
-		if (empty($flattened_data)) {
-			fclose($output);
-			return false;
-		}
+		$flattened_data =  $data;
 
 		// Write CSV header
 		$headers = array_keys($flattened_data[0]);
