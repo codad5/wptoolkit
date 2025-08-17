@@ -576,31 +576,34 @@ final class Page
         return esc_url($base_url);
     }
 
-    /**
-     * Get the URL for a frontend page.
-     *
-     * @param string $slug Page slug
-     * @param array<string, mixed> $params Additional URL parameters
-     * @return string Page URL
-     */
-    public function getFrontendUrl(string $slug, array $params = []): string
-    {
-        $page_config = $this->frontend_pages[$slug] ?? null;
+	/**
+	 * Get the URL for a frontend page.
+	 *
+	 * @param string $slug Page slug
+	 * @param array<string, mixed> $params Additional URL parameters
+	 * @return string Page URL
+	 */
+	public function getFrontendUrl(string $slug, array $params = []): string
+	{
+		$page_config = $this->frontend_pages[$slug] ?? null;
 
-        if (!$page_config) {
-            return home_url('/');
-        }
+		if (!$page_config) {
+			return home_url('/');
+		}
 
-        $base_url = home_url('/' . $this->app_slug . '/' . $slug . '/');
+		// Get the correct path using the helper method
+		$path = $this->getFrontendPagePath($slug, $page_config);
+		$base_url = home_url('/' . $path . '/');
 
-        if (!empty($params)) {
-            $base_url = add_query_arg($params, $base_url);
-        }
+		if (!empty($params)) {
+			$base_url = add_query_arg($params, $base_url);
+		}
 
-        return esc_url($base_url);
-    }
+		return esc_url($base_url);
+	}
 
-    /**
+
+	/**
      * Get current page information.
      *
      * @return array<string, mixed> Current page data
