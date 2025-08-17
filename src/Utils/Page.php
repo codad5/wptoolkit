@@ -104,6 +104,19 @@ final class Page
 	];
 
 
+	/**
+	 * Registered menu groups for navigation menus.
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	protected array $menu_groups = [];
+
+	/**
+	 * Whether menu hooks have been registered.
+	 */
+	protected bool $menu_hooks_registered = false;
+
+
     /**
      * Constructor for creating a new Page instance.
      *
@@ -434,15 +447,51 @@ final class Page
 			'use_app_prefix' => true, // Whether to use app_slug prefix
 			'regex' => null, // For dynamic routing
 			'query_mapping' => [], // For extracting values from regex matches
+			'add_to_appearance_menu_group' => null, // Menu group to add this page to
 		];
 
 		$slug = sanitize_key($slug);
-		$this->frontend_pages[$slug] = array_merge(
+		$page_config = array_merge(
 			$defaults,
 			$this->mergeAssetConfig($config, 'frontend')
 		);
 
+		$this->frontend_pages[$slug] = $page_config;
+
+		// Auto-add to menu group if specified
+		if (!empty($page_config['add_to_appearance_menu_group'])) {
+			$this->addPageToAppearanceMenuGroup($slug);
+		}
+
 		return $this;
+	}
+
+	/**
+	 * Add a frontend page to a menu group.
+	 *
+	 * @param string $page_slug Page slug
+	 * @return void
+	 */
+	protected function addPageToAppearanceMenuGroup(string $page_slug): void
+	{
+		$page_config = $this->frontend_pages[$page_slug] ?? null;
+		if (!$page_config || empty($page_config['add_to_appearance_menu_group'])) {
+			return; // No group specified or page not found
+		}
+		$group_slug = $page_config['add_to_appearance_menu_group'];
+
+		if (!isset($this->menu_groups[$group_slug])) {
+			return; // Menu group doesn't exist
+		}
+
+		// Generate URL for the frontend page
+		$page_url = $this->getFrontendUrl($page_slug);
+
+		// Add to the menu group's paths
+		$this->menu_groups[$group_slug]['paths'][$page_slug] = [
+			'title' => $page_config['title'] ?: ucfirst(str_replace(['-', '_'], ' ', $page_slug)),
+			'url' => $page_url
+		];
 	}
 
 
@@ -1530,4 +1579,245 @@ final class Page
     {
         return $this->app_slug . '_flush_rules';
     }
+
+	/**
+	 * Create a menu group for WordPress navigation menus.
+	 *
+	 * @param string $slug Group slug
+	 * @param string $title Group title shown in menu admin
+	 * @param array $config Group configuration
+	 * @return static For method chaining
+	 */
+	public function createAppearanceMenuGroup(string $slug, string $title, array $config = []): static
+	{
+		$defaults = [
+			'paths' => [],
+			'description' => '',
+			'icon' => 'dashicons-admin-links',
+			'capability' => 'manage_options',
+			'priority' => 'default'
+		];
+
+		$slug = sanitize_key($slug);
+		$this->menu_groups[$slug] = array_merge($defaults, $config, [
+			'slug' => $slug,
+			'title' => $title
+		]);
+
+		$this->registerAppearanceMenuHooks();
+
+		return $this;
+	}
+
+	/**
+	 * Register menu hooks and modify WordPress menu behavior.
+	 *
+	 * @return void
+	 */
+	protected function registerAppearanceMenuHooks(): void
+	{
+		if ($this->menu_hooks_registered) {
+			return;
+		}
+
+		// Add metaboxes to menu admin
+		add_action('admin_head-nav-menus.php', [$this, 'addAppearanceMenuMetaboxes' ]);
+
+		// Add custom CSS for better integration
+		add_action('admin_head-nav-menus.php', [$this, 'addAppearanceMenuAdminStyles' ]);
+
+		$this->menu_hooks_registered = true;
+	}
+
+	/**
+	 * Add custom styles for menu integration.
+	 *
+	 * @return void
+	 */
+	public function addAppearanceMenuAdminStyles(): void
+	{
+		?>
+        <style type="text/css">
+            .control-section.accordion-section[id*="<?php echo esc_attr($this->app_slug); ?>"] {
+                /* Ensure proper styling matches WordPress core */
+            }
+
+            .control-section.accordion-section[id*="<?php echo esc_attr($this->app_slug); ?>"] .accordion-section-title {
+                border-top: 1px solid #dcdcde;
+            }
+        </style>
+		<?php
+	}
+
+	/**
+	 * Add custom metaboxes to the WordPress menu admin page.
+	 *
+	 * @return void
+	 */
+	public function addAppearanceMenuMetaboxes(): void
+	{
+		foreach ($this->menu_groups as $group_slug => $group_config) {
+			if (!current_user_can($group_config['capability'])) {
+				continue;
+			}
+
+			// Use the correct ID format for accordion sections
+			$metabox_id = 'add-' . $this->app_slug . '-' . $group_slug;
+
+			add_meta_box(
+				$metabox_id,
+				esc_html($group_config['title']),
+				[$this, 'renderAppearanceMenuGroupMetabox' ],
+				'nav-menus',
+				'side',
+				$group_config['priority'],
+				['group_slug' => $group_slug, 'group_config' => $group_config]
+			);
+		}
+	}
+
+	/**
+	 * Render the metabox content for a menu group.
+	 *
+	 * @param mixed $object Not used
+	 * @param array $args Metabox arguments
+	 * @return void
+	 */
+	public function renderAppearanceMenuGroupMetabox($object, array $args): void
+	{
+		$group_slug = $args['args']['group_slug'];
+		$group_config = $args['args']['group_config'];
+		$paths = $group_config['paths'];
+		$posttype_id = $this->app_slug . '-' . $group_slug;
+
+		if (empty($paths)) {
+			echo '<p>' . esc_html__('No items available in this group.', $this->text_domain) . '</p>';
+			return;
+		}
+
+		?>
+        <div id="posttype-<?php echo esc_attr($posttype_id); ?>" class="posttypediv">
+
+			<?php if (!empty($group_config['description'])): ?>
+                <p class="description"><?php echo esc_html($group_config['description']); ?></p>
+			<?php endif; ?>
+
+            <!-- Tabs structure like WordPress core -->
+            <ul id="posttype-<?php echo esc_attr($posttype_id); ?>-tabs" class="posttype-tabs add-menu-item-tabs">
+                <li class="tabs">
+                    <a class="nav-tab-link" data-type="tabs-panel-posttype-<?php echo esc_attr($posttype_id); ?>-all"
+                       href="#tabs-panel-posttype-<?php echo esc_attr($posttype_id); ?>-all">
+						<?php esc_html_e('View All', $this->text_domain); ?>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Main content panel -->
+            <div id="tabs-panel-posttype-<?php echo esc_attr($posttype_id); ?>-all" class="tabs-panel tabs-panel-active">
+                <ul id="<?php echo esc_attr($posttype_id); ?>checklist" class="categorychecklist form-no-clear">
+					<?php foreach ($paths as $path_key => $path_config): ?>
+						<?php
+						$item_index = $this->generateAppearanceMenuItemIndex($group_slug, $path_key);
+						$url = $this->resolveMenuItemUrl($path_config);
+						$title = $path_config['title'] ?? ucfirst(str_replace(['-', '_'], ' ', $path_key));
+						?>
+                        <li>
+                            <label class="menu-item-title">
+                                <input type="checkbox"
+                                       class="menu-item-checkbox"
+                                       name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-object-id]"
+                                       value="<?php echo esc_attr($item_index); ?>">
+								<?php echo esc_html($title); ?>
+                            </label>
+
+                            <!-- WordPress core required fields -->
+                            <input type="hidden" class="menu-item-db-id"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-db-id]" value="0">
+                            <input type="hidden" class="menu-item-object"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-object]" value="">
+                            <input type="hidden" class="menu-item-parent-id"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-parent-id]" value="0">
+                            <input type="hidden" class="menu-item-type"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-type]" value="custom">
+                            <input type="hidden" class="menu-item-title"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-title]"
+                                   value="<?php echo esc_attr($title); ?>">
+                            <input type="hidden" class="menu-item-url"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-url]"
+                                   value="<?php echo esc_url($url); ?>">
+                            <input type="hidden" class="menu-item-target"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-target]" value="">
+                            <input type="hidden" class="menu-item-attr-title"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-attr-title]" value="">
+                            <input type="hidden" class="menu-item-classes"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-classes]" value="">
+                            <input type="hidden" class="menu-item-xfn"
+                                   name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-xfn]" value="">
+
+                            <!-- Custom fields for tracking -->
+                            <input type="hidden" name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-wptk-group]"
+                                   value="<?php echo esc_attr($group_slug); ?>">
+                            <input type="hidden" name="menu-item[<?php echo esc_attr($item_index); ?>][menu-item-wptk-path]"
+                                   value="<?php echo esc_attr($path_key); ?>">
+                        </li>
+					<?php endforeach; ?>
+                </ul>
+            </div>
+
+            <!-- Button controls with proper structure -->
+            <p class="button-controls wp-clearfix" data-items-type="posttype-<?php echo esc_attr($posttype_id); ?>">
+            <span class="list-controls hide-if-no-js">
+                <input type="checkbox" id="<?php echo esc_attr($posttype_id); ?>-tab" class="select-all">
+                <label for="<?php echo esc_attr($posttype_id); ?>-tab"><?php esc_html_e('Select All', $this->text_domain); ?></label>
+            </span>
+
+                <span class="add-to-menu">
+                <input type="submit"
+                       class="button submit-add-to-menu right"
+                       value="<?php esc_attr_e('Add to Menu', $this->text_domain); ?>"
+                       name="add-post-type-menu-item"
+                       id="submit-posttype-<?php echo esc_attr($posttype_id); ?>">
+                <span class="spinner"></span>
+            </span>
+            </p>
+
+        </div>
+		<?php
+	}
+
+	/**
+	 * Generate a unique negative index for menu items.
+	 *
+	 * @param string $group_slug Group slug
+	 * @param string $path_key Path key
+	 * @return string Negative index
+	 */
+	protected function generateAppearanceMenuItemIndex(string $group_slug, string $path_key): string
+	{
+		static $counter = 1000; // Start with high number to avoid conflicts
+		$counter++;
+		return '-' . $counter;
+	}
+
+	/**
+	 * Resolve the URL for a menu item path configuration.
+	 *
+	 * @param array $path_config Path configuration
+	 * @return string Resolved URL
+	 */
+	protected function resolveMenuItemUrl(array $path_config): string
+	{
+		// If absolute URL is provided, use it
+		if (isset($path_config['url']) && filter_var($path_config['url'], FILTER_VALIDATE_URL)) {
+			return $path_config['url'];
+		}
+
+		// If relative path is provided, make it relative to home
+		if (isset($path_config['url'])) {
+			return home_url(ltrim($path_config['url'], '/'));
+		}
+
+		// Fallback to home URL
+		return home_url('/');
+	}
 }

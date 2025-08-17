@@ -133,6 +133,18 @@ class WPToolkitTodoPlugin extends  PluginEngine
 
 		$this->page->setAssetManager($assets);
 
+		$this->page->createAppearanceMenuGroup('my-plugin-pages', __('My Plugin Pages', 'textdomain'), [
+            'description' => __('Add plugin pages to your menu', 'textdomain'),
+            'paths' => [
+                'external-link' => [
+                    'title' => __('External Resource', 'textdomain'),
+                    'url' => 'https://example.com'
+                ]
+            ]
+        ]);
+
+
+
 		$this->page->addMenuPage('todo', [
 			'page_title' => __('Todo List', 'wptk-todo'),
 			'menu_title' => __('Todos', 'wptk-todo'),
@@ -147,6 +159,7 @@ class WPToolkitTodoPlugin extends  PluginEngine
 			'template' => 'frontend/todo-list.php',
 			'public' => true,
 			'path' => 'todo-list',
+            'add_to_appearance_menu_group' => 'my-plugin-pages',
 			'asset_groups' => ['frontend-todos']
 		]);
 
