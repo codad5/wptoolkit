@@ -76,6 +76,13 @@ class Settings
      */
     protected bool $hooks_registered = false;
 
+	/**
+	 * Hook priority for WordPress actions.
+	 *
+	 * Default is 10, can be overridden using setPriority().
+	 */
+	protected int $hook_priority = 10;
+
     /**
      * Constructor for creating a new Settings instance.
      *
@@ -548,24 +555,49 @@ class Settings
         return $this->config;
     }
 
-    /**
-     * Register WordPress hooks.
-     *
-     * @return void
-     */
-    protected function registerHooks(): void
-    {
-        if ($this->hooks_registered) {
-            return;
-        }
 
-        add_action('admin_init', [$this, 'registerSettingsWithWordPress']);
-        add_action('admin_post_' . $this->getClearCacheAction(), [$this, 'handleClearCache']);
 
-        $this->hooks_registered = true;
-    }
+	/**
+	 * Register or re-register WordPress hooks.
+	 *
+	 * @param bool $forceReregister Optional. If true, removes existing hooks before re-adding them.
+	 * @return void
+	 */
+	protected function registerHooks(bool $forceReregister = false): void
+	{
+		// If hooks are already registered and no re-registration is requested, skip.
+		if ($this->hooks_registered && !$forceReregister) {
+			return;
+		}
 
-    /**
+		// If hooks are already registered but re-registration is requested, remove them first.
+		if ($this->hooks_registered && $forceReregister) {
+			remove_action('admin_init', [$this, 'registerSettingsWithWordPress']);
+			remove_action('admin_post_' . $this->getClearCacheAction(), [$this, 'handleClearCache']);
+		}
+
+		// Register hooks with the specified priority
+		add_action('admin_init', [$this, 'registerSettingsWithWordPress'], $this->hook_priority);
+		add_action('admin_post_' . $this->getClearCacheAction(), [$this, 'handleClearCache'], $this->hook_priority);
+
+		$this->hooks_registered = true;
+	}
+
+	/**
+	 * Set hook priority and re-register hooks.
+	 *
+	 * @param int $priority The priority value to set.
+	 * @return void
+	 */
+	public function setPriority(int $priority): void
+	{
+		$this->hook_priority = $priority;
+		$this->registerHooks(true); // Force re-registration
+	}
+
+
+
+	/**
      * Register settings with WordPress Settings API.
      *
      * @return void
@@ -918,6 +950,16 @@ class Settings
     {
         $choices = $config['choices'] ?? [];
 
+	    // check if choice is callable
+	    if (is_callable($choices)) {
+		    $_choices = call_user_func($choices);
+		    if (is_array($_choices)) {
+			    $choices = $_choices;
+		    } else {
+			    throw new InvalidArgumentException('Choices must return an array');
+		    }
+	    }
+
         $attrs = $this->buildAttributes(array_merge([
             'name' => $name,
             'id' => $name,
@@ -1079,5 +1121,90 @@ class Settings
 		}
 		// Use the array save method
 		return $this->saveFromArray($settings_data);
+	}
+
+	/**
+	 * Generate a nonce input field.
+	 *
+	 * @param string $action Nonce action
+	 * @param string $field_name Field name (defaults to '_wpnonce')
+	 * @param bool $referer Whether to include referer field (defaults to true)
+	 * @param bool $echo Whether to echo or return the output (defaults to false)
+	 * @return string HTML output if $echo is false
+	 */
+	public function getNonceField(string $action, string $field_name = '_wpnonce', bool $referer = true, bool $echo = false): string
+	{
+		$nonce_field = wp_nonce_field($action, $field_name, $referer, false);
+
+		if ($echo) {
+			echo $nonce_field;
+			return '';
+		}
+
+		return $nonce_field;
+	}
+
+	/**
+	 * Generate just the nonce input field without referer.
+	 *
+	 * @param string $action Nonce action
+	 * @param string $field_name Field name (defaults to '_wpnonce')
+	 * @param array<string, mixed> $attributes Additional HTML attributes
+	 * @return string HTML input field
+	 */
+	public function renderNonceField(string $action, string $field_name = '_wpnonce', array $attributes = []): string
+	{
+		$nonce_value = wp_create_nonce($action);
+
+		$default_attrs = [
+			'type' => 'hidden',
+			'name' => $field_name,
+			'value' => $nonce_value,
+			'id' => $field_name
+		];
+
+		$attrs = $this->buildAttributes(array_merge($default_attrs, $attributes));
+
+		return sprintf('<input %s />', $attrs);
+	}
+
+	/**
+	 * Generate nonce field with custom action based on app slug.
+	 *
+	 * @param string $action_suffix Action suffix (will be prefixed with app slug)
+	 * @param string $field_name Field name (defaults to '_wpnonce')
+	 * @param bool $referer Whether to include referer field
+	 * @param bool $echo Whether to echo or return the output
+	 * @return string HTML output if $echo is false
+	 */
+	public function getAppNonceField(string $action_suffix, string $field_name = '_wpnonce', bool $referer = true, bool $echo = false): string
+	{
+		$action = $this->app_slug . '_' . $action_suffix;
+		return $this->getNonceField($action, $field_name, $referer, $echo);
+	}
+
+	/**
+	 * Verify nonce with custom action.
+	 *
+	 * @param string $nonce Nonce value to verify
+	 * @param string $action Nonce action
+	 * @return bool Whether nonce is valid
+	 */
+	public function verifyNonce(string $nonce, string $action): bool
+	{
+		return wp_verify_nonce($nonce, $action) !== false;
+	}
+
+	/**
+	 * Verify app-specific nonce.
+	 *
+	 * @param string $nonce Nonce value to verify
+	 * @param string $action_suffix Action suffix (will be prefixed with app slug)
+	 * @return bool Whether nonce is valid
+	 */
+	public function verifyAppNonce(string $nonce, string $action_suffix): bool
+	{
+		$action = $this->app_slug . '_' . $action_suffix;
+		return $this->verifyNonce($nonce, $action);
 	}
 }

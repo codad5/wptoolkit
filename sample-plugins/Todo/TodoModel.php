@@ -42,6 +42,12 @@ class TodoModel extends Model
 	protected function before_run(): void
 	{
 		$this->setup_metaboxes();
+
+	}
+
+	protected function after_run(): void {
+		// Add export handler
+		$this->add_tracked_action('admin_post_export_todos_csv', [$this, 'handle_csv_export']);
 	}
 
 	private function setup_metaboxes(): void
@@ -188,4 +194,98 @@ class TodoModel extends Model
 			'posts_per_page' => -1
 		]);
 	}
+
+
+	/**
+	 * Define admin buttons for todo management.
+	 */
+	protected function get_admin_buttons(): array
+	{
+		return [
+			'export_csv' => [
+				'order' => 10,
+				'pages' => ['list'],
+				'position' => 'header',
+				'callback' => [$this, 'render_export_button'],
+				'condition' => fn() => current_user_can('manage_options')
+			]
+		];
+	}
+
+	/**
+	 * Render the CSV export button.
+	 */
+	protected function render_export_button(string $page, mixed $context): void
+	{
+		$export_url = wp_nonce_url(
+			admin_url('admin-post.php?action=export_todos_csv'),
+			'export_todos_csv'
+		);
+
+		echo '<a href="' . esc_url($export_url) . '" class="button button-secondary" style="margin-left: 5px;">';
+		echo '<span class="dashicons dashicons-download" style="vertical-align: text-bottom; margin-right: 3px;"></span>';
+		echo __('Export CSV', 'wptk-todo');
+		echo '</a>';
+	}
+
+	/**
+	 * Handle CSV export request.
+	 */
+	public function handle_csv_export(): void
+	{
+		// Verify nonce
+		if (!wp_verify_nonce($_GET['_wpnonce'] ?? '', 'export_todos_csv')) {
+			wp_die(__('Security check failed', 'wptk-todo'));
+		}
+
+		// Check permissions
+		if (!current_user_can('manage_options')) {
+			wp_die(__('Insufficient permissions', 'wptk-todo'));
+		}
+
+		// Perform export with all todos
+		$result = $this->export([
+			'format' => 'csv',
+			'query_args' => [
+				'posts_per_page' => -1,
+				'post_status' => ['publish', 'draft', 'pending', 'private']
+			],
+			'include_meta' => true,
+			'include_taxonomies' => false,
+			'fields' => [
+				'post.post_title',
+				'post.post_content',
+				'post.post_date',
+				'post.post_status',
+				'meta.todo_details.priority',
+				'meta.todo_details.status',
+				'meta.todo_details.due_date',
+				'meta.todo_details.estimated_hours'
+			]
+		]);
+
+		if (is_wp_error($result)) {
+			wp_die(__('Export failed: ', 'wptk-todo') . $result->get_error_message());
+		}
+
+		// Force download
+		$file_path = $result['file_path'];
+		$file_name = $result['file_name'];
+
+		// Set headers for file download
+		header('Content-Type: text/csv; charset=utf-8');
+		header('Content-Disposition: attachment; filename="' . sanitize_file_name($file_name) . '"');
+		header('Content-Length: ' . filesize($file_path));
+		header('Cache-Control: must-revalidate');
+		header('Pragma: public');
+
+		// Output file content
+		readfile($file_path);
+
+		// Clean up the temporary file
+		unlink($file_path);
+
+		exit;
+	}
+
 }

@@ -33,7 +33,7 @@ final class Config
     /**
      * Application slug (required for registry identification).
      */
-    public readonly string $slug;
+    public string $slug; //TODO: make this read-only
 
     /**
      * Constructor - creates a new configuration instance.

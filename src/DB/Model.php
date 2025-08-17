@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\DB;
 
-use Codad5\WPToolkit\Utils\{Config, Cache, InputValidator};
+use Codad5\WPToolkit\Utils\{Config, Cache, Filesystem, InputValidator};
 use WP_Post;
 use WP_Error;
 use WP_Query;
@@ -103,6 +103,10 @@ abstract class Model
      * Cached admin columns configuration.
      */
     private ?array $admin_columns_cache = null;
+
+	protected static Filesystem $filesystem ;
+
+
 
     /**
      * Constructor - protected to enforce singleton pattern.
@@ -229,6 +233,241 @@ abstract class Model
     {
         return false;
     }
+
+	/* * Show post row actions in the admin list table.
+	 *
+	 * @param array $actions Array of post row actions
+	 * @param WP_Post $post Current post object
+	 * @return array Modified post row actions
+	 */
+	final function show_post_row(array $actions, WP_Post $post): array
+	{
+		// If the post type is not the current post type, return the actions as is
+		if ($post->post_type !== static::POST_TYPE) {
+			return $actions;
+		}
+
+		// Call the method to get the post row actions
+		return $this->get_post_row($actions, $post);
+	}
+
+
+	/*	 * Filter to modify the post row actions in the admin list table.
+	 *
+	 * @param array $actions Array of post row actions
+	 * @param WP_Post $post Current post object
+	 * @return array Modified post row actions
+	 */
+	protected  function get_post_row(array $actions, WP_Post $post): array {
+		return $actions;
+	}
+
+	/**
+	 * Define custom admin buttons configuration.
+	 *
+	 * Return an array of button configurations:
+	 * [
+	 *     'button_id' => [
+	 *         'order' => 10, // Lower numbers appear first
+	 *         'pages' => ['list', 'edit'], // Which pages to show on
+	 *         'callback' => callable|string, // Function to render the button
+	 *         'condition' => callable|null, // Optional condition check
+	 *         'position' => 'after_title'|'header'|'notices', // Where to place
+	 *     ]
+	 * ]
+	 *
+	 * @return array Admin buttons configuration
+	 */
+	protected function get_admin_buttons(): array
+	{
+		return [];
+	}
+
+	/**
+	 * Show admin buttons based on configuration.
+	 *
+	 * @param string $page Current page type ('list', 'edit', 'new')
+	 * @param string $position Button position ('header', 'after_title', 'notices')
+	 * @param mixed $context Additional context (post object for edit pages, etc.)
+	 * @return void
+	 */
+	final public function show_admin_buttons(string $page, string $position, mixed $context = null): void
+	{
+		$buttons = $this->get_admin_buttons();
+
+		if (empty($buttons)) {
+			return;
+		}
+
+		// Filter buttons for current page and position
+		$filtered_buttons = [];
+		foreach ($buttons as $button_id => $config) {
+			// Check if button should show on this page
+			$pages = $config['pages'] ?? ['list', 'edit'];
+			if (!in_array($page, $pages, true)) {
+				continue;
+			}
+
+			// Check position
+			$button_position = $config['position'] ?? 'header';
+			if ($button_position !== $position) {
+				continue;
+			}
+
+			// Check condition if specified
+			if (isset($config['condition']) && is_callable($config['condition'])) {
+				if (!call_user_func($config['condition'], $page, $context, $this)) {
+					continue;
+				}
+			}
+
+			$filtered_buttons[$button_id] = $config;
+		}
+
+		if (empty($filtered_buttons)) {
+			return;
+		}
+
+		// Sort by order
+		uasort($filtered_buttons, fn($a, $b) => ($a['order'] ?? 10) <=> ($b['order'] ?? 10));
+
+		// Render buttons
+		echo '<div class="wptk-admin-buttons wptk-admin-buttons-' . esc_attr($position) . '">';
+		foreach ($filtered_buttons as $button_id => $config) {
+			echo '<div class="wptk-admin-button" id="wptk-admin-button-' . esc_attr($button_id) . '">';
+
+			if (is_callable($config['callback'])) {
+				call_user_func($config['callback'], $page, $context, $this);
+			} elseif (is_string($config['callback']) && method_exists($this, $config['callback'])) {
+				$this->{$config['callback']}($page, $context);
+			}
+
+			echo '</div>';
+		}
+		echo '</div>';
+	}
+
+	/**
+	 * Handle admin buttons for list page.
+	 *
+	 * @return void
+	 */
+	public function handle_list_page_buttons(): void
+	{
+		$screen = get_current_screen();
+
+		if (!$screen || $screen->post_type !== static::POST_TYPE) {
+			return;
+		}
+
+		// Header buttons (next to "Add New")
+		$this->show_admin_buttons('list', 'header');
+
+		// Notice area buttons
+		$this->show_admin_buttons('list', 'notices');
+	}
+
+	/**
+	 * Handle admin buttons for edit/new pages.
+	 *
+	 * @param WP_Post $post Current post object
+	 * @return void
+	 */
+	public function handle_edit_page_buttons(WP_Post $post): void
+	{
+		if ($post->post_type !== static::POST_TYPE) {
+			return;
+		}
+
+		$page_type = $post->post_status === 'auto-draft' ? 'new' : 'edit';
+
+		// Header buttons
+		$this->show_admin_buttons($page_type, 'header', $post);
+
+		// After title buttons
+		$this->show_admin_buttons($page_type, 'after_title', $post);
+	}
+
+	/**
+	 * Handle admin buttons for notices area.
+	 *
+	 * @return void
+	 */
+	public function handle_admin_notices_buttons(): void
+	{
+		$screen = get_current_screen();
+
+		if (!$screen || $screen->post_type !== static::POST_TYPE) {
+			return;
+		}
+
+		$page_type = 'list';
+		if ($screen->base === 'post') {
+			global $post;
+			$page_type = ($post && $post->post_status === 'auto-draft') ? 'new' : 'edit';
+		}
+
+		$this->show_admin_buttons($page_type, 'notices', $screen);
+	}
+
+	/**
+	 * Inject header buttons using JavaScript (for list page).
+	 *
+	 * @return void
+	 */
+	public function inject_list_header_buttons(): void
+	{
+		$screen = get_current_screen();
+
+		if (!$screen || $screen->post_type !== static::POST_TYPE || $screen->base !== 'edit') {
+			return;
+		}
+
+		// Capture button output
+		ob_start();
+		$this->show_admin_buttons('list', 'header');
+		$button_html = ob_get_clean();
+
+		if (empty(trim($button_html))) {
+			return;
+		}
+
+		// Inject via JavaScript
+		?>
+		<script type="text/javascript">
+            jQuery(document).ready(function($) {
+                const customButtons = <?php echo wp_json_encode($button_html); ?>;
+                let selector = $('.wrap .page-title-action').last();
+                // if no element then use  `.wp-heading-inline`
+                if (selector.length === 0) {
+                    selector = $('.wp-heading-inline').last();
+                }
+                selector.after(customButtons);
+
+                // Add some basic styling
+                $('.wptk-admin-buttons-header .wptk-admin-button').css({
+                    display: 'inline-block',
+                    marginLeft: '5px'
+                });
+            });
+		</script>
+		<style>
+            .wptk-admin-buttons {
+                display: inline-block;
+            }
+            .wptk-admin-buttons-header .wptk-admin-button {
+                display: inline-block;
+                margin-left: 5px;
+            }
+            .wptk-admin-buttons-after_title {
+                margin: 10px 0;
+            }
+            .wptk-admin-buttons-notices {
+                margin-bottom: 15px;
+            }
+		</style>
+		<?php
+	}
 
     /**
      * Register the custom post type.
@@ -721,6 +960,7 @@ abstract class Model
         $include_meta = $config['include_meta'] ?? true;
         $include_taxonomies = $config['include_taxonomies'] ?? false;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
+        $transform_post_data = $config['transform_post_data'] ?? true;
 
         // Generate cache key based on configuration
         $cache_suffix = $this->generate_cache_suffix($include_meta, $include_taxonomies, $full_taxonomies_terms);
@@ -742,7 +982,7 @@ abstract class Model
         }
 
         // Build post data using the reusable method
-        $result = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms);
+        $result = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms, $transform_post_data);
 
         // Cache the result
         if ($this->enable_cache) {
@@ -771,6 +1011,7 @@ abstract class Model
         $include_meta = $config['include_meta'] ?? true;
         $include_taxonomies = $config['include_taxonomies'] ?? false;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
+        $transform_post_data = $config['transform_post_data'] ?? true;
 
         // Set default number of posts
         if (!isset($args['posts_per_page'])) {
@@ -794,8 +1035,9 @@ abstract class Model
         $posts = get_posts($args);
         $results = [];
 
+
         foreach ($posts as $post) {
-            $results[] = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms);
+            $results[] = $this->build_post_data($post, $strip_meta_key, $include_meta, $include_taxonomies, $full_taxonomies_terms, $transform_post_data);
         }
 
         // Cache simple queries
@@ -817,12 +1059,13 @@ abstract class Model
      * @param bool $full_taxonomies_terms Whether to return full term objects
      * @return array Post data structure
      */
-    protected function build_post_data(
+    final protected function build_post_data(
         WP_Post $post,
         ?bool $strip_meta_key,
         bool $include_meta,
         bool $include_taxonomies,
-        bool $full_taxonomies_terms
+        bool $full_taxonomies_terms,
+        bool $transform_post_data = true
     ): array {
         $post_data = ['post' => $post];
 
@@ -834,8 +1077,27 @@ abstract class Model
             $post_data['taxonomies'] = $this->build_taxonomies_data($post->ID, $full_taxonomies_terms);
         }
 
-        return $post_data;
+        return $transform_post_data ? $this->transform_post_data($post_data) : $post_data;
     }
+
+	/**
+	 * Transform post data into a custom format for this model.
+	 *
+	 * Override this method in child classes to customize how post data
+	 * is structured when returned by get_post(), get_posts(), and search() methods.
+	 *
+	 * @param array $post_data Raw post data containing:
+	 *   - 'post' => WP_Post object
+	 *   - 'meta' => array (if include_meta is true)
+	 *   - 'taxonomies' => array (if include_taxonomies is true)
+	 * @return array Transformed post data in your desired format
+	 */
+	static function transform_post_data(array $post_data): array
+	{
+		// Default implementation - return as-is
+		// Child classes should override this method to customize the output format
+		return $post_data;
+	}
 
     /**
      * Build taxonomies data for a post.
@@ -974,6 +1236,7 @@ abstract class Model
         $include_taxonomies = $config['include_taxonomies'] ?? true;
         $full_taxonomies_terms = $config['full_taxonomies_terms'] ?? false;
         $strip_meta_key = $config['strip_meta_key'] ?? null;
+        $transform_post_data = $config['transform_post_data'] ?? true;
 
         $args = array_merge($args, [
             'post_type' => static::POST_TYPE,
@@ -1046,7 +1309,8 @@ abstract class Model
                 $strip_meta_key,
                 $include_meta,
                 $include_taxonomies,
-                $full_taxonomies_terms
+                $full_taxonomies_terms,
+                $transform_post_data
             );
 
             $post_data['relevance'] = $this->calculate_relevance($post, $search_term, $search_fields);
@@ -1633,6 +1897,13 @@ abstract class Model
         $this->add_tracked_filter('manage_edit-' . static::POST_TYPE . '_sortable_columns', [$this, 'setup_sortable_columns']);
         $this->add_tracked_action('pre_get_posts', [$this, 'handle_column_sorting']);
 
+	    // Admin buttons hooks
+	    $this->add_tracked_action('admin_head', [$this, 'inject_list_header_buttons']);
+	    $this->add_tracked_action('edit_form_after_title', [$this, 'handle_edit_page_buttons']);
+	    $this->add_tracked_action('all_admin_notices', [$this, 'handle_admin_notices_buttons']);
+
+		//post row actions
+        $this->add_tracked_filter('post_row_actions', [$this, 'show_post_row'], 10, 2);
         // Authentication hooks
         if (static::REQUIRES_AUTHENTICATION) {
             $this->add_tracked_action('template_redirect', [$this, 'handle_authentication']);
@@ -2012,4 +2283,373 @@ abstract class Model
             }
         }
     }
+
+	/**
+	 * Export posts data to file with filtering capabilities.
+	 *
+	 * @param array $args Export configuration
+	 * * - format: 'json'|'csv' (default: 'json')
+	 * * - file_path: string|null (default: null for auto-generated)
+	 * * - file_name: string|null (default: auto-generated with timestamp)
+	 * * - query_args: array (filters for get_posts method)
+	 * * - include_meta: bool (default: true)
+	 * * - include_taxonomies: bool (default: true)
+	 * * - full_taxonomies_terms: bool (default: false)
+	 * * - strip_meta_key: bool (default: true)
+	 * * - meta_filters: array (specific meta key filters)
+	 * * - fields: array|null (specific fields to export, null = all)
+	 * @return array|WP_Error Export result with file info or error
+	 */
+	public function export(array $args = []): array|WP_Error
+	{
+		$defaults = [
+			'format' => 'json',
+			'file_path' => null,
+			'file_name' => null,
+			'query_args' => [],
+			'include_meta' => true,
+			'include_taxonomies' => true,
+			'full_taxonomies_terms' => false,
+			'strip_meta_key' => true,
+			'meta_filters' => [],
+			'fields' => null, // null = all fields
+		];
+
+		$config = array_merge($defaults, $args);
+
+		// Validate format
+		if (!in_array($config['format'], ['json', 'csv'], true)) {
+			return new WP_Error('invalid_format', 'Export format must be json or csv');
+		}
+
+		// Apply meta filters to query args
+		if (!empty($config['meta_filters'])) {
+			$meta_query = $config['query_args']['meta_query'] ?? [];
+
+			foreach ($config['meta_filters'] as $key => $value) {
+				$meta_query[] = [
+					'key' => $key,
+					'value' => $value,
+					'compare' => is_array($value) ? 'IN' : '='
+				];
+			}
+
+			if (!empty($meta_query)) {
+				$config['query_args']['meta_query'] = $meta_query;
+				if (count($meta_query) > 1) {
+					$config['query_args']['meta_query']['relation'] = 'AND';
+				}
+			}
+		}
+
+		// Get posts data
+		$posts_data = $this->get_posts(
+			$config['query_args'],
+			$config['strip_meta_key'],
+			[
+				'include_meta' => $config['include_meta'],
+				'include_taxonomies' => $config['include_taxonomies'],
+				'full_taxonomies_terms' => $config['full_taxonomies_terms'],
+                'transform_post_data' => false, // Disable default transformation
+			]
+		);
+
+		if (empty($posts_data)) {
+			return new WP_Error('no_data', 'No data found to export');
+		}
+
+
+		// Generate file path and name
+		$file_info = $this->generateExportFilePath($config);
+		if (is_wp_error($file_info)) {
+			return $file_info;
+		}
+
+		// Format and save data
+		$export_result = $this->formatAndSaveExportData(
+			$posts_data,
+			$file_info['full_path'],
+			$config['format'],
+			$config['fields'] ?? null
+		);
+
+		if (is_wp_error($export_result)) {
+			return $export_result;
+		}
+
+		// Return export information
+		return [
+			'success' => true,
+			'file_path' => $file_info['full_path'],
+			'file_url' => $file_info['url'],
+			'file_name' => $file_info['filename'],
+			'format' => $config['format'],
+			'records_exported' => count($posts_data),
+			'file_size' => $this->getFilesystem()->getFileSize($file_info['full_path']),
+			'created_at' => current_time('mysql'),
+		];
+	}
+
+	/**
+	 * Filter export data to include only specified fields.
+	 *
+	 * @param array $posts_data Posts data
+	 * @param array $fields Fields to include
+	 * @return array Filtered data
+	 */
+	protected function filterExportFields(array $posts_data, array $fields): array
+	{
+		$filtered_data = [];
+
+		foreach ($posts_data as $post_data) {
+			$filtered_item = [];
+
+			foreach ($fields as $field) {
+				// Handle dot notation for nested fields (e.g., 'post.post_title', 'meta.price')
+				$field_parts = explode('.', $field);
+				$value = $post_data;
+
+				foreach ($field_parts as $part) {
+					if (is_array($value) && isset($value[$part])) {
+						$value = $value[$part];
+					} elseif (is_object($value) && isset($value->$part)) {
+						$value = $value->$part;
+					} else {
+						$value = null;
+						break;
+					}
+				}
+
+
+				$filtered_item[$field] = $value;
+			}
+
+			$filtered_data[] = $filtered_item;
+		}
+
+
+		return $filtered_data;
+	}
+
+	/**
+	 * Generate export file path and information.
+	 *
+	 * @param array $config Export configuration
+	 * @return array|WP_Error File information or error
+	 */
+	protected function generateExportFilePath(array $config): array|WP_Error
+	{
+		$filesystem = $this->getFilesystem();
+
+		// Generate filename if not provided
+		if (!$config['file_name']) {
+			$timestamp = current_time('Y-m-d_H-i-s');
+			$config['file_name'] = sprintf(
+				'%s_export_%s.%s',
+				static::POST_TYPE,
+				$timestamp,
+				$config['format']
+			);
+		}
+
+		// Ensure proper file extension
+		$file_extension = '.' . $config['format'];
+		if (!str_ends_with($config['file_name'], $file_extension)) {
+			$config['file_name'] .= $file_extension;
+		}
+
+		// Use custom path or create app-specific directory
+		if ($config['file_path']) {
+			$directory = dirname($config['file_path']);
+			if (!$filesystem->fileExists($directory)) {
+				if (!$filesystem->createDirectory($directory)) {
+					return new WP_Error('directory_creation_failed', 'Could not create export directory');
+				}
+			}
+			$full_path = $config['file_path'];
+		} else {
+			$export_dir = $filesystem->createAppUploadDir('exports');
+			if (!$export_dir) {
+				return new WP_Error('directory_creation_failed', 'Could not create export directory');
+			}
+			$full_path = $export_dir['path'] . '/' . $config['file_name'];
+		}
+
+		// Make filename unique
+		$unique_filename = $filesystem->getUniqueFilename(basename($full_path), dirname($full_path));
+		$full_path = dirname($full_path) . '/' . $unique_filename;
+
+		// Generate URL for the file
+		$upload_dir = $filesystem->getUploadDir();
+		$relative_path = str_replace($upload_dir['path'], '', $full_path);
+		$file_url = $upload_dir['url'] . $relative_path;
+
+		return [
+			'full_path' => $full_path,
+			'filename' => basename($full_path),
+			'url' => $file_url,
+		];
+	}
+
+	/**
+	 * Format data and save to file.
+	 *
+	 * @param array $data Data to export
+	 * @param string $file_path File path to save to
+	 * @param string $format Export format
+	 * @return bool|WP_Error Success status or error
+	 */
+	protected function formatAndSaveExportData(array $data, string $file_path, string $format, array|null $fields = null): bool|WP_Error
+	{
+		$filesystem = $this->getFilesystem();
+
+		// Filter fields if specified
+		$data = $fields !== null && count( $fields ) > 0 ? $this->filterExportFields( $data, $fields ) : ( $format === 'csv' ? $this->flattenDataForCsv( $data ) : $data );
+
+
+		try {
+			switch ($format) {
+				case 'json':
+					$content = wp_json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+					if ($content === false) {
+						return new WP_Error('json_encoding_failed', 'Failed to encode data as JSON');
+					}
+					break;
+
+				case 'csv':
+					$content = $this->formatDataAsCsv($data);
+					if ($content === false) {
+						return new WP_Error('csv_formatting_failed', 'Failed to format data as CSV');
+					}
+					break;
+
+				default:
+					return new WP_Error('unsupported_format', "Unsupported export format: {$format}");
+			}
+
+			if (!$filesystem->putContents($file_path, $content)) {
+				return new WP_Error('file_write_failed', 'Failed to write export file');
+			}
+
+			return true;
+		} catch (Exception $e) {
+			return new WP_Error('export_error', 'Export error: ' . $e->getMessage());
+		}
+	}
+
+	/**
+	 * Format data as CSV content.
+	 *
+	 * @param array $data Data to format
+	 * @return string|false CSV content or false on failure
+	 */
+	protected function formatDataAsCsv(array $data): string|false
+	{
+		if (empty($data)) {
+			return '';
+		}
+
+		$output = fopen('php://temp', 'r+');
+		if ($output === false) {
+			return false;
+		}
+
+		// Flatten data for CSV format
+		$flattened_data =  $data;
+
+		// Write CSV header
+		$headers = array_keys($flattened_data[0]);
+		fputcsv($output, $headers);
+
+		// Write data rows
+		foreach ($flattened_data as $row) {
+			fputcsv($output, $row);
+		}
+
+		rewind($output);
+		$csv_content = stream_get_contents($output);
+		fclose($output);
+
+		return $csv_content;
+	}
+
+	/**
+	 * Flatten nested data structure for CSV export.
+	 *
+	 * @param array $data Nested data
+	 * @return array Flattened data
+	 */
+	protected function flattenDataForCsv(array $data): array
+	{
+		$flattened = [];
+
+		foreach ($data as $item) {
+			$flat_item = [];
+
+			// Flatten post data
+			if (isset($item['post'])) {
+				foreach ($item['post'] as $key => $value) {
+					$flat_item["post_{$key}"] = $this->formatCsvValue($value);
+				}
+			}
+
+			// Flatten meta data
+			if (isset($item['meta'])) {
+				foreach ($item['meta'] as $metabox_id => $meta_fields) {
+					if (is_array($meta_fields)) {
+						foreach ($meta_fields as $field_key => $field_value) {
+							$flat_item["meta_{$field_key}"] = $this->formatCsvValue($field_value);
+						}
+					}
+				}
+			}
+
+			// Flatten taxonomy data
+			if (isset($item['taxonomies'])) {
+				foreach ($item['taxonomies'] as $taxonomy => $terms) {
+					if (is_array($terms)) {
+						$flat_item["taxonomy_{$taxonomy}"] = $this->formatCsvValue($terms);
+					}
+				}
+			}
+
+			$flattened[] = $flat_item;
+		}
+
+		return $flattened;
+	}
+
+	/**
+	 * Format value for CSV output.
+	 *
+	 * @param mixed $value Value to format
+	 * @return string Formatted value
+	 */
+	protected function formatCsvValue(mixed $value): string
+	{
+		if (is_array($value)) {
+			return implode('; ', array_map('strval', $value));
+		}
+
+		if (is_object($value)) {
+			return wp_json_encode($value);
+		}
+
+		return (string) $value;
+	}
+
+	/**
+	 * Get Filesystem instance for file operations.
+	 *
+	 * @return Filesystem Filesystem instance
+	 */
+	protected function getFilesystem(): Filesystem
+	{
+
+		if (!isset(static::$filesystem)) {
+			static::$filesystem = new Filesystem($this->config ?? static::POST_TYPE);
+		}
+
+		return static::$filesystem;
+	}
 }

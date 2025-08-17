@@ -674,11 +674,10 @@ final class Ajax
     {
         return match ($type) {
             'string' => is_string($value),
-            'int', 'integer' => is_numeric($value),
-            'float', 'number' => is_numeric($value),
+            'int', 'integer', 'float', 'number' => is_numeric($value),
             'bool', 'boolean' => in_array($value, [true, false, 'true', 'false', '1', '0', 1, 0], true),
             'array' => is_array($value),
-            'email' => is_email($value),
+            'email' => is_email($value) == true,
             'url' => filter_var($value, FILTER_VALIDATE_URL) !== false,
             default => true,
         };
@@ -690,7 +689,7 @@ final class Ajax
 	 * @return string URL to ajax.js helper script
 	 * @throws Exception
 	 */
-	private static function getAjaxHelperScriptUrl(): string
+	final static function getAjaxHelperScriptUrl(): string
 	{
 		static $script_url = null;
 
@@ -698,35 +697,28 @@ final class Ajax
 			return $script_url;
 		}
 
-		// Get current file path (e.g., C:/laragon/www/wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$current_file_path = __FILE__;
+		$script_path = '/../../assets/js/wptoolkit-ajax.js';
 
-
-		// Find wp-content position and extract the relative path
 		$wp_content_pos = strpos($current_file_path, 'wp-content');
-
 		if ($wp_content_pos === false) {
 			throw new Exception('Could not locate wp-content directory in path: ' . $current_file_path);
 		}
 
-		// Get the part from wp-content onwards (e.g., wp-content/plugins/my-plugin/src/Utils/Ajax.php)
 		$relative_path = substr($current_file_path, $wp_content_pos);
+		$relative_path = str_replace('\\', '/', $relative_path); // Normalize for URL
 
-		// Navigate from Ajax.php location to assets/js/ajax.js
 		$path_parts = explode('/', dirname($relative_path));
 
-		// Remove the last 2 parts (src/Utils) to get to root
-		array_pop($path_parts); // Remove 'Utils'
-		array_pop($path_parts); // Remove 'src'
+		$script_relative_path = implode('/', $path_parts) . $script_path;
 
-		// Build the script path
-		$script_relative_path = implode('/', $path_parts) . '/assets/js/ajax.js';
-
-		// Convert to full URL
+		// Normalize again for URL, resolving ".." if needed
+		$script_relative_path = str_replace('//', '/', $script_relative_path);
 		$script_url = site_url('/' . $script_relative_path);
 
-		return $script_url;
+		return str_replace('\\', '/', $script_url); // Extra safety
 	}
+
 
 	/**
 	 * Get the script handle for the Ajax helper script.
