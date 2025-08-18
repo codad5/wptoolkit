@@ -1084,6 +1084,17 @@ final class Page
 			}
 		}
 
+
+		// if callback just echo the output of the callback and return
+		if (isset($config['callback']) && is_callable($config['callback'])) {
+			// Call the callback function and return its output
+			ob_start();
+			call_user_func($config['callback'], $config);
+			$output = ob_get_clean();
+			echo $output;
+			return ''; // Return empty to prevent further template processing
+		}
+
 		// Handle the request and return custom template
 		return $this->getFrontendTemplate($plugin_page, $config);
 	}
@@ -1115,12 +1126,6 @@ final class Page
 			}
 		}
 
-		// Use callback if provided
-//		if (isset($config['callback']) && is_callable($config['callback'])) {
-//			// Create a temporary template file for callback
-//			return $this->createCallbackTemplate($config['callback'], $data);
-//		}
-
 		// Use template if provided
 		$template = $config['template'] ?? null;
 		if ($template) {
@@ -1133,7 +1138,7 @@ final class Page
 		}
 
 		// Create default template
-		return $this->createDefaultFrontendTemplate($slug, $config, $data);
+		return "This page has no template configured. Please create a template file named '{$slug}.php' in your plugin or theme directory.";
 	}
 
 	/**
