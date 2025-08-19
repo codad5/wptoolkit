@@ -112,79 +112,7 @@ class ViewLoader
         $data = array_merge(self::$global_data, $data);
 
         // Add helper functions to data
-		$data['view'] = new class($base_path, $plugin_prefix) {
-			private ?string $default_base_path;
-			private string $default_plugin_prefix;
-
-			public function __construct(?string $base_path, string $plugin_prefix)
-			{
-				$this->default_base_path   = $base_path;
-				$this->default_plugin_prefix = $plugin_prefix;
-			}
-
-			public function load(string $view, array $data = [], ?string $base_path = null, bool $overridable = false, ?string $plugin_prefix = null): string
-			{
-				return ViewLoader::load(
-					$view,
-					$data,
-					false,
-					$base_path ?? $this->default_base_path,
-					$overridable,
-					$plugin_prefix ?? $this->default_plugin_prefix
-				) ?: '';
-			}
-
-			public function include(string $view, array $data = [], ?string $base_path = null, bool $overridable = false, ?string $plugin_prefix = null): void
-			{
-				ViewLoader::load(
-					$view,
-					$data,
-					true,
-					$base_path ?? $this->default_base_path,
-					$overridable,
-					$plugin_prefix ?? $this->default_plugin_prefix
-				);
-			}
-
-			public function load_overridable(string $view, array $data = []): string
-			{
-				return ViewLoader::load(
-					$view,
-					$data,
-					false,
-					$this->default_base_path,
-					true,
-					$this->default_plugin_prefix
-				) ?: '';
-			}
-
-			public function include_overridable(string $view, array $data = []): void
-			{
-				ViewLoader::load(
-					$view,
-					$data,
-					true,
-					$this->default_base_path,
-					true,
-					$this->default_plugin_prefix
-				);
-			}
-
-			public function section(string $name): void
-			{
-				ViewLoader::start_section($name);
-			}
-
-			public function end_section(): void
-			{
-				ViewLoader::end_section();
-			}
-
-			public function yield(string $name, string $default = ''): void
-			{
-				echo ViewLoader::get_section($name, $default);
-			}
-		};
+		$data['view'] = self::create_view_helper($base_path, $plugin_prefix);
 
 
 		// Render the template
@@ -205,6 +133,19 @@ class ViewLoader
 
         return $output;
     }
+
+
+	/**
+	 * Create a view helper instance.
+	 *
+	 * @param string|null $base_path Default base path
+	 * @param string $plugin_prefix Default plugin prefix
+	 * @return ViewHelper View helper instance
+	 */
+	private static function create_view_helper(?string $base_path, string $plugin_prefix): ViewHelper
+	{
+		return new ViewHelper($base_path, $plugin_prefix);
+	}
 
     /**
      * Load a view and return output without echoing.
