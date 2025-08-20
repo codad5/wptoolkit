@@ -36,18 +36,19 @@ abstract class APIHelper
      */
     protected static int $default_cache_duration = 90;
 
-    /**
-     * API endpoints configuration - should be overridden in child classes.
-     *
-     * @var array<string, array{
-     *     route: string,
-     *     method?: string,
-     *     params?: array<string, mixed>,
-     *     headers?: array<string, string>,
-     *     cache?: bool|int|callable
-     * }>
-     */
-    abstract protected static function get_endpoints(): array;
+	/**
+	 * API endpoints configuration - should be overridden in child classes.
+	 *
+	 * @return array<string, array{
+	 *     route: string,
+	 *     method?: string,
+	 *     params?: array<string, mixed>,
+	 *     body?: array<string, mixed>,
+	 *     headers?: array<string, string>,
+	 *     cache?: bool|int|callable
+	 * }>
+	 */
+	abstract protected static function get_endpoints(): array;;
 
     /**
      * Get the plugin slug for cache and option key generation.
@@ -190,73 +191,129 @@ abstract class APIHelper
      * @param string $method HTTP method
      * @param string $url Request URL
      * @param array<string, mixed> $params Request parameters
+     * @param array<string, mixed> $body Request body data
      * @param array<string, mixed> $args Additional request arguments
      * @return mixed Response data
      * @throws \Exception When request fails or response is invalid
      */
-    public static function request(string $method, string $url, array $params = [], array $args = []): mixed
-    {
-        $method = strtoupper(sanitize_text_field($method));
-        $url = esc_url_raw($url);
+	public static function request(string $method, string $url, array $params = [], array $body = [], array $args = []): mixed
+	{
+		$method = strtoupper(sanitize_text_field($method));
+		$url = esc_url_raw($url);
 
-        $request_args = array_merge([
-            'method' => $method,
-            'timeout' => 30,
-        ], $args, [
-            'headers' => array_merge(
-                static::get_headers(),
-                $args['headers'] ?? []
-            ),
-        ]);
+		$request_args = array_merge([
+			'method' => $method,
+			'timeout' => 30,
+		], $args, [
+			'headers' => array_merge(
+				static::get_headers(),
+				$args['headers'] ?? []
+			),
+		]);
 
-        // Add body for non-GET requests
-        if ($method !== 'GET' && !empty($params)) {
-            $request_args['body'] = $params;
-        }
+		// Add query parameters to URL for all methods
+		if (!empty($params)) {
+			$url = static::prepare_request_url($url, $params);
+		}
 
-        $response = wp_remote_request($url, $request_args);
+		// Add body for non-GET requests
+		if ($method !== 'GET' && !empty($body)) {
+			$content_type = static::resolve_content_type($request_args['headers']);
+			$request_args['body'] = static::prepare_request_body($body, $content_type);
+		}
 
-        if (is_wp_error($response)) {
-            throw new \Exception(
-                sprintf(
-                    'Request failed: %s (Code: %s)',
-                    esc_html($response->get_error_message()),
-                    esc_html($response->get_error_code())
-                )
-            );
-        }
+		$response = wp_remote_request($url, $request_args);
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code >= 400) {
-            throw new \Exception(
-                sprintf('HTTP Error: %d', $status_code)
-            );
-        }
+		if (is_wp_error($response)) {
+			throw new \Exception(
+				sprintf(
+					'Request failed: %s (Code: %s)',
+					esc_html($response->get_error_message()),
+					esc_html($response->get_error_code())
+				)
+			);
+		}
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+		$status_code = wp_remote_retrieve_response_code($response);
+		if ($status_code >= 400) {
+			throw new \Exception(
+				sprintf('HTTP Error: %d', $status_code)
+			);
+	    }
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception(
-                sprintf(
-                    'JSON decode error: %s',
-                    json_last_error_msg()
-                )
-            );
-        }
+		$body_response = wp_remote_retrieve_body($response);
+		$data = json_decode($body_response, true);
 
-        // Handle caching
-        $cache_setting = $args['cache'] ?? true;
-        $should_cache = static::should_cache_response($cache_setting, $data);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			throw new \Exception(
+				sprintf(
+					'JSON decode error: %s',
+					json_last_error_msg()
+				)
+			);
+	    }
 
-        if ($should_cache && $method === 'GET') {
-            $cache_duration = is_numeric($cache_setting) ? (int)$cache_setting : static::$default_cache_duration;
-            static::cache($url, $data, $cache_duration);
-        }
+		// Handle caching
+		$cache_setting = $args['cache'] ?? true;
+		$should_cache = static::should_cache_response($cache_setting, $data);
 
-        static::update_api_call_count();
-        return $data;
-    }
+		if ($should_cache && $method === 'GET') {
+			$cache_duration = is_numeric($cache_setting) ? (int)$cache_setting : static::$default_cache_duration;
+			static::cache($url, $data, $cache_duration);
+		}
+
+		static::update_api_call_count();
+		return $data;
+	}
+
+	/**
+	 * Prepare request body based on content type and data.
+	 *
+	 * @param array<string, mixed> $body Request body data
+	 * @param string $content_type Content type header value
+	 * @param bool $force_json_encode Force JSON encoding regardless of content type
+	 * @return string|array Prepared request body
+	 */
+	protected static function prepare_request_body(array $body, string $content_type = 'application/json', bool $force_json_encode = true): string|array
+	{
+		if (empty($body)) {
+			return [];
+		}
+
+		// Force JSON encoding by default or when content type is JSON
+		if ($force_json_encode || str_contains($content_type, 'application/json')) {
+			return json_encode($body);
+		}
+
+		// Handle form data
+		if (str_contains($content_type, 'application/x-www-form-urlencoded')) {
+			return http_build_query($body);
+		}
+
+		// Handle multipart form data or other types - return as array
+		return $body;
+	}
+
+	/**
+	 * Get default content type for requests.
+	 *
+	 * @return string Default content type
+	 */
+	protected static function get_default_content_type(): string
+	{
+		return 'application/json';
+	}
+
+	/**
+	 * Determine content type from request headers or use default.
+	 *
+	 * @param array<string, string> $headers Request headers
+	 * @return string Content type
+	 */
+	protected static function resolve_content_type(array $headers): string
+	{
+		return $headers['Content-Type'] ?? static::get_default_content_type();
+	}
 
     /**
      * Determine if response should be cached.
