@@ -419,11 +419,12 @@ abstract class APIHelper
      *
      * @param string $endpoint_name Endpoint identifier
      * @param array<string, mixed> $params Request parameters
+     * @param array<string, mixed> $body Request body data
      * @param array<string, string> $substitutions URL placeholder substitutions
      * @return mixed Response data
      * @throws \Exception When endpoint is invalid or request fails
      */
-    public static function make_request(string $endpoint_name, array $params = [], array $substitutions = []): mixed
+    public static function make_request(string $endpoint_name, array $params = [], array $body = [], array $substitutions = []): mixed
     {
         $endpoint = static::get_endpoints()[$endpoint_name] ?? null;
         if (!$endpoint) {
@@ -458,6 +459,22 @@ abstract class APIHelper
             }
         }
 
+
+		$endpoint_body = $endpoint['body'] ?? [];
+		$body = array_merge($endpoint_body, $body);
+
+		// Filter body to only include those defined in endpoint
+        if (!empty($endpoint_body)) {
+			$body = array_intersect_key($body, $endpoint_body);
+	    }
+
+		// Execute callable body values
+        foreach ($body as $key => $value) {
+			if (is_callable($value)) {
+				$body[$key] = $value();
+			}
+	    }
+
         $method = $endpoint['method'] ?? 'GET';
         $url = rtrim(static::get_base_url(), '/') . '/' . ltrim($route, '/');
 
@@ -474,7 +491,7 @@ abstract class APIHelper
             $params = []; // Parameters already in URL
         }
 
-        return static::request($method, $url, $params, $endpoint);
+        return static::request($method, $url, $params, $body, $endpoint);
     }
 
     /**
