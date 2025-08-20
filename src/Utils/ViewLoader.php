@@ -112,7 +112,7 @@ class ViewLoader
         $data = array_merge(self::$global_data, $data);
 
         // Add helper functions to data
-		$data['view'] = self::create_view_helper($base_path, $plugin_prefix);
+		$data['view'] = self::create_view_helper($base_path, $plugin_prefix, $overridable);
 
 
 		// Render the template
@@ -140,11 +140,12 @@ class ViewLoader
 	 *
 	 * @param string|null $base_path Default base path
 	 * @param string $plugin_prefix Default plugin prefix
+	 * @param bool $overridable Whether the view is overridable by theme
 	 * @return ViewHelper View helper instance
 	 */
-	private static function create_view_helper(?string $base_path, string $plugin_prefix): ViewHelper
+	private static function create_view_helper(?string $base_path, string $plugin_prefix, bool $overridable = false): ViewHelper
 	{
-		return new ViewHelper($base_path, $plugin_prefix);
+		return new ViewHelper($base_path, $plugin_prefix, $overridable);
 	}
 
     /**

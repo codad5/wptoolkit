@@ -14,15 +14,18 @@ class ViewHelper
 {
 	private ?string $default_base_path;
 	private string $default_plugin_prefix;
+	private bool $overridable = false;
 
-	public function __construct(?string $base_path, string $plugin_prefix)
+	public function __construct(?string $base_path, string $plugin_prefix, bool $overridable = false)
 	{
 		$this->default_base_path = $base_path;
 		$this->default_plugin_prefix = $plugin_prefix;
+		$this->overridable = $overridable;
 	}
 
-	public function load(string $view, array $data = [], ?string $base_path = null, bool $overridable = false, ?string $plugin_prefix = null): string
+	public function load(string $view, array $data = [], ?string $base_path = null, bool $overridable = null, ?string $plugin_prefix = null): string
 	{
+		$overridable = $overridable === null ? $this->overridable : $overridable;
 		return ViewLoader::load(
 			$view,
 			$data,
@@ -33,8 +36,9 @@ class ViewHelper
 		) ?: '';
 	}
 
-	public function include(string $view, array $data = [], ?string $base_path = null, bool $overridable = false, ?string $plugin_prefix = null): void
+	public function include(string $view, array $data = [], ?string $base_path = null, bool $overridable = null, ?string $plugin_prefix = null): void
 	{
+		$overridable = $overridable === null ? $this->overridable : $overridable;
 		ViewLoader::load(
 			$view,
 			$data,
