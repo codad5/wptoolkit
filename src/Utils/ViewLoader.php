@@ -618,7 +618,7 @@ class ViewLoader
      * @param bool $echo Whether to echo error
      * @return false
      */
-    private static function handle_template_not_found(string $view, bool $echo): false
+    private static function handle_template_not_found(string $view, bool $echo): bool
     {
         $error_message = "Template not found: {$view}";
 
@@ -639,7 +639,7 @@ class ViewLoader
      * @param bool $echo Whether to echo error
      * @return false
      */
-    private static function handle_render_error(string $view, bool $echo): false
+    private static function handle_render_error(string $view, bool $echo): bool
     {
         $error_message = "Error rendering template: {$view}";
 
