@@ -66,6 +66,7 @@
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": "phpunit",
         "verify": [
+            "@php bin/check-workflows.php",
             "@lint",
             "@cs",
             "@analyse",

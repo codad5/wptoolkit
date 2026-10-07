@@ -102,7 +102,20 @@ jobs:
       - run: composer i18n
       # Timestamp, generator and "#: file:line" location lines churn; any other difference means a
       # library string changed without regenerating languages/wptoolkit.pot (run: composer i18n).
-      - run: git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -I '^#: ' -- languages/
+      - name: Template matches the source
+        run: |
+          git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -I '^#: ' -- languages/
+
+  js:
+    name: JavaScript client
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --check resources/js/client.js
+      - run: node --test tests/js/*.test.mjs
 
   integration:
     # Adapters against a real WordPress + MySQL (wp-env tests container), PHPUnit 10 with a
