@@ -228,6 +228,11 @@ final class PublicPages
     private function printInTheme(string $html): void
     {
         if (function_exists('wp_is_block_theme') && wp_is_block_theme()) {
+            // Block themes get <title> from a hook WordPress adds only while resolving a block template,
+            // which this page skips — add it here, or the page has no title.
+            if (function_exists('_block_template_render_title_tag') && has_action('wp_head', '_block_template_render_title_tag') === false) {
+                add_action('wp_head', '_block_template_render_title_tag', 1);
+            }
             echo '<!doctype html><html ';
             language_attributes();
             echo '><head><meta charset="' . esc_attr(get_bloginfo('charset')) . '" />';
