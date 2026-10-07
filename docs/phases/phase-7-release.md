@@ -41,9 +41,18 @@
       every place the guide was wrong and fix the guide
 - [ ] Run staging for an agreed soak period with `WP_DEBUG_LOG` on; zero toolkit warnings
 
+### 7.3b Protect consumers that track `dev-main`
+
+- [ ] `pau` requires `codad5/wptoolkit: dev-main`: before 1.0 reaches `main`, pin it to the last 0.x
+      tag (or migrate it to 1.0 deliberately). Otherwise its next `composer update` pulls 1.0, which
+      needs PHP 8.1 while pau declares 8.0 *(maintainer)*
+- [ ] Tag the last 0.x (`v0.2.0`) on the current `main` first, so there is something to pin to
+
 ### 7.4 Release
 
-- [ ] `v1.0.0`; merge `next` → `main`; `dev` retired
+- [ ] Open the PR `next` → `main` with the full change description; the maintainer reviews and merges
+- [ ] `v1.0.0` GitHub release (tag + standalone zip + `.sha256` built with `wptoolkit-build`); no
+      Packagist needed — Composer users can install from the GitHub repository (VCS); `dev` retired
 - [ ] `0.x` support policy published: security fixes for 12 months after 1.0.0
 
 ---
