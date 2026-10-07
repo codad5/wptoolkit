@@ -167,8 +167,19 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      # A stalled download once ate the whole job timeout; give each attempt 5 minutes, 3 tries.
+      - name: Install Chromium for Playwright
+        run: |
+          for attempt in 1 2 3; do
+            timeout 300 npx playwright install --with-deps chromium && exit 0
+            echo "::warning::Playwright install attempt $attempt failed or stalled; retrying"
+          done
+          exit 1
       - run: npm run e2e:start
-      - run: npx playwright install --with-deps chromium
       - run: npx playwright test
       - if: failure()
         uses: actions/upload-artifact@v4
