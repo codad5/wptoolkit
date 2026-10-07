@@ -28,6 +28,7 @@ is written.
 | 6   | [Developer experience, docs and AI-readiness](phase-6-dx-docs-ai.md)      | M      | Adoption                          |
 | 7   | [Release 1.0](phase-7-release.md)                                         | S      | 1.0.0                             |
 | 0.x | [Maintenance track](track-0x-maintenance.md) — **parallel, not a phase**  | —      | Nothing; blocks nothing           |
+| P   | [Packager](track-p-packager.md) — **parallel, can start after Phase 0**   | S–M    | Correct zips for every project now |
 
 ```
 Phase 0 ─▶ Phase 1 ─┬─▶ Phase 2 ─┬─▶ Phase 3 ─┐

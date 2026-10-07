@@ -48,3 +48,4 @@ Not for a naming choice, a library with no real alternative, or anything you wou
 | [0012](0012-zero-runtime-dependencies.md)                            | Zero runtime Composer dependencies, PSR via optional bridges              | Accepted |
 | [0013](0013-plugins-boot-through-a-syntax-safe-guard.md)             | Every plugin boots through a syntax-safe guard and never takes the site down | Accepted |
 | [0014](0014-composer-is-optional.md)                                 | Composer is optional: standalone build, tiny autoloader, zero-tool scoper | Accepted |
+| [0015](0015-packaging-is-a-toolkit-dev-tool.md)                      | Packaging is a toolkit dev tool (PHP CLI) that CI calls, not runtime code | Proposed |
