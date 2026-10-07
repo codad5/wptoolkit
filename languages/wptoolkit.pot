@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T15:05:56+00:00\n"
+"POT-Creation-Date: 2026-10-07T17:51:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wptoolkit\n"
@@ -37,68 +37,68 @@ msgid "Codad5"
 msgstr ""
 
 #. translators: 1: required PHP version, 2: current PHP version
-#: bootstrap/guard.php:163
+#: bootstrap/guard.php:166
 #, php-format
 msgid "PHP %1$s or newer is required; this site runs PHP %2$s."
 msgstr ""
 
 #. translators: 1: required WordPress version, 2: current WordPress version
-#: bootstrap/guard.php:166
+#: bootstrap/guard.php:169
 #, php-format
 msgid "WordPress %1$s or newer is required; this site runs %2$s."
 msgstr ""
 
 #. translators: %s: PHP extension name
-#: bootstrap/guard.php:169
+#: bootstrap/guard.php:172
 #, php-format
 msgid "The PHP extension \"%s\" is required but not installed."
 msgstr ""
 
 #. translators: %s: plugin basename
-#: bootstrap/guard.php:172
+#: bootstrap/guard.php:175
 #, php-format
 msgid "The plugin \"%s\" must be active."
 msgstr ""
 
 #. translators: 1: required WPToolkit version, 2: loaded version, 3: path of the loaded copy
-#: bootstrap/guard.php:176
+#: bootstrap/guard.php:179
 #, php-format
 msgid "WPToolkit %1$s is required, but WPToolkit %2$s was already loaded from %3$s by another plugin or theme."
 msgstr ""
 
 #. translators: %s: loaded WPToolkit version
-#: bootstrap/guard.php:178
+#: bootstrap/guard.php:181
 #, php-format
 msgid "Deactivate that one, or use a version of this plugin built for WPToolkit %s."
 msgstr ""
 
-#: bootstrap/guard.php:179
+#: bootstrap/guard.php:182
 msgid "Developers: ship a scoped copy of WPToolkit."
 msgstr ""
 
 #. translators: 1: required WPToolkit version, 2: bundled version
-#: bootstrap/guard.php:183
+#: bootstrap/guard.php:186
 #, php-format
 msgid "WPToolkit %1$s is required, but this plugin bundles %2$s."
 msgstr ""
 
-#: bootstrap/guard.php:185
+#: bootstrap/guard.php:188
 msgid "It failed while starting. The error has been written to the PHP error log."
 msgstr ""
 
 #. translators: %s: path of the missing autoloader file
-#: bootstrap/guard.php:188
+#: bootstrap/guard.php:191
 #, php-format
 msgid "Its class loader is missing (%s). Reinstall the plugin."
 msgstr ""
 
 #. translators: %s: plugin name
-#: bootstrap/guard.php:199
+#: bootstrap/guard.php:202
 #, php-format
 msgid "%s has been paused and is not running:"
 msgstr ""
 
-#: bootstrap/guard.php:216
+#: bootstrap/guard.php:219
 #: src/Foundation/Application.php:162
 msgid "Plugin not activated"
 msgstr ""

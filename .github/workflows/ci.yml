@@ -100,9 +100,9 @@ jobs:
           coverage: none
       - run: composer install --no-interaction --no-progress --prefer-dist
       - run: composer i18n
-      # The timestamp and generator lines change on every run; any other difference means a
+      # Timestamp, generator and "#: file:line" location lines churn; any other difference means a
       # library string changed without regenerating languages/wptoolkit.pot (run: composer i18n).
-      - run: git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -- languages/
+      - run: git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -I '^#: ' -- languages/
 
   integration:
     # Adapters against a real WordPress + MySQL (wp-env tests container), PHPUnit 10 with a
