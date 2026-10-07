@@ -7,6 +7,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 if (!defined('ABSPATH')) {
     define('ABSPATH', '/srv/wordpress/');
 }
+define('WP_CONTENT_DIR', ABSPATH . 'wp-content');
 define('WP_PLUGIN_DIR', ABSPATH . 'wp-content/plugins');
 define('WPMU_PLUGIN_DIR', ABSPATH . 'wp-content/mu-plugins');
 

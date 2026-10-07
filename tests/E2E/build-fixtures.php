@@ -88,6 +88,30 @@ foreach ($fixtures as $name => $fixture) {
     fwrite(STDOUT, "built {$name} (" . ($fixture['namespace'] ?? 'unscoped') . ', ' . ($fixture['version'] ?? 'current') . ")\n");
 }
 
+// The todo example, installed as `composer install` would: the library in vendor/codad5/wptoolkit,
+// and a vendor/autoload.php mapping both namespaces (the guard detects and loads it).
+$todo = $build . '/wptk-todo';
+copy_directory($root . '/examples/todo', $todo);
+foreach (['src', 'bootstrap', 'languages', 'resources'] as $folder) {
+    copy_directory($root . '/' . $folder, $todo . '/vendor/codad5/wptoolkit/' . $folder);
+}
+file_put_contents($todo . '/vendor/autoload.php', <<<'PHP'
+<?php
+spl_autoload_register(static function (string $class): void {
+    $map = ['WptkTodo\\' => __DIR__ . '/../src/', 'Codad5\\WPToolkit\\' => __DIR__ . '/codad5/wptoolkit/src/'];
+    foreach ($map as $prefix => $dir) {
+        if (strncmp($class, $prefix, strlen($prefix)) === 0) {
+            $file = $dir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+            return;
+        }
+    }
+});
+PHP);
+fwrite(STDOUT, "built wptk-todo (examples/todo, composer layout)\n");
+
 function copy_directory(string $from, string $to): void
 {
     if (!is_dir($to)) {

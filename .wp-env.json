@@ -17,6 +17,7 @@
         "wp-content/plugins/coexist-alpha": "./tests/E2E/.build/plugins/coexist-alpha",
         "wp-content/plugins/coexist-beta": "./tests/E2E/.build/plugins/coexist-beta",
         "wp-content/plugins/unscoped-first": "./tests/E2E/.build/plugins/unscoped-first",
-        "wp-content/plugins/unscoped-second": "./tests/E2E/.build/plugins/unscoped-second"
+        "wp-content/plugins/unscoped-second": "./tests/E2E/.build/plugins/unscoped-second",
+        "wp-content/plugins/wptk-todo": "./tests/E2E/.build/plugins/wptk-todo"
     }
 }

@@ -31,6 +31,8 @@ final class TodoExampleTest extends TestCase
         Functions\when('register_activation_hook')->justReturn(null);
         Functions\when('register_deactivation_hook')->justReturn(null);
         Functions\when('wp_using_ext_object_cache')->justReturn(false);
+        Functions\when('wp_normalize_path')->alias(static fn (string $p) => str_replace('\\', '/', $p));
+        Functions\when('content_url')->alias(static fn (string $p = '') => 'https://example.test/wp-content' . $p);
 
         $app = Application::create('/plugins/todo/todo.php', ['slug' => 'wptk-todo', 'text_domain' => 'wptk-todo', 'contain_hook_errors' => false])
             ->providers([TodoServiceProvider::class])
@@ -38,6 +40,9 @@ final class TodoExampleTest extends TestCase
 
         $routes = $app->container()->get(Router::class)->routes();
         self::assertCount(3, $routes);
+        self::assertSame(['todo-board'], array_keys($app->container()->get(\Codad5\WPToolkit\Frontend\PublicPages::class)->routes()));
+        self::assertNotFalse(has_action('admin_menu'), 'the settings page');
+        self::assertSame([], $app->container()->get(\Codad5\WPToolkit\Admin\Settings\Settings::class)->forScript(), 'built lazily, after init');
         foreach ($routes as $route) {
             self::assertSame('edit_posts', $route->capability(), $route->routeName());
         }
