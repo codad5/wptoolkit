@@ -120,6 +120,11 @@ jobs:
 
 - [ ] `Build`, `BuildStep`, `BuildContext`, `Version` sources; every built-in step a class
 - [ ] `syncVersionTo()`: write one version into the header, `readme.txt` Stable tag and a constant
+- [ ] Pattern sources for `exclude()`/`include()` besides plain globs (maintainer's idea):
+      `Patterns::fromDistignore()`, `fromGitattributesExportIgnore()`, `fromGitignore()`. Docs steer
+      to `.distignore`: a `.gitignore` excludes build output that should ship (`assets/dist`,
+      `vendor`) and misses dev files that shouldn't; `verify()` warns when an excluded file is one
+      the plugin references
 - [ ] Published as `codad5/wptoolkit-build` (dev dependency); included in the standalone download
 - [ ] `wptoolkit.json` / `wptoolkit package` build the same pipeline
 

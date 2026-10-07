@@ -26,7 +26,14 @@
             <property name="absoluteLineLimit" value="0"/>
         </properties>
     </rule>
-    <rule ref="PHPCompatibilityWP"/>
+    <rule ref="PHPCompatibilityWP">
+        <!--
+            PHPCompatibility 9 predates PHP 8.1 enums: it reads $this and self inside an enum as
+            "outside a class". PHPStan (level 8) checks those correctly, so these two are off.
+        -->
+        <exclude name="PHPCompatibility.Variables.ForbiddenThisUseContexts.OutsideObjectContext"/>
+        <exclude name="PHPCompatibility.FunctionDeclarations.NewParamTypeDeclarations.SelfOutsideClassScopeFound"/>
+    </rule>
 
     <!-- The parts of WPCS that catch real bugs: escaping, nonces, input, SQL, i18n. -->
     <rule ref="WordPress.Security"/>
