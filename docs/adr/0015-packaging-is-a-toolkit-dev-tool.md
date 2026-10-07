@@ -55,6 +55,29 @@ WPToolkit ships a packager as a **dev-time command**, `wptoolkit package`, in `b
 - **CI is a thin wrapper:** a reusable workflow in this repository that runs the same command on a
   tag and attaches the zip to the GitHub Release. Local build ≡ CI build.
 
+### Amendment (2026-10-07, same day, before any code): a fluent PHP build API first
+
+The maintainer asked for a library of build tools a project composes in its own `build.php`:
+
+```php
+Build::plugin(__DIR__)
+    ->version(Version::fromPackageJson())
+    ->run('npm ci', 'npm run build')
+    ->composer(noDev: true)
+    ->scope('MyPlugin\WPToolkit')
+    ->exclude('docs', '*.map')
+    ->verify()
+    ->zip('dist/{slug}-{version}.zip');
+```
+
+So the primary interface is a **Builder** over a pipeline of **steps** (Command pattern: each
+`BuildStep` is a class, and `->step(new MyStep())` adds a custom one) with interchangeable
+**version sources** (Strategy: package.json, composer.json, plugin/theme header, git tag, a PHP
+constant). `wptoolkit.json` and `wptoolkit package` remain as the zero-code path and build the same
+pipeline. The tool ships as a separate dev package, `codad5/wptoolkit-build`, published from this
+repository — a dev dependency never reaches a plugin's zip — and inside the standalone download for
+projects without Composer, where the packager excludes it from the plugin's own zip.
+
 ## Options considered
 
 ### Option A — Leave it in each project's CI/CD

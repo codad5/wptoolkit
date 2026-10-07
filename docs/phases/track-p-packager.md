@@ -17,6 +17,34 @@ fixes live problems in `pau`, `silverbird-fusionintel` and `nile-distribution` t
 
 ## How it's used
 
+**Primary interface — a fluent `build.php`** (ADR-0015 amendment):
+
+```php
+<?php
+// build.php — run with: php build.php
+require __DIR__ . '/vendor/autoload.php';
+
+use Codad5\WPToolkit\Build\{Build, Version};
+
+Build::plugin(__DIR__)                                   // or Build::theme(__DIR__)
+    ->version(Version::fromPackageJson())                // fromComposerJson(), fromHeader(), fromGitTag(), fromConstant()
+    ->syncVersionTo('header', 'readme.txt', 'MY_PLUGIN_VERSION')
+    ->run('npm ci', 'npm run build')                     // project asset build, before staging
+    ->composer(noDev: true)                              // inside the staging copy
+    ->scope('MyPlugin\WPToolkit')
+    ->makePot()
+    ->include('assets/dist')
+    ->exclude('src/**/*.ts', 'docs', '*.map')
+    ->step(new MyCustomStep())                           // any BuildStep
+    ->verify()
+    ->zip('dist/{slug}-{version}.zip');
+```
+
+Building blocks: `Build` (builder), `BuildStep` (interface: `name()`, `run(BuildContext)`),
+`BuildContext` (paths, slug, version, file list, report), `Version` sources (Strategy), and the
+built-in steps behind each method. A failing step stops the build with its name and a non-zero
+exit code.
+
 **Zero config by default.** In most projects you run it with no setup, and it reads the plugin or
 theme headers:
 
@@ -87,6 +115,13 @@ jobs:
 ---
 
 ## Scope
+
+### P.0 Fluent build library
+
+- [ ] `Build`, `BuildStep`, `BuildContext`, `Version` sources; every built-in step a class
+- [ ] `syncVersionTo()`: write one version into the header, `readme.txt` Stable tag and a constant
+- [ ] Published as `codad5/wptoolkit-build` (dev dependency); included in the standalone download
+- [ ] `wptoolkit.json` / `wptoolkit package` build the same pipeline
 
 ### P.1 Command and detection
 

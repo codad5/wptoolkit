@@ -7,21 +7,19 @@
 
 ---
 
-## Now: Phase 1 — Foundation and the coexistence proof
+## Now: Phase 2 — Infrastructure adapters
 
-Phase 0 is done: CI is green on `next` (run 37632478575).
+| Phase | State |
+| ----- | ----- |
+| 0 — Gates | ✅ CI green on PHP 8.1–8.4 |
+| 1 — Foundation & coexistence | ✅ DoD demonstrated: 9/9 E2E on real WordPress (run 37643432573), 118 unit tests |
+| 2 — Infrastructure adapters | 🔄 cache + clock in progress |
+| P — Build tool (`Build::plugin()->…`) | next after Phase 2 |
+| 3–7 | ☐ |
 
-Phase 0 (lay the gates on `next`) runs alongside: tooling first, so Phase 1 code lands with tests.
-
-| Step | What                                                         | State |
-| ---- | ------------------------------------------------------------ | ----- |
-| 0.1  | Repository hygiene on `next`                                 | ✅    |
-| 0.2  | Tooling (PHPUnit, Brain Monkey, PHPStan, PHPCS)              | ✅ (verified in CI; local install pending) |
-| 0.3  | CI                                                           | ✅ green on PHP 8.1–8.4 |
-| 0.4  | Agent and docs scaffolding                                   | ✅ 2026-10-07 |
-| 1.1  | Strangler layout (`legacy/`, new `src/` namespaces)          | ✅    |
-| 1.1b | Usage inventory of pau, silverbird, nile                     | ✅ inventory · ☐ data fixtures |
-| 1.2  | Kernel (container, providers, hooks, config, lifecycle)      | ✅ except activation/deactivation/uninstall wiring |
+Phase 1 delivered: kernel (container, providers, lifecycle, hook containment), `Identity`,
+library translations, coexistence ledger, `requires_toolkit` with activation refusal naming the
+plugin that won, `bootstrap/guard.php` (PHP 5.6-safe), standalone autoloader, `bin/scope.php`.
 
 ## Decided 2026-10-07
 

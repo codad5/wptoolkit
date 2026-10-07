@@ -117,6 +117,10 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ## Definition of Done
 
+> **Demonstrated 2026-10-07** in CI run 37643432573: 9/9 end-to-end tests on WordPress in Docker
+> (`tests/E2E/`), plus 118 unit tests. The boot and i18n items are covered by unit tests
+> (`ApplicationTest`, `LibraryTranslationsTest`); the WordPress-suite integration job moved to Phase 2.
+
 **The boot test.** The Todo example plugin boots on `Application`; deactivating it leaves zero of its
 hooks registered (asserted by `HookRegistrar` and by inspecting `$wp_filter`).
 
@@ -132,12 +136,12 @@ hooks registered (asserted by `HookRegistrar` and by inspecting `$wp_filter`).
 
 **The safe-boot test** — each demonstrated on wp-env, never assumed:
 
-- [ ] A fixture plugin declaring `php: 99.0` is active: the site's front end and wp-admin both load,
+- [x] A fixture plugin declaring `php: 99.0` is active: the site's front end and wp-admin both load,
       the plugin shows its notice, and none of its code ran.
-- [ ] A fixture plugin whose `src/boot.php` contains a syntax error: same outcome, plus a log entry
+- [x] A fixture plugin whose `src/boot.php` contains a syntax error: same outcome, plus a log entry
       naming the file and line.
-- [ ] A fixture plugin whose boot throws an exception: same outcome.
-- [ ] Trying to activate the `php: 99.0` fixture from the Plugins screen is refused with a readable
+- [x] A fixture plugin whose boot throws an exception: same outcome.
+- [x] Trying to activate the `php: 99.0` fixture from the Plugins screen is refused with a readable
       message.
 
 **The i18n test.** With the site in `fr_FR` and a test `.mo` in place, a library string renders in
