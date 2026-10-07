@@ -62,6 +62,16 @@ final class Identity
     }
 
     /**
+     * A public query variable (rewrite rules): `my_plugin_page`.
+     *
+     * @return non-empty-string
+     */
+    public function queryVar(string $name): string
+    {
+        return $this->underscored . '_' . $this->clean($name, '_');
+    }
+
+    /**
      * A REST namespace: `my-plugin/v1`.
      *
      * @return non-falsy-string

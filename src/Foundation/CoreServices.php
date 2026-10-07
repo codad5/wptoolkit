@@ -29,6 +29,7 @@ use Codad5\WPToolkit\Data\EntityRegistrar;
 use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
 use Codad5\WPToolkit\Data\Migrations\Migrator;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
+use Codad5\WPToolkit\Frontend\PublicPages;
 use Codad5\WPToolkit\Http\Dispatcher;
 use Codad5\WPToolkit\Http\Router;
 use Codad5\WPToolkit\Http\Transport\AjaxTransport;
@@ -128,6 +129,11 @@ final class CoreServices
             $pages = new Pages($app->hooks(), $c->get(Renderer::class));
             $pages->register();
             return $pages;
+        });
+        $container->singleton(PublicPages::class, static function (Container $c) use ($app): PublicPages {
+            $public = new PublicPages($app->identity(), $app->hooks(), $c->get(Dispatcher::class), $c->get(Renderer::class), $c->get(ClientIp::class));
+            $public->register();
+            return $public;
         });
         $container->singleton(Notices::class, static function () use ($app): Notices {
             $notices = new Notices($app->identity(), $app->hooks());

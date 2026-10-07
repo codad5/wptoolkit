@@ -45,9 +45,11 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 - [x] `Admin\Page` builders (`top`, `under`, `hidden`, `postTypeList`) + `Admin\Pages` (menu, capability
       required and re-checked before rendering, help tabs, `url()` = 0.x `getAdminUrl()`). Slugs are kept
       verbatim so 0.x admin URLs keep working. Screen options: not used by any consumer — deferred
-- [ ] ~~Frontend virtual pages~~ — **not ported**: no consumer (pau, silverbird, nile) uses 0.x
-      `addFrontendPage()`, and the rewrite-rule machinery is a liability to carry without a user.
-      Recorded under "Deliberately not in this phase"; add it in 1.x if someone needs it
+- [x] Frontend virtual pages: `Frontend\PublicPages::page($path, $title, $view, $data)` returns a
+      `Route`, so a page runs the router's pipeline (required access rule, validation, rate limit,
+      middleware) and renders a theme-overridable view inside the theme (classic or block). Rewrite
+      rules flush only when they change; 401 → login, 404 → the theme's 404. No consumer uses 0.x
+      `addFrontendPage()` yet; kept because themes and plugins commonly need pretty URLs
 
 ### 5.4 Settings — ports `Settings`
 
@@ -88,8 +90,7 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 ## Deliberately not in this phase
 
 A block-editor settings UI. A React admin framework. Twig/Blade adapters (separate packages).
-Frontend virtual pages from 0.x `Page::addFrontendPage()` (no consumer uses them), appearance-menu
-groups and dashboard widgets from 0.x `Page` (likewise unused).
+Appearance-menu groups and dashboard widgets from 0.x `Page` (no consumer uses them).
 
 ## Risks
 

@@ -17,7 +17,7 @@ namespace Codad5\WPToolkit\Http;
 final class Request
 {
     /**
-     * @param 'rest'|'ajax' $transport
+     * @param 'rest'|'ajax'|'page' $transport Where the request came in ('page': a PublicPages URL).
      * @param array<string, mixed> $routeParams Values captured from the route path.
      * @param array<string, mixed> $query
      * @param array<string, mixed> $body

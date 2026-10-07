@@ -22,7 +22,7 @@ migration guide (Phase 6) is written from this table.
 | `DB/Model`                   |  2655 | **Split** → `Entity`, repositories, `Search`, `Admin\Columns`, `Authorize` middleware       | 4     | ✅ `Data\Entity`, `Adapters\Repository\*`, `Data\Search`, `Admin\Columns`, route access rules; **deleted** |
 | `Utils/ViewLoader` + `ViewHelper` | 655 + 95 | **Ported** → `View\Renderer` + `TemplateLocator` + `Escaper`                   | 5     | ✅ `View\PhpTemplateRenderer`, `TemplateLocator`, `Escaper`, `Template` |
 | `Utils/EnqueueManager`       |  1286 | **Ported** → `Assets\AssetManager`                                                         | 5     | ✅ `Assets\AssetManager`, `Asset`, `JsNamespace` |
-| `Utils/Page`                 |  1831 | **Split** → `Admin\Page` + router frontend routes                                          | 5     | ✅ `Admin\Page`, `Admin\Pages`; frontend pages not ported (unused) |
+| `Utils/Page`                 |  1831 | **Split** → `Admin\Page` + router frontend routes                                          | 5     | ✅ `Admin\Page`, `Admin\Pages`; frontend pages → `Frontend\PublicPages` |
 | `Utils/Settings`             |  1210 | **Ported** → `Admin\Settings` on the field system                                          | 5     | ✅ `Admin\Settings\Settings`, `SettingsForm` |
 | `Utils/Notification`         |   819 | **Ported** → `Admin\Notice`                                                                | 5     | ✅ `Admin\Notices`, `NoticeType` |
 | `Cli/ExampleCommand`         |    43 | **Replaced** by `make:*` commands                                                          | 6     | ☐      |
