@@ -16,6 +16,7 @@ plugin quickly, because the safe path is the default path and it's written down 
 ### 6.1 WP-CLI
 
 - [ ] `wp {slug} make:entity|controller|provider|field|migration` scaffolding (tested templates)
+- [ ] `wp {slug} migrate`, `migrate:status`, `migrate:rollback` (all with `--dry-run`)
 - [ ] `wp {slug} routes:list`, `hooks:list`, `toolkit:info` (version, path, scoped or not, other
       copies seen in the coexistence ledger)
 

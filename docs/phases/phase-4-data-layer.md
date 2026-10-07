@@ -44,6 +44,17 @@ This is the critical path and the biggest phase. It's where most consumer code l
 - [ ] `RepositoryFactory` picks the adapter an entity declares
 - [ ] Caching through `CacheStore`, invalidated on save/delete
 
+### 4.3b Migrations ([ADR-0018](../adr/0018-versioned-data-migrations-expand-contract.md))
+
+- [ ] `Data\Migrations\Migration` (`id()`, `up()`, optional `down()`, optional batching)
+- [ ] `Migrator`: applied ids in `{slug}_migrations`; lock with expiry; idempotent runs; stops and
+      logs on failure; admin notice
+- [ ] Batched migrations via WP-Cron with recorded progress and resume
+- [ ] Runs on activation and on `admin_init` when the latest id isn't recorded
+- [ ] Settings upcasters (old stored shape → current shape on read)
+- [ ] Integration tests: rename a meta key on 1,000 posts in batches; interrupted run resumes;
+      concurrent runs blocked by the lock; rollback restores
+
 ### 4.4 Query builder
 
 - [ ] `Data\Query\QueryBuilder`: where / whereMeta / whereTerm / orderBy / paginate, compiled to
