@@ -226,6 +226,38 @@ final class Build
     }
 
     /**
+     * The files a build would ship, without running any command or writing anything. Steps that
+     * change files (composer, scope, make-pot) are not run, so their effects aren't reflected.
+     *
+     * @return list<string> Paths relative to the project, sorted.
+     */
+    public function dryRun(): array
+    {
+        $staging = sys_get_temp_dir() . '/wptoolkit-dryrun-' . bin2hex(random_bytes(6)) . '/' . $this->project->slug;
+
+        try {
+            $this->stage($staging, $this->project->root . '/dist/.dry-run.zip');
+            $this->prune($staging);
+
+            $files = [];
+            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($staging, FilesystemIterator::SKIP_DOTS));
+            foreach ($iterator as $file) {
+                $files[] = substr(str_replace('\\', '/', $file->getPathname()), strlen($staging) + 1);
+            }
+            sort($files);
+
+            return $files;
+        } finally {
+            self::removeDirectory(dirname($staging));
+        }
+    }
+
+    public function project(): Project
+    {
+        return $this->project;
+    }
+
+    /**
      * @param list<BuildStep> $extra
      */
     private function runPhase(Phase $phase, BuildContext $context, array $extra = []): void

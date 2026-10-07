@@ -4,7 +4,9 @@
 /**
  * wptoolkit-build — package a WordPress plugin or theme from wptoolkit.json (or defaults).
  *
- *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH]
+ *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run]
+ *   vendor/bin/wptoolkit-build verify  FILE.zip
+ *   vendor/bin/wptoolkit-build doctor  [--project=DIR]
  *   vendor/bin/wptoolkit-build init    [--project=DIR]
  *
  * For anything beyond the config file, write a build.php with the fluent API instead.
@@ -15,7 +17,9 @@
 declare(strict_types=1);
 
 use Codad5\WPToolkit\Build\BuildException;
+use Codad5\WPToolkit\Build\Doctor;
 use Codad5\WPToolkit\Build\JsonConfig;
+use Codad5\WPToolkit\Build\ZipVerifier;
 
 foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php', __DIR__ . '/../../../vendor/autoload.php'] as $autoload) {
     if (is_file($autoload)) {
@@ -37,8 +41,35 @@ try {
     switch ($command) {
         case 'package':
             [$build, $zip] = JsonConfig::load($project);
+            if (in_array('--dry-run', $argv, true)) {
+                foreach ($build->dryRun() as $file) {
+                    fwrite(STDOUT, $file . PHP_EOL);
+                }
+                fwrite(STDOUT, "(dry run: commands, composer, scope and make-pot were not run)\n");
+                exit(0);
+            }
             $build->zip($options['zip'] ?? $zip);
             exit(0);
+
+        case 'verify':
+            $zipFile = $argv[2] ?? '';
+            $problems = ZipVerifier::verify($zipFile);
+            foreach ($problems as $problem) {
+                fwrite(STDERR, '✗ ' . $problem . PHP_EOL);
+            }
+            fwrite(STDOUT, $problems === [] ? "✓ {$zipFile} looks fine.\n" : '');
+            exit($problems === [] ? 0 : 1);
+
+        case 'doctor':
+            [$build] = JsonConfig::load($project);
+            $findings = Doctor::examine($build->project());
+            $errors = 0;
+            foreach ($findings as $finding) {
+                $errors += $finding['level'] === 'error' ? 1 : 0;
+                fwrite(STDOUT, ($finding['level'] === 'error' ? '✗ ' : '! ') . $finding['message'] . PHP_EOL);
+            }
+            fwrite(STDOUT, $findings === [] ? "✓ Nothing to report.\n" : '');
+            exit($errors > 0 ? 1 : 0);
 
         case 'init':
             $file = $project . '/wptoolkit.json';
@@ -57,7 +88,11 @@ try {
             exit(0);
 
         default:
-            fwrite(STDOUT, "Usage:\n  wptoolkit-build package [--project=DIR] [--zip=PATH]\n  wptoolkit-build init [--project=DIR]\n");
+            fwrite(STDOUT, "Usage:\n"
+                . "  wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run]\n"
+                . "  wptoolkit-build verify FILE.zip\n"
+                . "  wptoolkit-build doctor [--project=DIR]\n"
+                . "  wptoolkit-build init [--project=DIR]\n");
             exit($command === 'help' ? 0 : 1);
     }
 } catch (BuildException $failure) {
