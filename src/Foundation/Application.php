@@ -49,7 +49,7 @@ final class Application
         Coexistence::record(self::VERSION, Coexistence::thisCopyPath(), Coexistence::thisCopyNamespace());
 
         $this->container = new Container();
-        $this->hooks = new HookRegistrar();
+        $this->hooks = new HookRegistrar($this->shouldContainHookErrors());
 
         $this->container->instance(self::class, $this);
         $this->container->instance(Config::class, $config);
@@ -272,6 +272,23 @@ final class Application
     public function isBooted(): bool
     {
         return $this->booted;
+    }
+
+    /**
+     * Contain hook errors in production; let them surface on local/development sites with WP_DEBUG
+     * (ADR-0013). `'contain_hook_errors' => bool` in the config overrides both.
+     */
+    private function shouldContainHookErrors(): bool
+    {
+        $configured = $this->config->get('contain_hook_errors');
+        if (is_bool($configured)) {
+            return $configured;
+        }
+
+        $debug = defined('WP_DEBUG') && constant('WP_DEBUG');
+        $environment = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
+
+        return !($debug && in_array($environment, ['local', 'development'], true));
     }
 
     private function loadTextDomain(): void

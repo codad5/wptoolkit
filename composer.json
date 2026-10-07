@@ -67,6 +67,6 @@
             "@analyse",
             "@test"
         ],
-        "i18n": "wp i18n make-pot . languages/wptoolkit.pot --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap"
+        "i18n": "wp i18n make-pot . languages/wptoolkit.pot --slug=wptoolkit --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap"
     }
 }

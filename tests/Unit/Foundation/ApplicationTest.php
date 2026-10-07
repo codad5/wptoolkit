@@ -247,7 +247,7 @@ final class ApplicationTest extends TestCase
         do_action('init');
         Functions\when('current_user_can')->justReturn(true);
 
-        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'name' => 'My <Plugin>', 'requires_toolkit' => '^9.0'])
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'name' => 'My <Plugin>', 'requires_toolkit' => '^9.0', 'contain_hook_errors' => false])
             ->providers([FirstProvider::class])
             ->boot();
 
@@ -297,6 +297,6 @@ final class ApplicationTest extends TestCase
 
     private function app(): Application
     {
-        return Application::create('/plugins/my-plugin/my-plugin.php', ['slug' => 'my-plugin']);
+        return Application::create('/plugins/my-plugin/my-plugin.php', ['slug' => 'my-plugin', 'contain_hook_errors' => false]);
     }
 }
