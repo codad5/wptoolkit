@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}};
+
+use Codad5\WPToolkit\Foundation\ServiceProvider;
+
+/**
+ * Add it to the application: `->providers([{{class}}ServiceProvider::class])`.
+ *
+ * register() binds services (no WordPress calls, nothing translated yet). boot() runs on `init`
+ * with its parameters injected — ask for Router, Pages, AssetManager, EntityRegistrar, …
+ */
+final class {{class}}ServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+    }
+
+    public function boot(): void
+    {
+    }
+}

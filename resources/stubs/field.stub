@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}}\Fields;
+
+use Codad5\WPToolkit\Data\Field\Field;
+use Codad5\WPToolkit\Data\Field\FieldType;
+
+/**
+ * A custom field type. Register it before use: `$fieldTypes->register('{{id}}', new {{class}}FieldType());`
+ * then declare fields with `$f->of('name', '{{id}}')`.
+ */
+final class {{class}}FieldType implements FieldType
+{
+    public function sanitize(mixed $value, Field $field): mixed
+    {
+        return sanitize_text_field(is_scalar($value) ? (string) $value : '');
+    }
+
+    public function read(mixed $stored, Field $field): mixed
+    {
+        return is_scalar($stored) ? (string) $stored : null;
+    }
+
+    public function rules(Field $field): array
+    {
+        return [];
+    }
+
+    public function render(Field $field, string $name, string $id, mixed $value): string
+    {
+        return sprintf(
+            '<input type="text" class="regular-text" id="%s" name="%s" value="%s" />',
+            esc_attr($id),
+            esc_attr($name),
+            esc_attr(is_scalar($value) ? (string) $value : '')
+        );
+    }
+}

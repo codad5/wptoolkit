@@ -8,3 +8,6 @@ parameters:
         - packages/build/src
         - examples/todo/src
     tmpDir: .phpstan.cache
+    # WP-CLI's helper functions (src/Cli) live in a file Composer doesn't autoload.
+    scanFiles:
+        - vendor/wp-cli/wp-cli/php/utils.php

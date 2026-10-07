@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Foundation;
 
+use Codad5\WPToolkit\Cli\ToolkitCommand;
 use Codad5\WPToolkit\Contracts\Container\Container as ContainerContract;
 use Codad5\WPToolkit\Data\Migrations\Migration;
 use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
@@ -187,6 +188,10 @@ final class Application
 
         if ($this->migrations !== []) {
             $this->container->get(MigrationRunner::class)->register($this->hooks);
+        }
+
+        if (defined('WP_CLI') && constant('WP_CLI') === true && class_exists(\WP_CLI::class)) {
+            \WP_CLI::add_command($this->config->slug, $this->container->get(ToolkitCommand::class));
         }
 
         if ($this->config->get('type', 'plugin') === 'plugin') {

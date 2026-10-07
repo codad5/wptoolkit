@@ -24,6 +24,22 @@ test.describe('two plugins, two WPToolkit versions, one site', () => {
         expect(takeDebugLog()).not.toMatch(/PHP (Fatal|Warning|Notice|Deprecated)/);
     });
 
+    test('wp {slug} toolkit:info lists both copies, each plugin with its own command (Phase 6 DoD)', () => {
+        expect(wp('plugin', 'activate', 'coexist-alpha').code).toBe(0);
+        expect(wp('plugin', 'activate', 'coexist-beta').code).toBe(0);
+
+        for (const [command, own] of [['coexist-alpha', 'Alpha\\WPToolkit'], ['coexist-beta', 'Beta\\WPToolkit']] as const) {
+            const result = wp(command, 'toolkit:info', '--format=json');
+            expect(result.code, result.output).toBe(0);
+            expect(result.output).toContain(`(namespace ${own})`);
+
+            const copies = JSON.parse(result.output.slice(result.output.indexOf('['))) as Array<Record<string, string>>;
+            expect(copies.map((c) => c.namespace).sort()).toEqual(['Alpha\\WPToolkit', 'Beta\\WPToolkit']);
+            expect(copies.map((c) => c.version).sort()).toEqual([toolkitVersion(), '1.4.0'].sort());
+            expect(copies.find((c) => c.namespace === own)?.['this plugin']).toBe('yes');
+        }
+    });
+
     test('activating an unscoped plugin that needs a newer WPToolkit than the loaded copy is refused', () => {
         expect(wp('plugin', 'activate', 'unscoped-first').code).toBe(0);
 

@@ -15,10 +15,13 @@ plugin quickly, because the safe path is the default path and it's written down 
 
 ### 6.1 WP-CLI
 
-- [ ] `wp {slug} make:entity|controller|provider|field|migration` scaffolding (tested templates)
-- [ ] `wp {slug} migrate`, `migrate:status`, `migrate:rollback` (all with `--dry-run`)
-- [ ] `wp {slug} routes:list`, `hooks:list`, `toolkit:info` (version, path, scoped or not, other
-      copies seen in the coexistence ledger)
+- [x] `wp {slug} make:entity|controller|provider|field|migration` scaffolding (tested templates: every
+      stub generates PHP that passes `php -l`; namespace from the plugin's composer.json; no overwrite
+      without `--force`)
+- [x] `wp {slug} migrate`, `migrate:status`, `migrate:rollback` (`migrate` and `migrate:rollback` take `--dry-run`)
+- [x] `wp {slug} routes:list` (REST, Ajax and public pages, with each access rule), `hooks:list`,
+      `toolkit:info` (version, path, scoped or not, other copies seen in the coexistence ledger) — the
+      E2E coexistence suite runs it on both plugins
 
 ### 6.2 Documentation
 

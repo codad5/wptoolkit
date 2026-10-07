@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}}\Migrations;
+
+use Codad5\WPToolkit\Data\Migrations\Migration;
+
+/**
+ * Add it to the application: `->migrations([{{class}}::class])`. It runs once, on activation or
+ * the next admin page load; `wp {{slug}} migrate:status` shows where it stands.
+ * Keep up() idempotent. For data that grows with the site, extend BatchedMigration.
+ */
+final class {{class}} extends Migration
+{
+    public function id(): string
+    {
+        return '{{id}}';
+    }
+
+    public function up(): void
+    {
+    }
+
+    public function down(): void
+    {
+    }
+}

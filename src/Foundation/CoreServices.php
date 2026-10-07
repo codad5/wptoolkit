@@ -18,6 +18,9 @@ use Codad5\WPToolkit\Admin\Notices;
 use Codad5\WPToolkit\Admin\Pages;
 use Codad5\WPToolkit\Assets\AssetManager;
 use Codad5\WPToolkit\Assets\JsNamespace;
+use Codad5\WPToolkit\Cli\Scaffolder;
+use Codad5\WPToolkit\Cli\ToolkitCommand;
+use Codad5\WPToolkit\Cli\WpCliConsole;
 use Codad5\WPToolkit\Contracts\Cache\CacheStore;
 use Codad5\WPToolkit\Contracts\Clock\Clock;
 use Codad5\WPToolkit\Contracts\Container\Container;
@@ -139,6 +142,23 @@ final class CoreServices
             $notices = new Notices($app->identity(), $app->hooks());
             $notices->register();
             return $notices;
+        });
+
+        // `wp {slug} …`, registered by Application::boot() under WP-CLI only.
+        $container->singleton(ToolkitCommand::class, static function (Container $c) use ($app, $config): ToolkitCommand {
+            $dir = dirname($config->file);
+            $namespace = $config->get('namespace') ?? Scaffolder::namespaceFromComposer($dir);
+            return new ToolkitCommand(
+                new WpCliConsole(),
+                Application::VERSION,
+                $c->get(Router::class),
+                $c->get(PublicPages::class),
+                $app->hooks(),
+                $c->get(Migrator::class),
+                is_string($namespace) && $namespace !== ''
+                    ? new Scaffolder($dir, $namespace, $config->slug, $config->textDomain(), dirname(__DIR__, 2) . '/resources/stubs', $c->get(Clock::class))
+                    : null
+            );
         });
 
         $container->singleton(MigrationStore::class, static fn () => new OptionMigrationStore($app->identity()));
