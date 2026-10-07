@@ -56,7 +56,7 @@ final class Application
 
     /**
      * @param string $file The main plugin file (or the theme's functions.php).
-     * @param array<string, mixed> $config Must contain a 'slug'. Optional: 'textdomain',
+     * @param array<string, mixed> $config Must contain a 'slug'. Optional: 'text_domain',
      *        'domain_path' (default 'languages'), 'type' ('plugin' or 'theme', default 'plugin').
      */
     public static function create(string $file, array $config): self

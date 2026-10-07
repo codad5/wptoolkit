@@ -9,17 +9,19 @@
 
 ## Now: Phase 1 — Foundation and the coexistence proof
 
+Phase 0 is done: CI is green on `next` (run 37632478575).
+
 Phase 0 (lay the gates on `next`) runs alongside: tooling first, so Phase 1 code lands with tests.
 
 | Step | What                                                         | State |
 | ---- | ------------------------------------------------------------ | ----- |
-| 0.1  | Repository hygiene on `next`                                 | ☐     |
-| 0.2  | Tooling (PHPUnit, Brain Monkey, PHPStan, PHPCS)              | ⏳ maintainer runs `composer install` |
-| 0.3  | CI                                                           | ☐     |
+| 0.1  | Repository hygiene on `next`                                 | ✅    |
+| 0.2  | Tooling (PHPUnit, Brain Monkey, PHPStan, PHPCS)              | ✅ (verified in CI; local install pending) |
+| 0.3  | CI                                                           | ✅ green on PHP 8.1–8.4 |
 | 0.4  | Agent and docs scaffolding                                   | ✅ 2026-10-07 |
-| 1.1  | Strangler layout (`legacy/`, new `src/` namespaces)          | ☐     |
-| 1.1b | Usage inventory of pau, silverbird, nile                     | ☐     |
-| 1.2  | Kernel (container, providers, hooks, config, lifecycle)      | ☐     |
+| 1.1  | Strangler layout (`legacy/`, new `src/` namespaces)          | ✅    |
+| 1.1b | Usage inventory of pau, silverbird, nile                     | ✅ inventory · ☐ data fixtures |
+| 1.2  | Kernel (container, providers, hooks, config, lifecycle)      | ✅ except activation/deactivation/uninstall wiring |
 
 ## Decided 2026-10-07
 

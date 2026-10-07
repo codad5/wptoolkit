@@ -6,6 +6,7 @@
 
 *Transform WordPress development with modern architecture, dependency injection, and enterprise-grade patterns*
 
+[![CI](https://github.com/codad5/wptoolkit/actions/workflows/ci.yml/badge.svg?branch=next)](https://github.com/codad5/wptoolkit/actions/workflows/ci.yml)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPL_v2%2B-blue.svg)](LICENSE)
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-blue.svg)](https://php.net)
 [![WordPress](https://img.shields.io/badge/WordPress-%3E%3D6.4-blue.svg)](https://wordpress.org)

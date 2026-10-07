@@ -44,7 +44,7 @@ the same checks run locally with one command.**
 - [x] `.github/workflows/ci.yml` on `next` and PRs: validate (composer validate + audit) · lint ·
       cs · analyse · unit (PHP 8.1 → newest stable)
 - [x] `dependabot.yml` (composer, github-actions)
-- [ ] Real CI badge in README
+- [x] Real CI badge in README
 
 ### 0.4 Agent and docs scaffolding
 

@@ -38,7 +38,7 @@ final class ConfigTest extends TestCase
     public function test_text_domain_defaults_to_the_slug(): void
     {
         self::assertSame('my-plugin', Config::fromArray('/p.php', ['slug' => 'my-plugin'])->textDomain());
-        self::assertSame('custom', Config::fromArray('/p.php', ['slug' => 'my-plugin', 'textdomain' => 'custom'])->textDomain());
+        self::assertSame('custom', Config::fromArray('/p.php', ['slug' => 'my-plugin', 'text_domain' => 'custom'])->textDomain());
     }
 
     public function test_with_returns_a_new_config_and_keeps_the_slug(): void

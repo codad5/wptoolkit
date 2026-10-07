@@ -70,11 +70,11 @@ final class Config
     }
 
     /**
-     * The consumer's text domain: 'textdomain' if set, else the slug.
+     * The consumer's text domain: 'text_domain' if set, else the slug.
      */
     public function textDomain(): string
     {
-        $domain = $this->values['textdomain'] ?? $this->slug;
+        $domain = $this->values['text_domain'] ?? $this->slug;
         return is_string($domain) && $domain !== '' ? $domain : $this->slug;
     }
 

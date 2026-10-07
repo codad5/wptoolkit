@@ -75,7 +75,7 @@ use Codad5\WPToolkit\Foundation\Application;
 
 Application::create(MY_PLUGIN_FILE, [
     'slug'             => 'my-plugin',
-    'textdomain'       => 'my-plugin',
+    'text_domain'       => 'my-plugin',
     'requires_toolkit' => '^1.0',
     'cache'            => ['driver' => 'object'],
 ])

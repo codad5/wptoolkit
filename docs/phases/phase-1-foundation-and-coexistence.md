@@ -33,7 +33,7 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.1b Usage inventory of the real consumers
 
-- [ ] Catalogue every 0.x API used by `pau`, `silverbird-fusionintel` and `nile-distribution`
+- [x] Catalogue every 0.x API used by `pau`, `silverbird-fusionintel` and `nile-distribution`
       (class, method, options passed, data written) into
       [docs/reference/0x-usage-inventory.md](../reference/0x-usage-inventory.md) — this decides
       what 1.0 must cover and feeds the migration guide
