@@ -61,7 +61,7 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 - [x] `Foundation\Identity`: derives every WP-global name from the slug — `hook()`, `ajaxAction()`,
       `restNamespace()`, `optionKey()`, `transientKey()`, `table()`, `cronHook()`, `handle()`,
-      `jsGlobal()`, `nonceAction()`
+      `jsKey()`/`jsAccessor()`, `nonceAction()`
 - [x] Unit tests: two identities never produce the same key; keys respect WordPress length limits
       (option names 191, transient keys 172, hook names unlimited but sane)
 

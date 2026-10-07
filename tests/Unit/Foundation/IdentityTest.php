@@ -21,7 +21,8 @@ final class IdentityTest extends TestCase
         self::assertSame('my_plugin_books', $id->table('books'));
         self::assertSame('my_plugin_cleanup', $id->cronHook('cleanup'));
         self::assertSame('my-plugin-toolkit-api', $id->handle('toolkit-api'));
-        self::assertSame('myPluginToolkit', $id->jsGlobal());
+        self::assertSame('my-plugin', $id->jsKey());
+        self::assertSame('window.wptoolkit["my-plugin"]', $id->jsAccessor());
         self::assertSame('my-plugin:books.search', $id->nonceAction('books.search'));
     }
 
@@ -65,7 +66,7 @@ final class IdentityTest extends TestCase
             self::assertNotSame($a->$method('same'), $b->$method('same'), $method);
         }
         self::assertNotSame($a->restNamespace(), $b->restNamespace());
-        self::assertNotSame($a->jsGlobal(), $b->jsGlobal());
+        self::assertNotSame($a->jsAccessor(), $b->jsAccessor());
     }
 
     public function test_long_transient_keys_are_hashed_to_fit(): void
@@ -86,10 +87,11 @@ final class IdentityTest extends TestCase
         (new Identity('my-plugin'))->optionKey(str_repeat('a', 200));
     }
 
-    public function test_js_global_is_a_valid_identifier_even_for_numeric_slugs(): void
+    public function test_js_accessor_is_valid_javascript_for_any_slug(): void
     {
-        self::assertSame('_3dViewerToolkit', (new Identity('3d-viewer'))->jsGlobal());
-        self::assertSame('aBCToolkit', (new Identity('a_b-c'))->jsGlobal());
+        // Bracket access works for slugs that aren't JS identifiers (digits first, hyphens).
+        self::assertSame('window.wptoolkit["3d-viewer"]', (new Identity('3d-viewer'))->jsAccessor());
+        self::assertSame('wptoolkit', Identity::JS_NAMESPACE);
     }
 
     public function test_unusable_names_are_rejected(): void

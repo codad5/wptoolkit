@@ -38,10 +38,19 @@ breaks extraction), and uses some bare `wptoolkit_` keys (which breaks coexisten
 | Tables          | `{$wpdb->prefix}my_plugin_books`          |
 | Cron hooks      | `my_plugin_cleanup`                       |
 | Script handles  | `my-plugin-toolkit-api`                   |
-| JS global       | `window.myPluginToolkit`                  |
+| JS data         | `window.wptoolkit["my-plugin"]` (see amendment) |
 | Nonce actions   | `my-plugin:books.search`                  |
 
 The one exception is the coexistence ledger and a single diagnostic action, `wptoolkit/loaded`.
+
+### Amendment (2026-10-07, before the asset layer exists): one shared JS namespace, keyed by slug
+
+The first draft gave each consumer its own global (`window.myPluginToolkit`). The maintainer
+proposed one namespace with a key per plugin or theme — `window.wptoolkit["my-plugin"]` — which is
+easier to find in devtools and still collision-free, because slugs are unique per site. Adopted,
+with two rules: every writer **merges** into `window.wptoolkit` and never replaces it, and each
+entry carries its own `toolkitVersion` — a single top-level `_version` would be wrong whenever two
+plugins run different versions side by side.
 
 ## Options considered
 

@@ -36,7 +36,7 @@
    ledger and the `wptoolkit/loaded` diagnostic action.
 3. **No global functions or constants**, except inside `bootstrap/` files which `return` closures.
 4. **No static properties that hold data.** Two plugins sharing an unscoped copy would share them.
-5. **JS:** no shared `window.wpToolkit`; localized data under `Identity::jsGlobal()`; script handles
+5. **JS:** one shared namespace object, `window.wptoolkit`, that every writer **merges into** and never replaces; each consumer's data under its slug key (`Identity::jsAccessor()` → `window.wptoolkit["my-plugin"]`), each entry carrying its own `toolkitVersion` (no single top-level version: with coexisting copies it would be wrong for someone); script handles
    via `Identity::handle()`.
 
 ## The coexistence ledger

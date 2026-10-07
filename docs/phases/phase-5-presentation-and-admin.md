@@ -27,7 +27,9 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
       `admin_enqueue_scripts`, `login_enqueue_scripts`; calling early queues instead of erroring
 - [ ] Reads `@wordpress/scripts` `*.asset.php` manifests (dependencies + version)
 - [ ] Handles via `Identity::handle()`; `wp_set_script_translations` for every script with strings
-- [ ] Localized data goes under `Identity::jsGlobal()` — never a shared `window.wpToolkit`
+- [ ] Localized data goes to `window.wptoolkit[slug]` (`Identity::jsAccessor()`), written with a
+      merge (`window.wptoolkit = window.wptoolkit || {}`) so no plugin can wipe another's entry;
+      each entry carries `toolkitVersion` — there is no single top-level version
 - [ ] RTL: `wp_style_add_data($handle, 'rtl', 'replace')` for styles that ship an `-rtl.css`
 
 ### 5.3 Admin pages and frontend routes — splits `Page` (1,831 lines)

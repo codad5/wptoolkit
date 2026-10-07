@@ -162,16 +162,28 @@ final class Identity
     }
 
     /**
-     * The JavaScript global the library localizes data under: `myPluginToolkit`.
+     * The one shared JavaScript namespace: `window.wptoolkit`. Every plugin's data lives under its
+     * own slug key inside it, never at the top level (ADR-0006 amendment). Writers must merge
+     * (`window.wptoolkit = window.wptoolkit || {}`), never replace.
+     */
+    public const JS_NAMESPACE = 'wptoolkit';
+
+    /**
+     * This consumer's key inside `window.wptoolkit` — its slug, unique per site.
+     */
+    public function jsKey(): string
+    {
+        return $this->slug;
+    }
+
+    /**
+     * A JavaScript expression for this consumer's data: `window.wptoolkit["my-plugin"]`.
      *
      * @return non-empty-string
      */
-    public function jsGlobal(): string
+    public function jsAccessor(): string
     {
-        $parts = preg_split('/[-_]+/', $this->slug) ?: [$this->slug];
-        $camel = array_shift($parts) . implode('', array_map('ucfirst', $parts));
-
-        return (ctype_digit($camel[0]) ? '_' : '') . $camel . 'Toolkit';
+        return 'window.' . self::JS_NAMESPACE . '[' . (string) json_encode($this->slug) . ']';
     }
 
     /**

@@ -17,6 +17,6 @@ Decision: [ADR-0006](../../docs/adr/0006-library-text-domain-and-consumer-prefix
 Always from `Foundation\Identity`, never a string literal:
 
 `hook()` · `ajaxAction()` · `restNamespace()` · `optionKey()` · `transientKey()` · `table()` ·
-`cronHook()` · `handle()` · `jsGlobal()` · `nonceAction()`
+`cronHook()` · `handle()` · `jsAccessor()` (data lives at `window.wptoolkit[slug]`; merge, never replace) · `nonceAction()`
 
 Only exceptions: the coexistence ledger and the `wptoolkit/loaded` diagnostic action.
