@@ -24,40 +24,40 @@ passing the same contract test suite.**
 
 ### 2.1 The contract-test pattern
 
-- [ ] An abstract PHPUnit test case per contract (`CacheStoreContractTest`, …). Every adapter's test
+- [x] An abstract PHPUnit test case per contract (`CacheStoreContractTest`, …). Every adapter's test
       extends it, so one behaviour list holds for every backend.
 
 ### 2.2 Cache — ports 0.x `Utils/Cache`
 
-- [ ] `Contracts\Cache\CacheStore` (get, set, delete, has, remember, many, increment, flushGroup)
-- [ ] Adapters: `TransientStore`, `ObjectCacheStore`, `ArrayStore`, `NullStore`
-- [ ] `CacheFactory`: picks a driver from `config['cache']['driver']`, falls back to transients when
+- [x] `Contracts\Cache\CacheStore` (get, set, delete, has, remember, increment/count, clear) — `many()` dropped (no caller needs it); flushGroup is `clear()` via generation counter
+- [x] Adapters: `TransientStore`, `ObjectCacheStore`, `ArrayStore`, `NullStore`
+- [x] `CacheFactory`: picks a driver from `config['cache']['driver']`, falls back to transients when
       no persistent object cache exists
-- [ ] Keys always go through `Identity::transientKey()`; group flush without `LIKE` scans where the
+- [x] Keys always go through `Identity::transientKey()`; group flush without `LIKE` scans where the
       backend supports it
 - [ ] Optional `Psr16Bridge` (only usable when the consumer installs `psr/simple-cache` themselves)
 
 ### 2.3 Logging — replaces 0.x `Utils/Debugger`
 
-- [ ] `Contracts\Log\Logger` (PSR-3-shaped levels and context interpolation)
-- [ ] Adapters: `ErrorLogLogger`, `QueryMonitorLogger` (when the plugin is active), `BrowserConsoleLogger`
+- [x] `Contracts\Log\Logger` (PSR-3-shaped levels and context interpolation)
+- [x] Adapters: `ErrorLogLogger`, `QueryMonitorLogger` (when the plugin is active), `BrowserConsoleLogger`
       (buffers; prints only in `wp_footer` / `admin_footer`; only for users who can `manage_options`
       and only when `WP_DEBUG`), `NullLogger`, `ArrayLogger` (tests)
 - [ ] `Psr3Bridge` (optional, same rule as 2.2)
 
 ### 2.4 HTTP client — ports 0.x `Utils/APIHelper`
 
-- [ ] `Contracts\Http\HttpClient` + typed `HttpResponse` and `HttpException`
-- [ ] `WpHttpClient` (`wp_remote_request`), `FakeHttpClient` (queued responses, records requests)
-- [ ] `ApiClient` on top: base URL, auth strategies, retry with backoff on 429/5xx, timeouts, cached
+- [x] `Contracts\Http\HttpClient` + typed `HttpResponse` and `HttpException`
+- [x] `WpHttpClient` (`wp_remote_request`), `FakeHttpClient` (queued responses, records requests)
+- [x] `ApiClient` on top: base URL, auth strategies, retry with backoff on 429/5xx, timeouts, cached
       GETs via `CacheStore`, request/response logging with secrets redacted
 
 ### 2.5 Rate limiting — fixes C3
 
-- [ ] `Contracts\RateLimit\RateLimiterStore` + fixed-window and sliding-window limiters
-- [ ] Store backed by `CacheStore`; **refuses** non-persistent backends (an in-request array cache
+- [x] `Support\RateLimit\RateLimiter` (fixed window, clock-aligned) over `CacheStore` — no separate store contract needed. Sliding window: not built; add only if a consumer needs smoother limits
+- [x] Store backed by `CacheStore`; non-persistent backends are **reported** (warning, once) rather than refused — refusing would turn a config mistake into an outage (an in-request array cache
       can't rate-limit across requests) and warns once
-- [ ] Identifier strategies: user ID, IP (honouring a configurable trusted-proxy list, never raw
+- [x] Identifier strategies: user ID, IP (honouring a configurable trusted-proxy list, never raw
       `X-Forwarded-For`), custom callable
 
 ### 2.6 Filesystem — ports 0.x `Utils/Filesystem` (trimmed)
@@ -67,7 +67,7 @@ passing the same contract test suite.**
 
 ### 2.7 Clock
 
-- [ ] `Contracts\Clock` + `SystemClock` + `FrozenClock` — so cache expiry and rate windows are testable
+- [x] `Contracts\Clock` + `SystemClock` + `FrozenClock` — so cache expiry and rate windows are testable
 
 ---
 
