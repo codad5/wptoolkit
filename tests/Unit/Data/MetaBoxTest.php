@@ -96,6 +96,18 @@ final class MetaBoxTest extends TestCase
         self::assertSame(['C:\books\dune'], $this->wp->meta[1]['d_book_path']);
     }
 
+    public function test_non_media_multiple_fields_keep_0x_serialized_array_shape(): void
+    {
+        // 0.x stored arrays from sanitize callbacks as one serialized row; only wp_media used rows.
+        $this->wp->meta[40] = ['d_book_tags' => [['a', 'b']]];
+        $box = $this->box('d', 'book', [$this->f->select('tags', ['a' => 'A', 'b' => 'B', 'c' => 'C'])->multiple()]);
+
+        self::assertSame(['a', 'b'], $box->value(40, 'tags'));
+
+        $box->save(41, 'tags', ['b', 'c']);
+        self::assertSame([['b', 'c']], $this->wp->meta[41]['d_book_tags'], 'one row, so 0.x reads it after a downgrade');
+    }
+
     // --- Reading and validation -------------------------------------------------------------
 
     public function test_missing_values_fall_back_to_defaults(): void

@@ -68,7 +68,7 @@ final class EntityRegistrar
 
         $fields = array_values(array_filter(
             $definition->fields,
-            static fn (Field $f): bool => !array_key_exists($f->name, PostType::COLUMNS)
+            static fn (Field $f): bool => $postType->columnFor($f->name) === null
         ));
         if ($fields === []) {
             return null;

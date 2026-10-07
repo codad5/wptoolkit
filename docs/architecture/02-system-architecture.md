@@ -105,7 +105,7 @@ final class BookServiceProvider extends ServiceProvider
 ```
 
 ```php
-#[PostType('book', public: true)]
+#[PostType('book', public: true, columns: ['title' => 'post_title'])]
 final class Book extends Entity
 {
     public static function fields(FieldFactory $f): array

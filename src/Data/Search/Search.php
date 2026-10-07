@@ -89,13 +89,16 @@ final class Search
     {
         $copy = clone $this;
         foreach ($sources as $source) {
-            if (isset(self::COLUMN_FIELDS[$source])) {
-                $copy->columns[] = $source;
-            } elseif (in_array($source, $this->definition->taxonomyNames(), true)) {
-                $copy->taxonomies[] = $source;
-            } elseif ($this->definition->hasField($source) && !PostType::isColumn($source)) {
+            $column = $this->postType->columnFor($source);
+            if ($column !== null && in_array($column, self::COLUMN_FIELDS, true)) {
+                $copy->columns[] = $column;
+            } elseif ($column === null && $this->definition->hasField($source)) {
                 $this->assertNotSensitive($source);
                 $copy->metaFields[] = $source;
+            } elseif (isset(self::COLUMN_FIELDS[$source])) {
+                $copy->columns[] = self::COLUMN_FIELDS[$source];
+            } elseif (in_array($source, $this->definition->taxonomyNames(), true)) {
+                $copy->taxonomies[] = $source;
             } else {
                 throw new InvalidConfigException(sprintf(
                     'Cannot search "%s": it is not a post column, field or taxonomy of %s.',
@@ -210,7 +213,7 @@ final class Search
 
         return $this->ids($visibility + [
             's' => $term,
-            'search_columns' => array_map(static fn (string $c): string => self::COLUMN_FIELDS[$c], $this->columns),
+            'search_columns' => array_values(array_unique($this->columns)),
         ]);
     }
 

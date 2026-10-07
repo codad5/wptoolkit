@@ -91,6 +91,18 @@ final class EntityTest extends TestCase
         }
     }
 
+    public function test_post_columns_are_opt_in_and_validated(): void
+    {
+        $mapped = new PostType('book', columns: ['title' => 'post_title']);
+        $plain = new PostType('pau-executive');
+
+        self::assertSame('post_title', $mapped->columnFor('title'));
+        self::assertNull($plain->columnFor('title'), 'a 0.x meta field called "title" stays meta');
+
+        $this->expectException(InvalidConfigException::class);
+        new PostType('book', columns: ['title' => 'post_password']);
+    }
+
     public function test_query_page_size_is_capped_and_queries_are_immutable(): void
     {
         $base = Query::create();

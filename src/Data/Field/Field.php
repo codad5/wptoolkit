@@ -143,6 +143,15 @@ final class Field
         return (bool) $this->setting('multiple', false);
     }
 
+    /**
+     * How a multiple field is stored, as 0.x did (ADR-0016): media fields one meta row per ID,
+     * every other multiple field one row holding a serialized array.
+     */
+    public function storesOneRowPerValue(): bool
+    {
+        return $this->isMultiple() && in_array($this->type, ['media', 'wp_media'], true);
+    }
+
     public function isSensitive(): bool
     {
         return (bool) $this->setting('sensitive', false);

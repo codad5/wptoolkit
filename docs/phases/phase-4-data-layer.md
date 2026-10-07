@@ -98,11 +98,13 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.8 Data compatibility ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md))
 
-- [ ] Fixture database with 0.x-written meta (single, serialized array, multiple media rows,
-      custom prefix) and options (hyphenated slug)
-- [ ] 1.0 `MetaBox`/`PostTypeRepository` and `Settings` read every fixture value identically, and
-      writes produce the same keys and formats
-- [ ] Round trip: 1.0 writes → 0.x reads (downgrade stays possible)
+- [x] Fixture database with 0.x-written meta (single, serialized array, multiple media rows,
+      custom prefix) — `DataCompatibilityTest`, shaped like pau and silverbird. Options (hyphenated
+      slug) move to Phase 5 with `Settings`, which owns them
+- [x] 1.0 `MetaBox`/`PostTypeRepository` read every fixture value identically, and writes produce
+      the same keys and formats (`Settings`: Phase 5)
+- [x] Round trip: 1.0 writes → 0.x reads (downgrade stays possible) — asserted on raw rows, which
+      is exactly what 0.x's `get_post_meta($id, $key, $single)` reads, so the test outlives `legacy/`
 
 ### 4.9 Port and delete
 

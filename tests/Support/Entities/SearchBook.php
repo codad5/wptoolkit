@@ -9,7 +9,7 @@ use Codad5\WPToolkit\Data\Attributes\Taxonomy;
 use Codad5\WPToolkit\Data\Entity;
 use Codad5\WPToolkit\Data\Field\FieldFactory;
 
-#[PostType('wptk_search', public: true)]
+#[PostType('wptk_search', public: true, columns: ['title' => 'post_title', 'content' => 'post_content'])]
 #[Taxonomy('wptk_topic')]
 final class SearchBook extends Entity
 {

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T19:44:10+00:00\n"
+"POT-Creation-Date: 2026-10-07T19:54:20+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wptoolkit\n"
@@ -123,7 +123,7 @@ msgstr ""
 msgid "Choose media"
 msgstr ""
 
-#: src/Data/MetaBox.php:399
+#: src/Data/MetaBox.php:394
 msgid "Some fields were not saved:"
 msgstr ""
 

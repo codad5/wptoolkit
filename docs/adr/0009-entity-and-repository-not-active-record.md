@@ -44,7 +44,9 @@ The adapters live in `src/Adapters/Repository` with the other adapters (Rule 10)
 entity, its attributes, `Query` and the registrar, and never imports an adapter.
 
 **Implementation notes (Phase 4):** `Entity::fields()` is static so a definition is read once per
-class (`EntityDefinition`). The post-column map lives on `#[PostType]`. Every adapter passes
+class (`EntityDefinition`). Post columns are opt-in (`#[PostType(columns: ['title' => 'post_title'])]`):
+mapping by field name would have moved 0.x meta fields called `title` or `status` (pau has one) into
+`wp_posts`, breaking ADR-0016. Every adapter passes
 `tests/Contract/RepositoryContract.php`; `ArrayRepository` exists so consumers can unit-test domain
 code with the same semantics.
 

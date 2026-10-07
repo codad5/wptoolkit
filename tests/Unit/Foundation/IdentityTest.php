@@ -48,6 +48,8 @@ final class IdentityTest extends TestCase
         $id = new Identity('x');
 
         self::assertSame('box_book_isbn', $id->metaKey('box', 'book', 'box_book_isbn'));
+        self::assertSame('silverbird_rating', $id->metaKey('box', 'book', 'rating', 'Silverbird_'), '0.x sanitize_key()d custom prefixes');
+        self::assertSame('rating', $id->metaKey('box', 'book', 'rating', ''), 'an empty prefix is the bare field name, as in 0.x');
     }
 
     public function test_option_key_is_sanitized_like_wordpress_sanitize_key(): void

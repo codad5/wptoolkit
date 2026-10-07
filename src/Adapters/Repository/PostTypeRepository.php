@@ -12,6 +12,7 @@ use Codad5\WPToolkit\Data\Attributes\PostType;
 use Codad5\WPToolkit\Data\Entity;
 use Codad5\WPToolkit\Data\Field\Field;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
+use Codad5\WPToolkit\Data\Field\PostMetaStorage;
 use Codad5\WPToolkit\Data\Query\Condition;
 use Codad5\WPToolkit\Data\Query\Operator;
 use Codad5\WPToolkit\Data\Query\Query;
@@ -34,22 +35,6 @@ use WP_Query;
  */
 final class PostTypeRepository extends BaseRepository
 {
-    private const POST_COLUMNS = PostType::COLUMNS;
-
-    /** Entity field name => WP_Query orderby key. */
-    private const ORDER_KEYS = [
-        'id' => 'ID',
-        'title' => 'title',
-        'slug' => 'name',
-        'date' => 'date',
-        'author' => 'author',
-        'parent' => 'parent',
-        'menu_order' => 'menu_order',
-        'content' => 'post_content',
-        'excerpt' => 'post_excerpt',
-        'status' => 'post_status',
-    ];
-
     private readonly PostType $postType;
 
     /**
@@ -114,8 +99,9 @@ final class PostTypeRepository extends BaseRepository
         $meta = [];
         foreach ($dirty as $name => $_) {
             $stored = $this->toStorage($fields[$name], $entity->get($name));
-            if (isset(self::POST_COLUMNS[$name])) {
-                $post[self::POST_COLUMNS[$name]] = $stored ?? '';
+            $column = $this->postType->columnFor($name);
+            if ($column !== null) {
+                $post[$column] = $stored ?? '';
             } else {
                 $meta[$name] = $stored;
             }
@@ -170,22 +156,7 @@ final class PostTypeRepository extends BaseRepository
 
     private function writeMeta(int $postId, Field $field, mixed $stored): void
     {
-        $key = $this->metaKey($field->name);
-
-        if ($field->isMultiple()) {
-            delete_post_meta($postId, $key);
-            foreach (is_array($stored) ? $stored : [] as $value) {
-                add_post_meta($postId, $key, wp_slash($value));
-            }
-            return;
-        }
-
-        if ($stored === null) {
-            delete_post_meta($postId, $key);
-            return;
-        }
-
-        update_post_meta($postId, $key, wp_slash($stored));
+        PostMetaStorage::write($postId, $this->metaKey($field->name), $field, $stored);
     }
 
     /**
@@ -195,17 +166,14 @@ final class PostTypeRepository extends BaseRepository
     {
         $values = [];
         foreach ($this->definition->fields as $name => $field) {
-            if (isset(self::POST_COLUMNS[$name])) {
-                $column = self::POST_COLUMNS[$name];
+            $column = $this->postType->columnFor($name);
+            if ($column !== null) {
                 $raw = $post->{$column};
                 $values[$name] = $this->fromStorage($field, $raw === '' ? null : $raw);
                 continue;
             }
 
-            $rows = get_post_meta($post->ID, $this->metaKey($name), false);
-            $rows = is_array($rows) ? array_values($rows) : [];
-            $stored = $field->isMultiple() ? ($rows === [] ? null : $rows) : ($rows[0] ?? null);
-            $values[$name] = $this->fromStorage($field, $stored);
+            $values[$name] = $this->fromStorage($field, PostMetaStorage::read($post->ID, $this->metaKey($name), $field));
         }
 
         $entity = $this->definition->newEntity();
@@ -260,7 +228,7 @@ final class PostTypeRepository extends BaseRepository
         $metaQuery = [];
         $where = [];
         foreach ($query->conditions() as $condition) {
-            if ($condition->field === 'id' || isset(self::POST_COLUMNS[$condition->field])) {
+            if ($condition->field === 'id' || $this->postType->columnFor($condition->field) !== null) {
                 $where[] = $condition;
             } else {
                 $metaQuery[] = $this->metaClause($condition);
@@ -269,8 +237,13 @@ final class PostTypeRepository extends BaseRepository
 
         $orderby = [];
         foreach ($query->order() as $i => [$field, $direction]) {
-            if (isset(self::ORDER_KEYS[$field])) {
-                $orderby[self::ORDER_KEYS[$field]] = $direction;
+            $column = $field === 'id' ? 'ID' : $this->postType->columnFor($field);
+            if ($column !== null) {
+                $key = $column === 'ID' ? 'ID' : PostType::COLUMNS[$column];
+                if ($key === null) {
+                    throw new InvalidConfigException(sprintf('WordPress cannot order posts by %s ("%s").', $column, $field));
+                }
+                $orderby[$key] = $direction;
                 continue;
             }
             $clause = 'wptoolkit_order_' . $i;
@@ -320,6 +293,14 @@ final class PostTypeRepository extends BaseRepository
      */
     private function metaClause(Condition $condition): array
     {
+        $field = $this->definition->field($condition->field);
+        if ($field->isMultiple() && !$field->storesOneRowPerValue()) {
+            throw new InvalidConfigException(sprintf(
+                '"%s" is stored as one serialized array (as in 0.x), which meta queries cannot compare; only multiple media fields can be queried.',
+                $condition->field
+            ));
+        }
+
         $key = $this->metaKey($condition->field);
         $value = $this->conditionToStorage($condition);
         $type = $this->metaType($condition->field);
@@ -361,7 +342,7 @@ final class PostTypeRepository extends BaseRepository
 
         $sql = '';
         foreach ($conditions as $condition) {
-            $column = $wpdb->posts . '.' . ($condition->field === 'id' ? 'ID' : self::POST_COLUMNS[$condition->field]);
+            $column = $wpdb->posts . '.' . ($condition->field === 'id' ? 'ID' : (string) $this->postType->columnFor($condition->field));
             $value = $this->conditionToStorage($condition);
 
             if ($condition->operator->takesList()) {

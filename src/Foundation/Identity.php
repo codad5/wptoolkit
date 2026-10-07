@@ -115,13 +115,14 @@ final class Identity
      * A post meta key, in 0.x MetaBox's shape: `{box_id}_{post_type}_{field}`.
      *
      * Pass `$prefix` when the box was given a custom prefix (0.x `set_prefix()`); it then replaces
-     * `{box_id}_{post_type}_` entirely, exactly as 0.x did.
+     * `{box_id}_{post_type}_` entirely, exactly as 0.x did — including 0.x's sanitize_key() of it, so
+     * `'Silverbird_'` still means `silverbird_`. An empty prefix means the bare field name.
      *
      * @return non-empty-string
      */
     public function metaKey(string $boxId, string $postType, string $field, ?string $prefix = null): string
     {
-        $prefix ??= $this->sanitizeKey($boxId) . '_' . $postType . '_';
+        $prefix = $prefix === null ? $this->sanitizeKey($boxId) . '_' . $postType . '_' : $this->sanitizeKey($prefix);
         $key = str_starts_with($field, $prefix) ? $field : $prefix . $field;
 
         if ($field === '' || $key === '') {

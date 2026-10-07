@@ -12,6 +12,7 @@ use Codad5\WPToolkit\Contracts\Cache\CacheStore;
 use Codad5\WPToolkit\Data\Field\Field;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
 use Codad5\WPToolkit\Data\Field\FieldValidator;
+use Codad5\WPToolkit\Data\Field\PostMetaStorage;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Foundation\HookRegistrar;
 use Codad5\WPToolkit\Foundation\Identity;
@@ -117,22 +118,21 @@ final class MetaBox
     public function value(int $postId, string $fieldName): mixed
     {
         $field = $this->field($fieldName);
-        $key = $this->metaKey($fieldName);
         $type = $this->types->get($field->type);
 
-        if (!metadata_exists('post', $postId, $key)) {
+        $stored = PostMetaStorage::read($postId, $this->metaKey($fieldName), $field);
+        if ($stored === null) {
             return $field->defaultValue();
         }
 
         if ($field->isMultiple()) {
-            $stored = get_post_meta($postId, $key, false);
             return array_values(array_filter(
-                array_map(static fn ($v) => $type->read($v, $field), is_array($stored) ? $stored : []),
+                array_map(static fn ($v) => $type->read($v, $field), (array) $stored),
                 static fn ($v) => $v !== null
             ));
         }
 
-        return $type->read(get_post_meta($postId, $key, true), $field);
+        return $type->read($stored, $field);
     }
 
     /**
@@ -174,27 +174,22 @@ final class MetaBox
 
     private function write(int $postId, Field $field, mixed $value): void
     {
-        $key = $this->metaKey($field->name);
         $type = $this->types->get($field->type);
 
         if ($field->isMultiple()) {
-            delete_post_meta($postId, $key);
+            $stored = [];
             foreach (is_array($value) ? $value : [$value] as $item) {
                 $clean = $type->sanitize($item, $field);
                 if ($clean !== null && $clean !== '') {
-                    add_post_meta($postId, $key, wp_slash($clean)); // the meta API unslashes
+                    $stored[] = $clean;
                 }
             }
-            return;
+        } else {
+            $stored = Rules::isEmpty($value) ? null : $type->sanitize($value, $field);
+            $stored = $stored === '' ? null : $stored;
         }
 
-        $clean = Rules::isEmpty($value) ? null : $type->sanitize($value, $field);
-        if ($clean === null || $clean === '') {
-            delete_post_meta($postId, $key);
-            return;
-        }
-
-        update_post_meta($postId, $key, wp_slash($clean));
+        PostMetaStorage::write($postId, $this->metaKey($field->name), $field, $stored);
     }
 
     // --- WordPress integration -----------------------------------------------------------------

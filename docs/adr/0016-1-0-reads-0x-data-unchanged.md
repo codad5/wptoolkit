@@ -49,6 +49,17 @@ owner; downgrading becomes impossible.
 **Pros:** upgrades are a code change only; downgrade still works. **Cons:** 1.0 inherits 0.x's
 key shapes, including hyphens in option names.
 
+## Shapes pinned by tests (Phase 4.8)
+
+`tests/Integration/DataCompatibilityTest.php` stores rows exactly as 0.x `MetaBox::save_field()` did and
+checks 1.0 reads and rewrites them unchanged:
+
+- key `{sanitize_key(box)}_{post_type}_{field}`, or a custom prefix passed through `sanitize_key()`
+  (an empty prefix means the bare field name);
+- single values: one row; a submitted checkbox `"on"` reads as true (1.0 writes `"1"`/`"0"`);
+- multiple `wp_media`: one row per attachment ID; any other multiple value: one serialized row;
+- a meta field named like a post column (`title`) stays in meta unless the entity maps it.
+
 ## Consequences
 
 **We accept:** slightly inconsistent key shapes in 1.0, documented here.
