@@ -41,6 +41,11 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 - [ ] On the Settings API, built from the Phase 4 field system; per-field sanitize/validate
 - [ ] Storage through `OptionsRepository` with `Identity::optionKey()`
+- [ ] **Sensitive fields** ([ADR-0021](../adr/0021-sensitive-settings-are-read-only-by-name.md)): readable only by
+      name; omitted from `all()`, JSON, exports and REST/Ajax; password input that never echoes
+      the stored value (blank keeps it); keys registered for log redaction; refused in JS
+      localization; optional sodium encryption at rest
+- [ ] Regression test reproducing pau's `/settings` route: the API key is absent from the response
 
 ### 5.5 Notices — ports `Notification`
 

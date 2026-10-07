@@ -26,6 +26,7 @@ This is the critical path and the biggest phase. It's where most consumer code l
 - [ ] **Third-party field types register with the factory** — no edits to core (replaces the
       `match ($field['type'])` blocks)
 - [ ] Every field: `<label for>`, `aria-describedby` for its error, translatable labels
+- [ ] A `sensitive` flag on field definitions (used by Settings, ADR-0021)
 
 ### 4.2 MetaBox, rebuilt on fields
 

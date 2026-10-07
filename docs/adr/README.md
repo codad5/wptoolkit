@@ -54,3 +54,4 @@ Not for a naming choice, a library with no real alternative, or anything you wou
 | [0018](0018-versioned-data-migrations-expand-contract.md)            | Data changes go through versioned migrations, expand → migrate → contract | Accepted |
 | [0019](0019-no-translator-abstraction.md)                            | No `Translator` abstraction: library strings call WordPress i18n directly | Accepted |
 | [0020](0020-incompatible-unscoped-copies-refuse-activation.md)       | The loaded copy wins; an incompatible plugin is refused at activation      | Accepted |
+| [0021](0021-sensitive-settings-are-read-only-by-name.md)              | Sensitive settings are readable only by name and never leave the server   | Accepted |
