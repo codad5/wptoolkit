@@ -17,6 +17,11 @@ passing the same contract test suite.**
 
 ## Scope
 
+### 2.0 Integration test infrastructure (moved from Phase 1 §1.7)
+
+- [ ] `composer test:integration`: wp-phpunit + the WordPress test suite inside wp-env
+- [ ] CI `integration` job: MySQL; PHP {8.1, 8.4} × WP {6.4, latest}
+
 ### 2.1 The contract-test pattern
 
 - [ ] An abstract PHPUnit test case per contract (`CacheStoreContractTest`, …). Every adapter's test

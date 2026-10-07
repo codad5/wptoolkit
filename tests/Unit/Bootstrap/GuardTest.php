@@ -192,6 +192,21 @@ final class GuardTest extends TestCase
         self::assertTrue($this->guard($this->fakeCopy('1.0.0'))($this->pluginFile(), ['toolkit' => '^1.0', 'autoload' => false], fn () => null));
     }
 
+    public function test_toolkit_path_points_the_guard_at_another_copy(): void
+    {
+        class_exists(Application::class);
+        $prefixed = $this->fakeCopy('3.0.0');
+        $booted = false;
+
+        // Guard from the repository, inspecting a copy elsewhere (as with Strauss's vendor-prefixed/).
+        $result = $this->guard()($this->pluginFile(), ['toolkit_path' => $prefixed, 'toolkit' => '^3.0', 'autoload' => false], function () use (&$booted) {
+            $booted = true;
+        });
+
+        self::assertFalse($result, 'the loaded copy (repository) is not ^3.0, and the guard judged by the inspected copy');
+        self::assertFalse($booted);
+    }
+
     public function test_the_guard_leaks_no_variables_into_the_including_scope(): void
     {
         $before = array_keys(get_defined_vars());

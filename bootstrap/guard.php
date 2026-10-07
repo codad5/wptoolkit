@@ -28,6 +28,7 @@
  *                 loader), 'composer', 'standalone', a file path, or false
  *   rethrow       rethrow boot errors instead of containing them (default: WP_DEBUG on a
  *                 'local' or 'development' environment)
+ *   toolkit_path  the WPToolkit copy to inspect and load (default: the package this file is in)
  *
  * Returns true when the plugin started, false when it was kept inert.
  *
@@ -37,8 +38,10 @@
 // Nothing outside the closure: `require` runs this file in the caller's scope, so even a variable
 // here would leak into the plugin's main file.
 return function ($pluginFile, $needs, $boot) {
-    $copyDirectory = dirname(__DIR__);
     $needs = is_array($needs) ? $needs : array();
+    // The copy to inspect and load: this file's own package unless told otherwise (e.g. Strauss
+    // copies the library to vendor-prefixed/ while the guard is required from vendor/).
+    $copyDirectory = isset($needs['toolkit_path']) ? rtrim((string) $needs['toolkit_path'], '/\\') : dirname(__DIR__);
     $name = isset($needs['name']) ? (string) $needs['name'] : basename(dirname($pluginFile));
     $problems = array();
 

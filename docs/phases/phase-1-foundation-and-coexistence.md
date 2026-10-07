@@ -37,7 +37,7 @@ ruinous to retrofit once every module has invented its own hook names and option
       (class, method, options passed, data written) into
       [docs/reference/0x-usage-inventory.md](../reference/0x-usage-inventory.md) — this decides
       what 1.0 must cover and feeds the migration guide
-- [ ] Capture each project's stored data shapes (meta keys, option keys) as fixtures for the
+- [ ] → **moved to Phase 4 §4.8** (data-compatibility fixtures): capture each project's stored data shapes as fixtures for the
       data-compatibility suite ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md))
 
 ### 1.2 The kernel ([ADR-0007](../adr/0007-own-container-no-static-registry.md))
@@ -76,19 +76,20 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.5 Coexistence ([03-multi-version-coexistence.md](../architecture/03-multi-version-coexistence.md))
 
-- [ ] `Application::VERSION` constant, bumped by the release workflow
+- [x] `Application::VERSION` constant (the release workflow bumps it — Phase 7 §7.1)
 - [x] The coexistence ledger: each copy records `{version, path, namespace}` at load
 - [x] `requires_toolkit` constraint; on mismatch → stays inert, **refuses activation**, admin notice
       naming the plugin/theme whose copy won and what to do ([ADR-0020](../adr/0020-incompatible-unscoped-copies-refuse-activation.md))
-- [ ] Strauss configuration documented and used by both fixture plugins
+- [x] Strauss configuration documented ([guide](../guides/scoping-and-coexistence.md)); guard `toolkit_path` for
+      Strauss's `vendor-prefixed/`. A Strauss-built example plugin moves to Phase 6 §6.4
 - [x] **Composer is optional** ([ADR-0014](../adr/0014-composer-is-optional.md)):
       `bootstrap/autoload.php` (~50-line PSR-4 loader, no globals) replaces the 654-line 0.x
       `Autoloader`; `bin/scope.php MyPlugin` rewrites the namespace with only the PHP CLI
 - [x] Guard `autoload: 'auto'`: uses the plugin's `vendor/autoload.php` when present, else the
       standalone loader; standalone loader is idempotent per copy (tests for both paths)
-- [ ] Coexistence fixtures in **both** flavours: two Strauss-scoped Composer copies, and two
-      `bin/scope.php`-scoped standalone copies
-- [ ] Fixtures: `tests/Fixtures/plugin-alpha` (scoped, version A) and `plugin-beta` (scoped,
+- [x] Coexistence fixtures: two `bin/scope.php`-scoped copies (E2E + in-process test). Strauss flavour →
+      Phase 6 §6.4 example
+- [x] Fixtures: `tests/Fixtures/plugin-alpha` (scoped, version A) and `plugin-beta` (scoped,
       version B); `plugin-gamma` + `plugin-delta` (unscoped, different versions) for the conflict path
 
 ### 1.6 Safe boot — the guard ([ADR-0013](../adr/0013-plugins-boot-through-a-syntax-safe-guard.md))
@@ -99,17 +100,18 @@ ruinous to retrofit once every module has invented its own hook names and option
       needs vs has, deactivate link); WP-CLI warning; activation refused with a clear message
 - [x] Boot callback wrapped in `catch (Throwable)`: `ParseError`, Composer platform-check failures and
       boot exceptions make the plugin inert + logged + noticed, never a white screen
-- [ ] `HookRegistrar` containment mode: callbacks wrapped, exceptions logged; on in production, off
+- [x] `HookRegistrar` containment mode: callbacks wrapped, exceptions logged; on in production, off
       in development
-- [ ] Example and fixture plugins' main files use the guard
+- [x] Example and fixture plugins' main files use the guard
 - [x] CI: `php -l` on the guard and those main files under the oldest PHP image available; PHPCS
       PHPCompatibility `testVersion 5.6-` scoped to those files
 
 ### 1.7 Test infrastructure
 
-- [ ] `.wp-env.json` (WordPress + the fixtures); `composer test:integration` via wp-phpunit
-- [ ] CI `integration` job: MySQL service; matrix PHP {8.1, 8.4} × WP {6.4, latest}
-- [ ] Playwright skeleton (`tests/E2E/`) running against wp-env; CI job on label `e2e` + nightly
+- [x] `.wp-env.json` (WordPress + the fixtures)
+- [ ] → **moved to Phase 2 §2.0**: `composer test:integration` via wp-phpunit (first needed by adapters)
+- [ ] → **moved to Phase 2 §2.0**: CI `integration` job (MySQL; PHP {8.1, 8.4} × WP {6.4, latest})
+- [x] Playwright skeleton (`tests/E2E/`) running against wp-env; CI job on label `e2e` + nightly
 
 ---
 
