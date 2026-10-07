@@ -17,4 +17,14 @@ final class FirstProvider extends ServiceProvider
     {
         EventLog::$events[] = 'boot:first';
     }
+
+    public function activate(): void
+    {
+        EventLog::$events[] = 'activate:first';
+    }
+
+    public function deactivate(): void
+    {
+        EventLog::$events[] = 'deactivate:first';
+    }
 }

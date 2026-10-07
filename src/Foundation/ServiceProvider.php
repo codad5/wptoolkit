@@ -16,6 +16,9 @@ namespace Codad5\WPToolkit\Foundation;
  * - `boot()` runs on `init`, after the consumer's text domain is loaded, so it may call `__()`,
  *   add hooks and register routes. Declare any services it needs as parameters; they are
  *   resolved from the container.
+ * - `activate()` / `deactivate()` (optional) run on plugin activation and deactivation, with
+ *   their parameters injected the same way. Uninstall needs a static handler instead: pass
+ *   `'uninstall' => MyUninstaller::class` in the application config.
  */
 abstract class ServiceProvider
 {

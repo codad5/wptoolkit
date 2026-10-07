@@ -15,6 +15,7 @@ use Codad5\WPToolkit\Tests\Fixtures\Container\Logger;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\EventLog;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\FirstProvider;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\SecondProvider;
+use Codad5\WPToolkit\Tests\Fixtures\Providers\Uninstaller;
 use Codad5\WPToolkit\Tests\TestCase;
 
 final class ApplicationTest extends TestCase
@@ -25,6 +26,8 @@ final class ApplicationTest extends TestCase
         EventLog::$events = [];
         Functions\when('is_textdomain_loaded')->justReturn(false);
         Functions\when('plugin_basename')->justReturn('my-plugin/my-plugin.php');
+        Functions\when('register_activation_hook')->justReturn(null);
+        Functions\when('register_deactivation_hook')->justReturn(null);
         Functions\when('load_plugin_textdomain')->alias(static function (string $domain): bool {
             EventLog::$events[] = "textdomain:{$domain}";
             return true;
@@ -146,6 +149,70 @@ final class ApplicationTest extends TestCase
             'type' => 'theme',
             'domain_path' => '/lang/',
         ])->boot();
+    }
+
+    public function test_boot_registers_activation_and_deactivation_hooks_for_plugins(): void
+    {
+        $registered = [];
+        Functions\when('register_activation_hook')->alias(function ($file, $cb) use (&$registered) {
+            $registered['activate'] = [$file, $cb];
+        });
+        Functions\when('register_deactivation_hook')->alias(function ($file, $cb) use (&$registered) {
+            $registered['deactivate'] = [$file, $cb];
+        });
+
+        $app = $this->app()->boot();
+
+        self::assertSame(['/plugins/my-plugin/my-plugin.php', [$app, 'activate']], $registered['activate']);
+        self::assertSame(['/plugins/my-plugin/my-plugin.php', [$app, 'deactivate']], $registered['deactivate']);
+    }
+
+    public function test_activate_runs_provider_activate_and_registers_the_static_uninstall_handler(): void
+    {
+        Functions\expect('register_uninstall_hook')
+            ->once()
+            ->with('/plugins/my-plugin/my-plugin.php', [Uninstaller::class, 'uninstall']);
+        $app = Application::create('/plugins/my-plugin/my-plugin.php', ['slug' => 'my-plugin', 'uninstall' => Uninstaller::class])
+            ->providers([FirstProvider::class])
+            ->boot();
+
+        $app->activate();
+
+        self::assertContains('activate:first', EventLog::$events);
+    }
+
+    public function test_activate_rejects_an_uninstall_handler_without_a_static_method(): void
+    {
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'uninstall' => Logger::class])->boot();
+
+        $this->expectException(InvalidConfigException::class);
+
+        $app->activate();
+    }
+
+    public function test_deactivate_runs_provider_deactivate_then_removes_every_hook(): void
+    {
+        $app = $this->app()->providers([FirstProvider::class])->boot();
+        self::assertNotFalse(has_action('init', [$app, 'bootProviders']));
+
+        $app->deactivate();
+
+        self::assertContains('deactivate:first', EventLog::$events);
+        self::assertFalse(has_action('init', [$app, 'bootProviders']));
+    }
+
+    public function test_themes_do_not_register_plugin_lifecycle_hooks(): void
+    {
+        do_action('init');
+        Functions\when('load_theme_textdomain')->justReturn(true);
+        $called = false;
+        Functions\when('register_activation_hook')->alias(function () use (&$called) {
+            $called = true;
+        });
+
+        Application::create('/themes/t/functions.php', ['slug' => 't', 'type' => 'theme'])->boot();
+
+        self::assertFalse($called);
     }
 
     private function app(): Application

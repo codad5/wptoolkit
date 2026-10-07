@@ -99,6 +99,11 @@ final class Application
             $this->providers[] = $provider;
         }
 
+        if ($this->config->get('type', 'plugin') === 'plugin') {
+            register_activation_hook($this->config->file, [$this, 'activate']);
+            register_deactivation_hook($this->config->file, [$this, 'deactivate']);
+        }
+
         if (did_action('init') > 0) {
             $this->bootProviders();
         } else {
@@ -106,6 +111,38 @@ final class Application
         }
 
         return $this;
+    }
+
+    /**
+     * Run each provider's optional `activate()`, and register the uninstall handler.
+     *
+     * @internal Registered with register_activation_hook() by boot().
+     */
+    public function activate(): void
+    {
+        $uninstall = $this->config->get('uninstall');
+        if ($uninstall !== null) {
+            if (!is_string($uninstall) || !is_callable([$uninstall, 'uninstall'])) {
+                throw new InvalidConfigException(
+                    "'uninstall' must name a class with a public static uninstall() method "
+                    . '(WordPress stores the callback, so it cannot be an object or closure).'
+                );
+            }
+            register_uninstall_hook($this->config->file, [$uninstall, 'uninstall']);
+        }
+
+        $this->callOnProviders('activate');
+    }
+
+    /**
+     * Run each provider's optional `deactivate()`, then remove every hook the application added.
+     *
+     * @internal Registered with register_deactivation_hook() by boot().
+     */
+    public function deactivate(): void
+    {
+        $this->callOnProviders('deactivate');
+        $this->shutdown();
     }
 
     /**
@@ -121,10 +158,18 @@ final class Application
         $this->booted = true;
 
         $this->loadTextDomain();
+        $this->callOnProviders('boot');
+    }
 
+    /**
+     * Call an optional lifecycle method on every provider that defines it, injecting its parameters.
+     */
+    private function callOnProviders(string $method): void
+    {
         foreach ($this->providers as $provider) {
-            if (method_exists($provider, 'boot')) {
-                $this->container->call([$provider, 'boot']);
+            $callable = [$provider, $method];
+            if (is_callable($callable)) {
+                $this->container->call($callable);
             }
         }
     }
