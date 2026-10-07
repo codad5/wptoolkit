@@ -34,7 +34,7 @@ final class TodoServiceProvider extends ServiceProvider
         $router->get('todos', [TodoController::class, 'index'])
             ->can('edit_posts')
             ->args([
-                'page' => ['rules' => 'integer|min:1', 'type' => 'integer', 'default' => 1],
+                'page' => ['rules' => 'integer|min:1', 'type' => 'int', 'default' => 1],
                 'status' => ['rules' => 'in:pending,in_progress,completed'],
             ])
             ->exposeVia('rest', 'ajax');

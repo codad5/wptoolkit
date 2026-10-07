@@ -55,6 +55,18 @@ final class RouterAndTransportsTest extends TestCase
         self::assertTrue((new Route(['POST'], 'x', fn () => null))->isMutation());
     }
 
+    /**
+     * Regression: an unknown arg type ('integer' instead of 'int') was only noticed when a request
+     * arrived, as a 500 on every call. The todo example shipped with exactly that.
+     */
+    public function test_unknown_arg_types_are_refused_when_the_route_is_declared(): void
+    {
+        $this->expectException(InvalidConfigException::class);
+        $this->expectExceptionMessage('Unknown input type "integer"');
+
+        (new Route(['GET'], 'todos', fn () => null))->args(['page' => ['type' => 'integer']]);
+    }
+
     public function test_unknown_transport_is_rejected(): void
     {
         $this->expectException(InvalidConfigException::class);

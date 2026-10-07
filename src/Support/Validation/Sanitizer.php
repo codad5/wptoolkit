@@ -18,6 +18,8 @@ use Codad5\WPToolkit\Exceptions\InvalidConfigException;
  */
 final class Sanitizer
 {
+    public const TYPES = ['text', 'textarea', 'email', 'url', 'int', 'float', 'bool', 'key', 'slug', 'html', 'array_text', 'raw'];
+
     public static function sanitize(mixed $value, string $type): mixed
     {
         return match ($type) {

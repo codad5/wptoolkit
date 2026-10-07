@@ -12,6 +12,7 @@ use Closure;
 use Codad5\WPToolkit\Contracts\Http\Middleware;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Support\Validation\Rule;
+use Codad5\WPToolkit\Support\Validation\Sanitizer;
 
 /**
  * One route, built fluently (Builder). Declares who may call it — there is no default
@@ -107,6 +108,17 @@ final class Route
      */
     public function args(array $args): self
     {
+        foreach ($args as $name => $arg) {
+            $type = $arg['type'] ?? 'text';
+            if (!in_array($type, Sanitizer::TYPES, true)) {
+                throw new InvalidConfigException(sprintf(
+                    'Unknown input type "%s" for "%s". Use one of: %s.',
+                    $type,
+                    $name,
+                    implode(', ', Sanitizer::TYPES)
+                ));
+            }
+        }
         $this->args = $args;
 
         return $this;
