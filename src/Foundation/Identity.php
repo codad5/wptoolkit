@@ -64,7 +64,7 @@ final class Identity
     /**
      * A REST namespace: `my-plugin/v1`.
      *
-     * @return non-empty-string
+     * @return non-falsy-string
      */
     public function restNamespace(string $version = 'v1'): string
     {

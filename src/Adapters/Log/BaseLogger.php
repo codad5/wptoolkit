@@ -96,9 +96,6 @@ abstract class BaseLogger implements Logger
     {
         $replace = [];
         foreach ($context as $key => $value) {
-            if ($key === 'exception') {
-                continue;
-            }
             $replace['{' . $key . '}'] = self::stringify($value);
         }
 

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T17:51:01+00:00\n"
+"POT-Creation-Date: 2026-10-07T18:19:25+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wptoolkit\n"
@@ -99,7 +99,7 @@ msgid "%s has been paused and is not running:"
 msgstr ""
 
 #: bootstrap/guard.php:219
-#: src/Foundation/Application.php:162
+#: src/Foundation/Application.php:194
 msgid "Plugin not activated"
 msgstr ""
 
@@ -153,4 +153,100 @@ msgstr ""
 
 #: src/Foundation/ToolkitCompatibility.php:141
 msgid "theme"
+msgstr ""
+
+#: src/Http/Dispatcher.php:122
+msgid "Your session has expired. Reload the page and try again."
+msgstr ""
+
+#: src/Http/HttpError.php:40
+msgid "The request is not valid."
+msgstr ""
+
+#: src/Http/HttpError.php:45
+msgid "You need to be logged in."
+msgstr ""
+
+#: src/Http/HttpError.php:50
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: src/Http/HttpError.php:55
+msgid "Not found."
+msgstr ""
+
+#: src/Http/HttpError.php:63
+msgid "Some fields are not valid."
+msgstr ""
+
+#: src/Http/HttpError.php:74
+msgid "Too many requests. Please try again later."
+msgstr ""
+
+#: src/Http/HttpError.php:82
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#: src/Http/Transport/AjaxTransport.php:69
+msgid "This request method is not allowed here."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:26
+#, php-format
+msgid "%s is required."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:36
+#, php-format
+msgid "%s must be a valid email address."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:46
+#, php-format
+msgid "%s must be a valid http(s) URL."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:55
+#, php-format
+msgid "%s must be a whole number."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:64
+#, php-format
+msgid "%s must be a number."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:73
+#, php-format
+msgid "%s must be true or false."
+msgstr ""
+
+#. translators: 1: field name, 2: minimum
+#: src/Support/Validation/Rules.php:85
+#, php-format
+msgid "%1$s must be at least %2$s."
+msgstr ""
+
+#. translators: 1: field name, 2: maximum
+#: src/Support/Validation/Rules.php:97
+#, php-format
+msgid "%1$s may not be more than %2$s."
+msgstr ""
+
+#. translators: 1: field name, 2: comma-separated allowed values
+#: src/Support/Validation/Rules.php:109
+#, php-format
+msgid "%1$s must be one of: %2$s."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:122
+#, php-format
+msgid "%s has an invalid format."
 msgstr ""

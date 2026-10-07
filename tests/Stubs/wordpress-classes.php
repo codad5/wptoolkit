@@ -72,6 +72,123 @@ if (!class_exists('WP_Post_Type')) {
     }
 }
 
+if (!class_exists('WP_REST_Request')) {
+    class WP_REST_Request
+    {
+        /** @var array<string, array<string, mixed>> */
+        private array $params = ['URL' => [], 'GET' => [], 'POST' => [], 'JSON' => [], 'FILES' => []];
+
+        /** @var array<string, list<string>> */
+        private array $headers = [];
+
+        public function __construct(private string $method = 'GET', private string $route = '')
+        {
+        }
+
+        public function get_method(): string
+        {
+            return $this->method;
+        }
+
+        public function get_route(): string
+        {
+            return $this->route;
+        }
+
+        /** @param array<string, mixed> $params */
+        public function set_url_params(array $params): void
+        {
+            $this->params['URL'] = $params;
+        }
+
+        /** @param array<string, mixed> $params */
+        public function set_query_params(array $params): void
+        {
+            $this->params['GET'] = $params;
+        }
+
+        /** @param array<string, mixed> $params */
+        public function set_body_params(array $params): void
+        {
+            $this->params['POST'] = $params;
+        }
+
+        /** @param array<string, mixed> $params */
+        public function set_json_params(array $params): void
+        {
+            $this->params['JSON'] = $params;
+        }
+
+        public function set_header(string $name, string $value): void
+        {
+            $this->headers[strtolower(str_replace('-', '_', $name))] = [$value];
+        }
+
+        /** @return array<string, mixed> */
+        public function get_url_params(): array
+        {
+            return $this->params['URL'];
+        }
+
+        /** @return array<string, mixed> */
+        public function get_query_params(): array
+        {
+            return $this->params['GET'];
+        }
+
+        /** @return array<string, mixed> */
+        public function get_body_params(): array
+        {
+            return $this->params['POST'];
+        }
+
+        /** @return array<string, mixed>|null */
+        public function get_json_params(): ?array
+        {
+            return $this->params['JSON'] ?: null;
+        }
+
+        /** @return array<string, mixed> */
+        public function get_file_params(): array
+        {
+            return $this->params['FILES'];
+        }
+
+        /** @return array<string, list<string>> */
+        public function get_headers(): array
+        {
+            return $this->headers;
+        }
+    }
+}
+
+if (!class_exists('WP_REST_Response')) {
+    class WP_REST_Response
+    {
+        /** @var array<string, string> */
+        public array $headers = [];
+
+        public function __construct(public mixed $data = null, public int $status = 200)
+        {
+        }
+
+        public function header(string $name, string $value): void
+        {
+            $this->headers[$name] = $value;
+        }
+
+        public function get_status(): int
+        {
+            return $this->status;
+        }
+
+        public function get_data(): mixed
+        {
+            return $this->data;
+        }
+    }
+}
+
 if (!class_exists('WP_Query')) {
     class WP_Query
     {

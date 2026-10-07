@@ -44,6 +44,9 @@ final class Application
 
     private ?ToolkitCompatibility $incompatibility = null;
 
+    /** @var list<\Closure(): void> */
+    private array $bootedCallbacks = [];
+
     private function __construct(private readonly Config $config)
     {
         Coexistence::record(self::VERSION, Coexistence::thisCopyPath(), Coexistence::thisCopyNamespace());
@@ -57,6 +60,35 @@ final class Application
         $this->container->instance(HookRegistrar::class, $this->hooks);
         $this->container->instance(Container::class, $this->container);
         $this->container->instance(ContainerContract::class, $this->container);
+
+        CoreServices::register($this, $this->container);
+    }
+
+    /**
+     * Run a callback once every provider has booted — immediately if that already happened.
+     *
+     * @param \Closure(): void $callback
+     */
+    public function onBooted(\Closure $callback): void
+    {
+        if ($this->booted) {
+            $callback();
+            return;
+        }
+
+        $this->bootedCallbacks[] = $callback;
+    }
+
+    /**
+     * WP_DEBUG on a 'local' or 'development' site: errors surface instead of being contained, and
+     * misconfigurations (such as a route without an access rule) throw at registration.
+     */
+    public function isDevelopment(): bool
+    {
+        $debug = defined('WP_DEBUG') && constant('WP_DEBUG');
+        $environment = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
+
+        return $debug && in_array($environment, ['local', 'development'], true);
     }
 
     /**
@@ -226,6 +258,11 @@ final class Application
         (new LibraryTranslations($this->identity(), LibraryTranslations::bundledDirectory()))->load();
         $this->loadTextDomain();
         $this->callOnProviders('boot');
+
+        foreach ($this->bootedCallbacks as $callback) {
+            $callback();
+        }
+        $this->bootedCallbacks = [];
     }
 
     /**
@@ -285,10 +322,7 @@ final class Application
             return $configured;
         }
 
-        $debug = defined('WP_DEBUG') && constant('WP_DEBUG');
-        $environment = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
-
-        return !($debug && in_array($environment, ['local', 'development'], true));
+        return !$this->isDevelopment();
     }
 
     private function loadTextDomain(): void
