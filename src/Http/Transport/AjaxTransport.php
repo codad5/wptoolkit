@@ -51,26 +51,40 @@ final class AjaxTransport
      */
     public function register(array $routes): void
     {
+        // Routes on one path (GET and POST `todos`) share an action: one handler picks by method.
+        // Separate handlers would let the first answer 405 and exit before the right one ran.
+        $byAction = [];
         foreach ($routes as $route) {
-            $action = $this->identity->ajaxAction($route->routeName());
-            $handler = fn () => $this->handle($route);
+            $byAction[$this->identity->ajaxAction($route->routeName())][] = $route;
+        }
+
+        foreach ($byAction as $action => $group) {
+            $handler = fn () => $this->handle(...$group);
 
             $this->hooks->addAction('wp_ajax_' . $action, $handler);
-            if ($route->access() === 'public') {
-                $this->hooks->addAction('wp_ajax_nopriv_' . $action, $handler);
+            foreach ($group as $route) {
+                if ($route->access() === 'public') {
+                    $this->hooks->addAction('wp_ajax_nopriv_' . $action, $handler);
+                    break;
+                }
             }
         }
     }
 
-    public function handle(Route $route): void
+    /**
+     * Dispatch to whichever of the action's routes accepts the request method; 405 if none does.
+     */
+    public function handle(Route $route, Route ...$siblings): void
     {
         $method = strtoupper(sanitize_key(wp_unslash($_SERVER['REQUEST_METHOD'] ?? 'GET')));
-        if (!in_array($method, $route->methods, true)) {
-            ($this->send)(Response::error(405, 'method_not_allowed', __('This request method is not allowed here.', 'wptoolkit')));
-            return;
+        foreach ([$route, ...$siblings] as $candidate) {
+            if (in_array($method, $candidate->methods, true)) {
+                ($this->send)($this->dispatcher->dispatch($candidate, $this->fromGlobals($method)));
+                return;
+            }
         }
 
-        ($this->send)($this->dispatcher->dispatch($route, $this->fromGlobals($method)));
+        ($this->send)(Response::error(405, 'method_not_allowed', __('This request method is not allowed here.', 'wptoolkit')));
     }
 
     /**

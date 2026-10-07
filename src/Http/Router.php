@@ -98,7 +98,20 @@ final class Router
         }
         $this->registered = true;
 
+        $paths = [];
         foreach ($this->routes as $route) {
+            // One name = one path (its methods may differ): the name is the Ajax action and the client's key.
+            $known = $paths[$route->routeName()] ?? null;
+            if ($known !== null && $known !== $route->path) {
+                throw new LifecycleException(sprintf(
+                    'Routes "%s" and "%s" share the name "%s". Give one a different ->name().',
+                    $known,
+                    $route->path,
+                    $route->routeName()
+                ));
+            }
+            $paths[$route->routeName()] = $route->path;
+
             if ($route->access() === null && $this->developmentMode) {
                 throw new LifecycleException(sprintf(
                     'Route %s %s has no access rule. Add ->public(), ->loggedIn(), ->can() or ->authorize(). (In production it would be refused with 403.)',

@@ -122,6 +122,47 @@ final class RouterAndTransportsTest extends TestCase
         self::assertSame(401, $this->sent[1]->status, 'not 200 with success:false, as 0.x did (C2)');
     }
 
+    /**
+     * Regression: GET and POST on one path share an action name. Each route hooked its own handler,
+     * so a POST met the GET handler first, got 405 and exited — the POST route was unreachable.
+     */
+    public function test_ajax_routes_sharing_a_path_are_chosen_by_method(): void
+    {
+        $hooks = new HookRegistrar();
+        $router = $this->router(hooks: $hooks);
+        $router->get('todos', fn () => 'list')->public()->exposeVia('ajax');
+        $router->post('todos', fn () => 'created')->public()->exposeVia('ajax');
+        $router->register();
+        Functions\when('wp_unslash')->returnArg();
+        Functions\when('wp_verify_nonce')->justReturn(1);
+
+        foreach (['POST' => 'created', 'GET' => 'list'] as $method => $expected) {
+            $_SERVER['REQUEST_METHOD'] = $method;
+            $_POST = $_GET = ['_wpnonce' => 'n'];
+            $this->sent = [];
+            foreach ($hooks->all() as $hook) {
+                if ($hook['hook'] === 'wp_ajax_my_plugin_todos' && $this->sent === []) {
+                    ($hook['callback'])(); // wp_send_json() exits after the first response
+                }
+            }
+
+            self::assertSame(200, $this->sent[0]->status ?? null, $method);
+            self::assertSame($expected, $this->sent[0]->data, $method);
+        }
+    }
+
+    public function test_two_different_paths_cannot_share_a_route_name(): void
+    {
+        $router = $this->router();
+        $router->get('books/{id}', fn () => null)->public();
+        $router->get('books_id', fn () => null)->public();
+
+        $this->expectException(LifecycleException::class);
+        $this->expectExceptionMessage('share the name "books_id"');
+
+        $router->register();
+    }
+
     public function test_ajax_reads_input_from_the_request_without_the_action(): void
     {
         $route = (new Route(['POST'], 'echo', fn (\Codad5\WPToolkit\Http\Request $r) => $r->raw()))->public();
