@@ -40,13 +40,16 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.3 Entities and repositories (Adapter)
 
-- [ ] `Data\Entity` (typed attributes, dirty tracking, no persistence logic) and `#[PostType]`,
-      `#[Taxonomy]` attributes for registration
-- [ ] `Contracts\Data\Repository` (find, findMany, query, save, delete, count)
-- [ ] Adapters: `PostTypeRepository` (CPT + meta + terms), `OptionsRepository`,
-      `CustomTableRepository` (`$wpdb` + `prepare()` only, with a small migration runner)
-- [ ] `RepositoryFactory` picks the adapter an entity declares
-- [ ] Caching through `CacheStore`, invalidated on save/delete
+- [x] `Data\Entity` (field-defined attributes, dirty tracking, no persistence logic) and `#[PostType]`,
+      `#[Taxonomy]`, `#[Table]`, `#[OptionStorage]` attributes; `EntityRegistrar` registers post types,
+      taxonomies and the matching meta box
+- [x] `Contracts\Data\Repository` (find, findMany, query, save, delete, count)
+- [x] Adapters (in `src/Adapters/Repository`): `PostTypeRepository` (CPT + meta + terms),
+      `OptionsRepository`, `CustomTableRepository` (`$wpdb` + `prepare()` only; `TableSchema` creates the
+      table from a migration), plus `ArrayRepository` for consumers' unit tests
+- [x] `RepositoryFactory` picks the adapter an entity declares
+- [x] Caching through `CacheStore`, invalidated on save/delete — custom tables only; post types use
+      WordPress's post and meta caches, which edits outside the repository also invalidate
 
 ### 4.3b Migrations ([ADR-0018](../adr/0018-versioned-data-migrations-expand-contract.md))
 
@@ -61,9 +64,10 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.4 Query builder
 
-- [ ] `Data\Query\QueryBuilder`: where / whereMeta / whereTerm / orderBy / paginate, compiled to
-      `WP_Query` args for post types and to prepared SQL for custom tables
-- [ ] Hard cap on page size; no `posts_per_page => -1` from user input
+- [x] `Data\Query\Query`: where / whereIn / whereTerm / status / orderBy / page, compiled to
+      `WP_Query` args for post types and to prepared SQL for custom tables (one `where` for meta and
+      columns — the adapter knows which is which)
+- [x] Hard cap on page size (`Query::MAX_PER_PAGE` = 100); no "all rows" query exists
 
 ### 4.5 Search — fixes C1
 

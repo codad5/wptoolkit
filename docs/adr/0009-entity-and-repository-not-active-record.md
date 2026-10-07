@@ -39,7 +39,14 @@ exports data. It can only store data as a custom post type.
 
 **We gain:** custom tables for high-volume data without changing domain code.
 
-**This constrains:** `$wpdb` appears only in `CustomTableRepository` and migrations (CLAUDE.md §5).
+**This constrains:** `$wpdb` appears only in the repository adapters and migrations (CLAUDE.md §5).
+The adapters live in `src/Adapters/Repository` with the other adapters (Rule 10); `Data` holds the
+entity, its attributes, `Query` and the registrar, and never imports an adapter.
+
+**Implementation notes (Phase 4):** `Entity::fields()` is static so a definition is read once per
+class (`EntityDefinition`). The post-column map lives on `#[PostType]`. Every adapter passes
+`tests/Contract/RepositoryContract.php`; `ArrayRepository` exists so consumers can unit-test domain
+code with the same semantics.
 
 ## Revisit when
 

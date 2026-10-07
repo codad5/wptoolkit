@@ -12,11 +12,14 @@ use Codad5\WPToolkit\Adapters\Cache\CacheFactory;
 use Codad5\WPToolkit\Adapters\Clock\SystemClock;
 use Codad5\WPToolkit\Adapters\Http\WpHttpClient;
 use Codad5\WPToolkit\Adapters\Log\LoggerFactory;
+use Codad5\WPToolkit\Adapters\Repository\RepositoryFactory;
 use Codad5\WPToolkit\Contracts\Cache\CacheStore;
 use Codad5\WPToolkit\Contracts\Clock\Clock;
 use Codad5\WPToolkit\Contracts\Container\Container;
 use Codad5\WPToolkit\Contracts\Http\HttpClient;
 use Codad5\WPToolkit\Contracts\Log\Logger;
+use Codad5\WPToolkit\Data\EntityRegistrar;
+use Codad5\WPToolkit\Data\Field\FieldTypes;
 use Codad5\WPToolkit\Http\Dispatcher;
 use Codad5\WPToolkit\Http\Router;
 use Codad5\WPToolkit\Http\Transport\AjaxTransport;
@@ -68,6 +71,19 @@ final class CoreServices
             $app->hooks(),
             $c->get(ClientIp::class)
         ));
+        $container->singleton(FieldTypes::class, static fn () => new FieldTypes());
+        $container->singleton(RepositoryFactory::class, static fn (Container $c) => new RepositoryFactory(
+            $c->get(FieldTypes::class),
+            $app->identity(),
+            $c->get(CacheFactory::class)
+        ));
+        $container->singleton(EntityRegistrar::class, static fn (Container $c) => new EntityRegistrar(
+            $app->hooks(),
+            $c->get(FieldTypes::class),
+            $app->identity(),
+            $c->get(CacheFactory::class)->make('flash')
+        ));
+
         $container->singleton(Router::class, static function (Container $c) use ($app): Router {
             $router = new Router($app->hooks(), $c->get(RestTransport::class), $c->get(AjaxTransport::class), $app->isDevelopment());
             // Routes are added in providers' boot(); hand them to WordPress once all have booted.

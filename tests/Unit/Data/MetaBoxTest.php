@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Codad5\WPToolkit\Tests\Unit\Data;
 
 use Brain\Monkey\Functions;
+use Codad5\WPToolkit\Adapters\Cache\ArrayStore;
+use Codad5\WPToolkit\Adapters\Clock\FrozenClock;
 use Codad5\WPToolkit\Data\Field\FieldFactory;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
 use Codad5\WPToolkit\Data\MetaBox;
@@ -19,17 +21,19 @@ final class MetaBoxTest extends TestCase
 
     private FieldFactory $f;
 
+    private ArrayStore $flash;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->wp = new FakePostMeta();
         $this->wp->install();
         $this->f = new FieldFactory();
+        $this->flash = new ArrayStore(new FrozenClock());
         Functions\stubs(['sanitize_email' => static fn ($v) => (string) $v, 'esc_url_raw' => static fn ($v) => (string) $v]);
         Functions\when('current_user_can')->justReturn(true);
         Functions\when('wp_verify_nonce')->justReturn(1);
         Functions\when('get_current_user_id')->justReturn(1);
-        Functions\when('set_transient')->justReturn(true);
     }
 
     protected function tearDown(): void
@@ -83,6 +87,15 @@ final class MetaBoxTest extends TestCase
         self::assertSame(['Dune'], $this->wp->meta[30]['_silverbird_movies_title']);
     }
 
+    public function test_backslashes_survive_a_save(): void
+    {
+        $box = $this->box('d', 'book', [$this->f->text('path')]);
+
+        $box->save(1, 'path', 'C:\books\dune');
+
+        self::assertSame(['C:\books\dune'], $this->wp->meta[1]['d_book_path']);
+    }
+
     // --- Reading and validation -------------------------------------------------------------
 
     public function test_missing_values_fall_back_to_defaults(): void
@@ -125,15 +138,9 @@ final class MetaBoxTest extends TestCase
     {
         $box = $this->box('d', 'book', [$this->f->text('title'), $this->f->email('contact')]);
         $_POST = [$box->nonceName() => 'n', 'd_book_title' => 'Dune', 'd_book_contact' => 'bad'];
-        $reported = null;
-        Functions\when('set_transient')->alias(static function (string $key, $errors) use (&$reported) {
-            $reported = $errors;
-            return true;
-        });
-
         $box->handleSave(5, $this->post(5, 'book'));
 
-        self::assertSame(['Contact must be a valid email address.'], $reported);
+        self::assertSame(['Contact must be a valid email address.'], $this->flash->get('metabox_errors_d_1'));
         self::assertSame(['Dune'], $this->wp->meta[5]['d_book_title']);
         self::assertArrayNotHasKey('d_book_contact', $this->wp->meta[5]);
     }
@@ -253,7 +260,7 @@ final class MetaBoxTest extends TestCase
      */
     private function box(string $id, string $postType, array $fields): MetaBox
     {
-        return new MetaBox($id, 'Details', $postType, $fields, new FieldTypes(), new Identity('my-plugin'));
+        return new MetaBox($id, 'Details', $postType, $fields, new FieldTypes(), new Identity('my-plugin'), $this->flash);
     }
 
     private function post(int $id, string $type): WP_Post

@@ -108,11 +108,11 @@ final class BookServiceProvider extends ServiceProvider
 #[PostType('book', public: true)]
 final class Book extends Entity
 {
-    public function fields(FieldFactory $f): array
+    public static function fields(FieldFactory $f): array
     {
         return [
             $f->text('isbn')->label(__('ISBN', 'my-plugin'))->required(),
-            $f->number('pages')->label(__('Pages', 'my-plugin'))->min(1),
+            $f->number('pages')->label(__('Pages', 'my-plugin'))->rules('min:1'),
         ];
     }
 }

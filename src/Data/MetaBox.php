@@ -8,8 +8,10 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Data;
 
+use Codad5\WPToolkit\Contracts\Cache\CacheStore;
 use Codad5\WPToolkit\Data\Field\Field;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
+use Codad5\WPToolkit\Data\Field\FieldValidator;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Foundation\HookRegistrar;
 use Codad5\WPToolkit\Foundation\Identity;
@@ -47,7 +49,8 @@ final class MetaBox
         public readonly string $postType,
         array $fields,
         private readonly FieldTypes $types,
-        private readonly Identity $identity
+        private readonly Identity $identity,
+        private readonly CacheStore $flash
     ) {
         if (preg_match('/^[a-z0-9_\-]+$/', $id) !== 1) {
             throw new InvalidConfigException(sprintf('Meta box id "%s" may contain only lowercase letters, digits, "_" and "-".', $id));
@@ -159,7 +162,7 @@ final class MetaBox
     public function save(int $postId, string $fieldName, mixed $value): array
     {
         $field = $this->field($fieldName);
-        $errors = $this->validate($field, $value);
+        $errors = (new FieldValidator($this->types))->validate($field, $value);
         if ($errors !== []) {
             return $errors;
         }
@@ -167,32 +170,6 @@ final class MetaBox
         $this->write($postId, $field, $value);
 
         return [];
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function validate(Field $field, mixed $value): array
-    {
-        $type = $this->types->get($field->type);
-        $label = $field->labelText();
-        $errors = [];
-
-        if ($field->isRequired() && Rules::isEmpty($value)) {
-            return [Rules::required()->message($label)];
-        }
-
-        $rules = Rules::parse([...$type->rules($field), ...$field->extraRules()]);
-        $items = $field->isMultiple() ? (is_array($value) ? $value : [$value]) : [$value];
-        foreach ($items as $item) {
-            foreach ($rules as $rule) {
-                if (!$rule->passes($item, [])) {
-                    $errors[] = $rule->message($label);
-                }
-            }
-        }
-
-        return array_values(array_unique($errors));
     }
 
     private function write(int $postId, Field $field, mixed $value): void
@@ -205,7 +182,7 @@ final class MetaBox
             foreach (is_array($value) ? $value : [$value] as $item) {
                 $clean = $type->sanitize($item, $field);
                 if ($clean !== null && $clean !== '') {
-                    add_post_meta($postId, $key, $clean);
+                    add_post_meta($postId, $key, wp_slash($clean)); // the meta API unslashes
                 }
             }
             return;
@@ -217,7 +194,7 @@ final class MetaBox
             return;
         }
 
-        update_post_meta($postId, $key, $clean);
+        update_post_meta($postId, $key, wp_slash($clean));
     }
 
     // --- WordPress integration -----------------------------------------------------------------
@@ -399,7 +376,7 @@ final class MetaBox
 
         $errorsKey = $this->errorsKey();
         if ($errors !== [] && $errorsKey !== null) {
-            set_transient($errorsKey, $errors, 60);
+            $this->flash->set($errorsKey, $errors, 60);
         }
     }
 
@@ -413,11 +390,11 @@ final class MetaBox
             return;
         }
 
-        $errors = get_transient($key);
+        $errors = $this->flash->get($key);
         if (!is_array($errors) || $errors === []) {
             return;
         }
-        delete_transient($key);
+        $this->flash->delete($key);
 
         echo '<div class="notice notice-error" role="alert"><p>' . esc_html__('Some fields were not saved:', 'wptoolkit') . '</p><ul>';
         foreach ($errors as $error) {
@@ -461,7 +438,7 @@ final class MetaBox
     {
         $user = function_exists('get_current_user_id') ? get_current_user_id() : 0;
 
-        return $user > 0 ? $this->identity->transientKey('metabox_errors_' . $this->id . '_' . $user) : null;
+        return $user > 0 ? 'metabox_errors_' . $this->id . '_' . $user : null;
     }
 
     private function field(string $name): Field
