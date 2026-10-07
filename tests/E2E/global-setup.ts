@@ -5,7 +5,7 @@ import { chromium, type FullConfig } from '@playwright/test';
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
     const baseURL = config.projects[0].use.baseURL ?? 'http://localhost:8888';
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({ channel: config.projects[0].use.channel });
     const page = await browser.newPage({ baseURL });
 
     await page.goto('/wp-login.php');

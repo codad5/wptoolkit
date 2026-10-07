@@ -17,5 +17,8 @@ export default defineConfig({
         baseURL: process.env.WP_BASE_URL ?? 'http://localhost:8888',
         storageState: '.auth/admin.json',
         trace: 'retain-on-failure',
+        // CI uses the Google Chrome preinstalled on GitHub's runners: no browser download and no
+        // apt install of its dependencies (Azure's apt mirror stalls and fails jobs).
+        ...(process.env.CI ? { channel: 'chrome' } : {}),
     },
 });

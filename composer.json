@@ -70,7 +70,8 @@
             "@lint",
             "@cs",
             "@analyse",
-            "@test"
+            "@test",
+            "@i18n"
         ],
         "i18n": "wp i18n make-pot . languages/wptoolkit.pot --slug=wptoolkit --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap",
         "test:integration": "npx wp-env run tests-cli --env-cwd=wp-content/plugins/wptoolkit vendor/bin/phpunit -c phpunit.integration.xml.dist"

@@ -63,7 +63,7 @@ writing code. It is binding. Where it conflicts with your defaults, this file wi
    editing core, the plan is wrong.
 4. **Tests ship in the same commit.** Write the test *first* for every bug fix (it must fail before
    the fix) and for every security control.
-5. **Run the gates** before claiming done: `composer verify` (lint, analyse, test).
+5. **Run the gates** before claiming done: `composer verify` (lint, style, analyse, test, and regenerate the POT — commit it).
 6. **Conventional Commits**, one logical change per commit.
 7. **Report honestly.** Failing test → show the output. Skipped scope → say which and why.
 8. **Tick the box** in the phase doc and update [STATUS.md](STATUS.md) when a task lands.
