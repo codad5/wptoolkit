@@ -1,6 +1,6 @@
 # ADR-0015 — Packaging is a WPToolkit dev tool (PHP CLI), which CI calls; it is not part of the runtime
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-07
 - **Deciders:** codad5
 - **Affects:** `bin/wptoolkit`, [track-p-packager.md](../phases/track-p-packager.md), Phase 6

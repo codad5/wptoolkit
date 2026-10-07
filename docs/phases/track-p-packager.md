@@ -1,7 +1,7 @@
 # Track P — Packager (parallel, not a phase)
 
 **Effort:** S–M (~0.5–0.75 active day) · **Depends on:** Phase 0's tooling; scoping step needs Phase 1 §1.5
-· **Decision:** [ADR-0015](../adr/0015-packaging-is-a-toolkit-dev-tool.md) (Proposed)
+· **Decision:** [ADR-0015](../adr/0015-packaging-is-a-toolkit-dev-tool.md) (Accepted)
 
 ---
 
@@ -15,6 +15,77 @@ fixes live problems in `pau`, `silverbird-fusionintel` and `nile-distribution` t
 
 ---
 
+## How it's used
+
+**Zero config by default.** In most projects you run it with no setup, and it reads the plugin or
+theme headers:
+
+```bash
+vendor/bin/wptoolkit package              # Composer install
+php wptoolkit/bin/wptoolkit package       # standalone install (no Composer)
+```
+
+| Command                              | Does                                                                    |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `wptoolkit init`                     | Writes a starter `wptoolkit.json` from the detected headers              |
+| `wptoolkit package`                  | Build → stage → zip → verify                                             |
+| `wptoolkit package --dry-run`        | Prints the exact file list that would ship; writes nothing               |
+| `wptoolkit verify dist/x.zip`        | Runs only the verification on an existing zip                            |
+| `wptoolkit doctor`                   | Checks headers, guard arguments and `wptoolkit.json` agree; lints the main file on old-PHP syntax |
+| `wptoolkit scope <Prefix>`           | Scopes the bundled toolkit (ADR-0014)                                    |
+
+Flags override config: `--out`, `--zip-name`, `--no-build`, `--no-composer`, `--no-scope`, `--pot`,
+`--json` (machine-readable report for CI).
+
+**Configuration** is one optional `wptoolkit.json` at the project root. It's JSON so PHP reads it
+without dependencies, and it has a JSON Schema so editors autocomplete it:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/codad5/wptoolkit/main/schema/wptoolkit.schema.json",
+  "type": "plugin",
+  "main": "pau.php",
+  "slug": "pau-alumni-manager",
+  "requires": { "php": "8.1", "wp": "6.4", "extensions": ["mbstring"] },
+  "package": {
+    "out": "dist",
+    "zipName": "{slug}-{version}.zip",
+    "build": ["npm ci", "npm run build"],
+    "composer": "no-dev",
+    "scope": { "prefix": "FIT\\PAUAlumniManager\\Vendor" },
+    "pot": true,
+    "exclude": ["docs/", "*.map"],
+    "include": ["vendor/codad5/wptoolkit/languages/"],
+    "verify": { "forbid": ["*.sql", "*.env"], "maxSizeMb": 5 }
+  }
+}
+```
+
+- Every key is optional. Defaults: `type`/`main`/`slug` detected; `out` = project root;
+  `zipName` = `{slug}.zip`; `composer` = `no-dev`; scope off; verification on.
+- **`requires` is the single source of truth.** `doctor` and `verify` fail if the `Requires PHP` /
+  `Requires at least` headers or the guard call disagree with it.
+- Ignore rules: `.distignore` (WP-CLI format) if present, plus `package.exclude`; `package.include`
+  re-adds paths an ignore rule removed.
+- Built-in forbidden list (dev deps, `.git`, `.claude`, `node_modules`, `tests`, …) can be extended
+  but not silently disabled; `--allow <pattern>` exists for a deliberate exception and is printed
+  in the report.
+
+**From npm and CI:**
+
+```json
+"scripts": { "package": "php vendor/bin/wptoolkit package" }
+```
+
+```yaml
+jobs:
+  release:
+    uses: codad5/wptoolkit/.github/workflows/package-wordpress.yml@v1
+    with: { php: "8.3", node: "20" }
+```
+
+---
+
 ## Scope
 
 ### P.1 Command and detection
@@ -22,7 +93,8 @@ fixes live problems in `pau`, `silverbird-fusionintel` and `nile-distribution` t
 - [ ] `bin/wptoolkit` entry (PHP 7.4+ syntax, so it also runs for 0.x projects); `package` subcommand
 - [ ] Detect plugin (main file `Plugin Name:` header) or theme (`style.css` `Theme Name:`); read
       slug, version, `Requires PHP`, `Requires at least`, text domain
-- [ ] Options: `--out`, `--no-build`, `--no-composer`, `--scope`, `--pot`, `--dry-run` (list files only)
+- [ ] Subcommands `init`, `package`, `verify`, `doctor`, `scope`; flags as in "How it's used"
+- [ ] `wptoolkit.json` loader with defaults; `schema/wptoolkit.schema.json` published
 
 ### P.2 Staging pipeline
 

@@ -27,11 +27,8 @@
 - [x] Library text domain `wptoolkit`; everything global prefixed by the consumer ([ADR-0006](docs/adr/0006-library-text-domain-and-consumer-prefixes.md))
 - [x] Plugins boot inside a syntax-safe guard; wrong PHP/WP never crashes the site ([ADR-0013](docs/adr/0013-plugins-boot-through-a-syntax-safe-guard.md))
 - [x] Composer is optional: a standalone zip with a tiny autoloader and a zero-tool scoper ([ADR-0014](docs/adr/0014-composer-is-optional.md))
+- [x] Packaging is a WPToolkit dev tool, `wptoolkit package` ([ADR-0015](docs/adr/0015-packaging-is-a-toolkit-dev-tool.md), [Track P](docs/phases/track-p-packager.md))
 - [x] The rebuild ships as `1.0.0`
-
-## Proposed, waiting on the maintainer
-
-- [ ] Packaging becomes a WPToolkit dev tool, `wptoolkit package` ([ADR-0015](docs/adr/0015-packaging-is-a-toolkit-dev-tool.md), [Track P](docs/phases/track-p-packager.md))
 
 ## Waiting on the maintainer
 
