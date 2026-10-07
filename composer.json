@@ -1,18 +1,48 @@
 {
     "name": "codad5/wptoolkit",
-    "description": "Your go to WP lib",
+    "description": "A typed, secure-by-default toolkit for building WordPress plugins and themes.",
     "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Codad5\\WPToolkit\\": "src/"
-        }
-    },
+    "license": "GPL-2.0-or-later",
+    "keywords": ["wordpress", "plugin", "theme", "framework", "toolkit"],
     "authors": [
         {
             "name": "codad5",
             "email": "aniezeoformic@gmail.com"
         }
     ],
-    "require": {}
+    "support": {
+        "issues": "https://github.com/codad5/wptoolkit/issues",
+        "source": "https://github.com/codad5/wptoolkit"
+    },
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "brain/monkey": "^2.6",
+        "phpunit/phpunit": "^9.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.0.30"
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "lint": "@php -r \"$f=new RecursiveIteratorIterator(new RecursiveDirectoryIterator('src'));$bad=0;foreach($f as $x){if(substr($x,-4)==='.php'){exec(PHP_BINARY.' -l '.escapeshellarg($x).' 2>&1',$o,$c);if($c){$bad=1;echo implode(PHP_EOL,$o),PHP_EOL;}$o=[];}}exit($bad);\"",
+        "test": "phpunit",
+        "verify": [
+            "@lint",
+            "@test"
+        ]
+    }
 }

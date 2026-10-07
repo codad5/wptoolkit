@@ -199,8 +199,8 @@ final class MetaBox
     {
         add_action("add_meta_boxes_{$this->screen}", [$this, 'show']);
         add_action('quick_edit_custom_box', [$this, 'show_quick_edit_field'], 10, 2);
+        // Logged-in users only: this returns post meta, which is never public by default.
         add_action("wp_ajax_wptoolkit_metabox_{$this->id}_fetch_data", [$this, 'handle_ajax']);
-        add_action("wp_ajax_nopriv_wptoolkit_metabox_{$this->id}_fetch_data", [$this, 'handle_ajax']);
 
         add_action('admin_enqueue_scripts', function () {
             wp_enqueue_media();
@@ -739,12 +739,18 @@ final class MetaBox
 
         $post_id = absint($_POST['post_id'] ?? 0);
         if (!$post_id) {
-            wp_send_json_error('Invalid post ID');
+            wp_send_json_error('Invalid post ID', 400);
         }
 
+        // Only posts of the type this metabox belongs to. Same response as a missing
+        // post, so the endpoint can't be used to probe which IDs exist.
         $post = get_post($post_id);
-        if (!$post) {
-            wp_send_json_error('Post not found');
+        if (!$post || $post->post_type !== $this->screen) {
+            wp_send_json_error('Post not found', 404);
+        }
+
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('You are not allowed to view this data', 403);
         }
 
         wp_send_json_success($this->all_meta($post_id));

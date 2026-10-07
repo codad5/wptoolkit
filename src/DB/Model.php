@@ -1909,13 +1909,99 @@ abstract class Model
             $this->add_tracked_action('template_redirect', [$this, 'handle_authentication']);
         }
 
-        // AJAX search hooks
+        // AJAX search and autocomplete. Logged-out users only get them when the
+        // post type is public and the model doesn't require authentication.
         $this->add_tracked_action('wp_ajax_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
-        $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
-
-        // AJAX autocomplete hooks
         $this->add_tracked_action('wp_ajax_' . static::POST_TYPE . '_autocomplete', [$this, 'handle_ajax_autocomplete']);
-        $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_autocomplete', [$this, 'handle_ajax_autocomplete']);
+
+        if ($this->allows_public_search()) {
+            $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_search', [$this, 'handle_ajax_search']);
+            $this->add_tracked_action('wp_ajax_nopriv_' . static::POST_TYPE . '_autocomplete', [$this, 'handle_ajax_autocomplete']);
+        }
+    }
+
+    /**
+     * Upper bound on results per Ajax search or autocomplete request.
+     */
+    protected const MAX_AJAX_RESULTS = 50;
+
+    /**
+     * Whether anyone, including logged-out visitors, may search this post type.
+     *
+     * @return bool
+     */
+    protected function allows_public_search(): bool
+    {
+        if (static::REQUIRES_AUTHENTICATION) {
+            return false;
+        }
+
+        // Post types are registered public unless the model says otherwise (see register_post_type()).
+        return (bool) (static::get_post_type_args()['public'] ?? true);
+    }
+
+    /**
+     * Whether the current user may see unpublished posts and post meta in search results.
+     *
+     * @return bool
+     */
+    protected function can_search_private_data(): bool
+    {
+        return current_user_can('edit_posts');
+    }
+
+    /**
+     * End the request with an error unless the current user may search this model.
+     *
+     * @return void
+     */
+    protected function authorize_ajax_search(): void
+    {
+        if (static::REQUIRES_AUTHENTICATION) {
+            if (!is_user_logged_in()) {
+                wp_send_json_error(__('You must be logged in to search.', 'wptoolkit'), 401);
+            }
+
+            if (!current_user_can(static::VIEW_CAPABILITY)) {
+                wp_send_json_error(__('You are not allowed to search this content.', 'wptoolkit'), 403);
+            }
+
+            return;
+        }
+
+        if (!$this->allows_public_search() && !$this->can_search_private_data()) {
+            wp_send_json_error(__('You are not allowed to search this content.', 'wptoolkit'), 403);
+        }
+    }
+
+    /**
+     * Clamp a client-supplied result limit to 1..MAX_AJAX_RESULTS.
+     *
+     * @param mixed $limit Raw limit from the request
+     * @return int
+     */
+    protected function clamp_ajax_limit(mixed $limit): int
+    {
+        return max(1, min(static::MAX_AJAX_RESULTS, (int) $limit));
+    }
+
+    /**
+     * Log an Ajax failure with full detail. The client only gets a generic message.
+     *
+     * @param string $action Ajax action that failed
+     * @param \Throwable $e The failure
+     * @return void
+     */
+    protected function log_ajax_failure(string $action, \Throwable $e): void
+    {
+        error_log(sprintf(
+            '[WPToolkit] %s %s failed: %s in %s:%d',
+            static::POST_TYPE,
+            $action,
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        ));
     }
 
     /**
@@ -1926,36 +2012,58 @@ abstract class Model
     public function handle_ajax_search(): void
     {
         check_ajax_referer(static::POST_TYPE . '_search', 'nonce');
+        $this->authorize_ajax_search();
 
-        $search_term = sanitize_text_field($_POST['search'] ?? '');
-        $search_fields = array_map('sanitize_text_field', $_POST['fields'] ?? ['title', 'content']);
-        $posts_per_page = (int) ($_POST['limit'] ?? 10);
+        $privileged = $this->can_search_private_data();
+        $search_term = sanitize_text_field(wp_unslash($_POST['search'] ?? ''));
+        $search_fields = $this->allowed_search_fields($_POST['fields'] ?? ['title', 'content'], $privileged);
 
-        // Configuration options from AJAX request
+        // Meta and unpublished posts are only for users who can edit posts.
         $config = [
-            'include_meta' => filter_var($_POST['include_meta'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'include_meta' => $privileged && filter_var($_POST['include_meta'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'include_taxonomies' => filter_var($_POST['include_taxonomies'] ?? true, FILTER_VALIDATE_BOOLEAN),
             'full_taxonomies_terms' => filter_var($_POST['full_taxonomies_terms'] ?? false, FILTER_VALIDATE_BOOLEAN),
         ];
 
+        $args = ['posts_per_page' => $this->clamp_ajax_limit($_POST['limit'] ?? 10)];
+        if (!$privileged) {
+            // admin-ajax runs with is_admin() true, where WP_Query would otherwise include drafts.
+            $args['post_status'] = 'publish';
+        }
+
         if (empty($search_term)) {
-            wp_send_json_error('Search term is required');
+            wp_send_json_error(__('Search term is required.', 'wptoolkit'), 400);
         }
 
         try {
-            $results = $this->search($search_term, $search_fields, [
-                'posts_per_page' => $posts_per_page
-            ], $config);
-
-            wp_send_json_success([
-                'results' => $results,
-                'total' => count($results),
-                'search_term' => $search_term,
-                'fields_searched' => $search_fields
-            ]);
-        } catch (Exception $e) {
-            wp_send_json_error('Search failed: ' . $e->getMessage());
+            $results = $this->search($search_term, $search_fields, $args, $config);
+        } catch (\Throwable $e) {
+            $this->log_ajax_failure('search', $e);
+            wp_send_json_error(__('Search failed. Please try again.', 'wptoolkit'), 500);
         }
+
+        wp_send_json_success([
+            'results' => $results,
+            'total' => count($results),
+            'search_term' => $search_term,
+            'fields_searched' => $search_fields
+        ]);
+    }
+
+    /**
+     * Reduce client-requested search fields to the ones the current user may search.
+     *
+     * @param mixed $requested Raw `fields` value from the request
+     * @param bool $privileged Whether the user may search meta
+     * @return string[]
+     */
+    protected function allowed_search_fields(mixed $requested, bool $privileged): array
+    {
+        $allowed = $privileged ? ['title', 'content', 'meta', 'taxonomies'] : ['title', 'content', 'taxonomies'];
+        $fields = array_map('sanitize_text_field', array_map('strval', (array) $requested));
+        $fields = array_values(array_intersect($fields, $allowed));
+
+        return $fields ?: ['title', 'content'];
     }
 
     /**
@@ -1966,30 +2074,28 @@ abstract class Model
     public function handle_ajax_autocomplete(): void
     {
         check_ajax_referer(static::POST_TYPE . '_autocomplete', 'nonce');
+        $this->authorize_ajax_search();
 
-        $search_term = sanitize_text_field($_POST['term'] ?? '');
-        $limit = (int) ($_POST['limit'] ?? 10);
-        $search_fields = array_map('sanitize_text_field', $_POST['fields'] ?? ['title']);
+        $search_term = sanitize_text_field(wp_unslash($_POST['term'] ?? ''));
+        $limit = $this->clamp_ajax_limit($_POST['limit'] ?? 10);
+        $search_fields = $this->allowed_search_fields($_POST['fields'] ?? ['title'], $this->can_search_private_data());
 
         if (strlen($search_term) < 2) {
-            wp_send_json_error('Search term must be at least 2 characters');
-        }
-
-        if ($limit > 50) {
-            $limit = 50; // Cap the limit for performance
+            wp_send_json_error(__('Search term must be at least 2 characters.', 'wptoolkit'), 400);
         }
 
         try {
             $suggestions = $this->search_autocomplete($search_term, $limit, $search_fields);
-
-            wp_send_json_success([
-                'suggestions' => $suggestions,
-                'total' => count($suggestions),
-                'search_term' => $search_term
-            ]);
-        } catch (Exception $e) {
-            wp_send_json_error('Autocomplete failed: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            $this->log_ajax_failure('autocomplete', $e);
+            wp_send_json_error(__('Search failed. Please try again.', 'wptoolkit'), 500);
         }
+
+        wp_send_json_success([
+            'suggestions' => $suggestions,
+            'total' => count($suggestions),
+            'search_term' => $search_term
+        ]);
     }
 
     /**
