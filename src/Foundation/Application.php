@@ -40,6 +40,10 @@ final class Application
 
     private bool $registered = false;
 
+    /** Providers' boot() is running. */
+    private bool $booting = false;
+
+    /** Every provider has booted and the onBooted() callbacks have run. */
     private bool $booted = false;
 
     private ?ToolkitCompatibility $incompatibility = null;
@@ -250,15 +254,18 @@ final class Application
      */
     public function bootProviders(): void
     {
-        if ($this->booted) {
+        if ($this->booting || $this->booted) {
             return;
         }
-        $this->booted = true;
+        $this->booting = true;
 
         (new LibraryTranslations($this->identity(), LibraryTranslations::bundledDirectory()))->load();
         $this->loadTextDomain();
         $this->callOnProviders('boot');
 
+        // Only now is booting over: onBooted() callbacks queued during the providers' boot()
+        // (e.g. the router's registration) run after every provider has added its routes.
+        $this->booted = true;
         foreach ($this->bootedCallbacks as $callback) {
             $callback();
         }

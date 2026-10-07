@@ -16,6 +16,7 @@ use Codad5\WPToolkit\Foundation\Identity;
 use Codad5\WPToolkit\Tests\Fixtures\Container\Logger;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\EventLog;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\FirstProvider;
+use Codad5\WPToolkit\Tests\Fixtures\Providers\RoutesProvider;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\SecondProvider;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\Uninstaller;
 use Codad5\WPToolkit\Tests\TestCase;
@@ -218,6 +219,38 @@ final class ApplicationTest extends TestCase
         Application::create('/themes/t/functions.php', ['slug' => 't', 'type' => 'theme'])->boot();
 
         self::assertFalse($called);
+    }
+
+    /**
+     * Regression (caught by the integration suite on real WordPress): the router registered itself
+     * the moment a provider asked for it, so adding a route in boot() threw.
+     */
+    public function test_providers_can_add_routes_in_boot_and_the_router_registers_after(): void
+    {
+        do_action('init');
+        Functions\when('current_user_can')->justReturn(false);
+        Functions\when('wp_using_ext_object_cache')->justReturn(false);
+
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'contain_hook_errors' => false])
+            ->providers([RoutesProvider::class])
+            ->boot();
+
+        $router = $app->container()->get(\Codad5\WPToolkit\Http\Router::class);
+        self::assertCount(2, $router->routes());
+        self::assertNotFalse(has_action('rest_api_init'), 'registered with WordPress after boot');
+    }
+
+    public function test_on_booted_runs_after_every_provider_booted(): void
+    {
+        $app = $this->app()->providers([FirstProvider::class])->boot();
+        $app->onBooted(static function (): void {
+            EventLog::$events[] = 'booted-callback';
+        });
+
+        $app->bootProviders();
+
+        self::assertSame('booted-callback', EventLog::$events[array_key_last(EventLog::$events)]);
+        self::assertContains('boot:first', EventLog::$events);
     }
 
     public function test_create_records_this_copy_in_the_coexistence_ledger(): void
