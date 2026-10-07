@@ -7,7 +7,7 @@
 
 ---
 
-## Now: Phase 4 — Data layer
+## Now: Phase 5 — Presentation and admin
 
 | Phase | State |
 | ----- | ----- |
@@ -16,7 +16,8 @@
 | 2 — Infrastructure adapters | ✅ cache, log, HTTP client, rate limit, filesystem, clock, PSR bridges; integration on WP 6.4/latest |
 | P — Build tool (`Build::plugin()->…`) | ✅ library + `wptoolkit-build`; ☐ doctor, CI workflow, migrating the 3 projects |
 | 3 — HTTP layer | ✅ router + one pipeline for REST/Ajax, deny-by-default, validation, 429s, JS client |
-| 4–7 | ☐ |
+| 4 — Data layer | ✅ fields, MetaBox (quick edit without a public endpoint), entities + 4 repository adapters on one contract, Query, migrations (batched, locked, reversible), Search (C1/S1 fixed), admin columns, 0.x data shapes pinned; 0.x `Model`/`MetaBox` deleted |
+| 5–7 | ☐ |
 
 Phase 1 delivered: kernel (container, providers, lifecycle, hook containment), `Identity`,
 library translations, coexistence ledger, `requires_toolkit` with activation refusal naming the
