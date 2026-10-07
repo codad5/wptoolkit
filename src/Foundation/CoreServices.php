@@ -14,6 +14,8 @@ use Codad5\WPToolkit\Adapters\Http\WpHttpClient;
 use Codad5\WPToolkit\Adapters\Log\LoggerFactory;
 use Codad5\WPToolkit\Adapters\Migrations\OptionMigrationStore;
 use Codad5\WPToolkit\Adapters\Repository\RepositoryFactory;
+use Codad5\WPToolkit\Admin\Notices;
+use Codad5\WPToolkit\Admin\Pages;
 use Codad5\WPToolkit\Assets\AssetManager;
 use Codad5\WPToolkit\Assets\JsNamespace;
 use Codad5\WPToolkit\Contracts\Cache\CacheStore;
@@ -120,6 +122,17 @@ final class CoreServices
             );
             $assets->register($app->hooks());
             return $assets;
+        });
+
+        $container->singleton(Pages::class, static function (Container $c) use ($app): Pages {
+            $pages = new Pages($app->hooks(), $c->get(Renderer::class));
+            $pages->register();
+            return $pages;
+        });
+        $container->singleton(Notices::class, static function () use ($app): Notices {
+            $notices = new Notices($app->identity(), $app->hooks());
+            $notices->register();
+            return $notices;
         });
 
         $container->singleton(MigrationStore::class, static fn () => new OptionMigrationStore($app->identity()));

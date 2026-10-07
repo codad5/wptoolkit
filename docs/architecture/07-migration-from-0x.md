@@ -20,9 +20,9 @@ migration guide (Phase 6) is written from this table.
 | `Utils/InputValidator`       |   581 | **Ported** → `Support\Validation` rule objects                                             | 3     | ✅ `Support\Validation\{Rules, Validator, Sanitizer}` |
 | `DB/MetaBox`                 |  1272 | **Rebuilt** on `Field` + `FieldFactory`                                                    | 4     | ✅ `Data\MetaBox` + `Data\Field\*`; **deleted** |
 | `DB/Model`                   |  2655 | **Split** → `Entity`, repositories, `Search`, `Admin\Columns`, `Authorize` middleware       | 4     | ✅ `Data\Entity`, `Adapters\Repository\*`, `Data\Search`, `Admin\Columns`, route access rules; **deleted** |
-| `Utils/ViewLoader` + `ViewHelper` | 655 + 95 | **Ported** → `View\Renderer` + `TemplateLocator` + `Escaper`                   | 5     | ☐      |
-| `Utils/EnqueueManager`       |  1286 | **Ported** → `Assets\AssetManager`                                                         | 5     | ☐      |
-| `Utils/Page`                 |  1831 | **Split** → `Admin\Page` + router frontend routes                                          | 5     | ☐      |
-| `Utils/Settings`             |  1210 | **Ported** → `Admin\Settings` on the field system                                          | 5     | ☐      |
-| `Utils/Notification`         |   819 | **Ported** → `Admin\Notice`                                                                | 5     | ☐      |
+| `Utils/ViewLoader` + `ViewHelper` | 655 + 95 | **Ported** → `View\Renderer` + `TemplateLocator` + `Escaper`                   | 5     | ✅ `View\PhpTemplateRenderer`, `TemplateLocator`, `Escaper`, `Template` |
+| `Utils/EnqueueManager`       |  1286 | **Ported** → `Assets\AssetManager`                                                         | 5     | ✅ `Assets\AssetManager`, `Asset`, `JsNamespace` |
+| `Utils/Page`                 |  1831 | **Split** → `Admin\Page` + router frontend routes                                          | 5     | ✅ `Admin\Page`, `Admin\Pages`; frontend pages not ported (unused) |
+| `Utils/Settings`             |  1210 | **Ported** → `Admin\Settings` on the field system                                          | 5     | ✅ `Admin\Settings\Settings`, `SettingsForm` |
+| `Utils/Notification`         |   819 | **Ported** → `Admin\Notice`                                                                | 5     | ✅ `Admin\Notices`, `NoticeType` |
 | `Cli/ExampleCommand`         |    43 | **Replaced** by `make:*` commands                                                          | 6     | ☐      |

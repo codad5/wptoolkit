@@ -42,8 +42,12 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 ### 5.3 Admin pages and frontend routes — splits `Page` (1,831 lines)
 
-- [ ] `Admin\Page` / `Admin\SubPage` builders (menu, capability required, screen options, help tabs)
-- [ ] Frontend virtual pages move to the router (Phase 3) + a template, not a separate system
+- [x] `Admin\Page` builders (`top`, `under`, `hidden`, `postTypeList`) + `Admin\Pages` (menu, capability
+      required and re-checked before rendering, help tabs, `url()` = 0.x `getAdminUrl()`). Slugs are kept
+      verbatim so 0.x admin URLs keep working. Screen options: not used by any consumer — deferred
+- [ ] ~~Frontend virtual pages~~ — **not ported**: no consumer (pau, silverbird, nile) uses 0.x
+      `addFrontendPage()`, and the rewrite-rule machinery is a liability to carry without a user.
+      Recorded under "Deliberately not in this phase"; add it in 1.x if someone needs it
 
 ### 5.4 Settings — ports `Settings`
 
@@ -60,8 +64,9 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 ### 5.5 Notices — ports `Notification`
 
-- [ ] `Admin\Notice` (one-time, persistent, dismissible per user), stored per user, not by scanning
-      the options table; `role="status"` / `role="alert"`
+- [x] `Admin\Notices` (one-time flash, persistent, dismissible per user), stored in user meta, not by
+      scanning the options table; `role="status"` / `role="alert"`; dismissal via a nonce-checked,
+      logged-in-only Ajax action
 
 ### 5.6 Delete `legacy/`
 
@@ -83,6 +88,8 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 ## Deliberately not in this phase
 
 A block-editor settings UI. A React admin framework. Twig/Blade adapters (separate packages).
+Frontend virtual pages from 0.x `Page::addFrontendPage()` (no consumer uses them), appearance-menu
+groups and dashboard widgets from 0.x `Page` (likewise unused).
 
 ## Risks
 
