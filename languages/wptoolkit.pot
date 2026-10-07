@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T19:00:41+00:00\n"
+"POT-Creation-Date: 2026-10-07T19:31:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wptoolkit\n"
@@ -99,8 +99,12 @@ msgid "%s has been paused and is not running:"
 msgstr ""
 
 #: bootstrap/guard.php:219
-#: src/Foundation/Application.php:198
+#: src/Foundation/Application.php:241
 msgid "Plugin not activated"
+msgstr ""
+
+#: src/Data/EntityRegistrar.php:77
+msgid "Details"
 msgstr ""
 
 #: src/Data/Field/Types/InputType.php:66
@@ -113,6 +117,10 @@ msgstr ""
 
 #: src/Data/MetaBox.php:399
 msgid "Some fields were not saved:"
+msgstr ""
+
+#: src/Data/Migrations/MigrationRunner.php:71
+msgid "A data update failed and was stopped. The site keeps working with the data as it was; the update retries on the next admin page load."
 msgstr ""
 
 #. translators: 1: plugin name, 2: required version, 3: loaded version, 4: path of the loaded copy

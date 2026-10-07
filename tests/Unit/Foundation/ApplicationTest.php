@@ -7,6 +7,7 @@ namespace Codad5\WPToolkit\Tests\Unit\Foundation;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Codad5\WPToolkit\Contracts\Container\Container;
+use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Exceptions\LifecycleException;
 use Codad5\WPToolkit\Foundation\Application;
@@ -132,6 +133,35 @@ final class ApplicationTest extends TestCase
         $this->expectException(LifecycleException::class);
 
         $app->providers([FirstProvider::class]);
+    }
+
+    public function test_migrations_hook_into_admin_init_and_resolve_class_names(): void
+    {
+        $app = $this->app()->migrations([AppMigration::class])->boot();
+        $runner = $app->container()->get(MigrationRunner::class);
+
+        self::assertNotFalse(has_action('admin_init', [$runner, 'runIfPending']));
+        self::assertInstanceOf(AppMigration::class, $app->resolvedMigrations()[0]);
+    }
+
+    public function test_without_migrations_nothing_hooks_admin_init(): void
+    {
+        $this->app()->boot();
+
+        self::assertFalse(has_action('admin_init'));
+    }
+
+    public function test_migrations_are_validated_and_fixed_at_boot(): void
+    {
+        try {
+            $this->app()->migrations([Logger::class]); // @phpstan-ignore argument.type
+            self::fail('Not a migration.');
+        } catch (InvalidConfigException) {
+        }
+
+        $app = $this->app()->boot();
+        $this->expectException(LifecycleException::class);
+        $app->migrations([AppMigration::class]);
     }
 
     public function test_shutdown_removes_the_init_hook_it_added(): void
@@ -331,5 +361,17 @@ final class ApplicationTest extends TestCase
     private function app(): Application
     {
         return Application::create('/plugins/my-plugin/my-plugin.php', ['slug' => 'my-plugin', 'contain_hook_errors' => false]);
+    }
+}
+
+final class AppMigration extends \Codad5\WPToolkit\Data\Migrations\Migration
+{
+    public function id(): string
+    {
+        return '2026_10_07_000000_app';
+    }
+
+    public function up(): void
+    {
     }
 }

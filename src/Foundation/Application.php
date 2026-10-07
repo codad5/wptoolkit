@@ -9,6 +9,8 @@ declare(strict_types=1);
 namespace Codad5\WPToolkit\Foundation;
 
 use Codad5\WPToolkit\Contracts\Container\Container as ContainerContract;
+use Codad5\WPToolkit\Data\Migrations\Migration;
+use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Exceptions\LifecycleException;
 
@@ -37,6 +39,9 @@ final class Application
 
     /** @var list<ServiceProvider> */
     private array $providers = [];
+
+    /** @var list<Migration|class-string<Migration>> */
+    private array $migrations = [];
 
     private bool $registered = false;
 
@@ -125,6 +130,40 @@ final class Application
     }
 
     /**
+     * Versioned data migrations (ADR-0018), as objects or class names (built by the container, so
+     * they can take services). They run on activation and on `admin_init` while any is pending.
+     *
+     * @param list<Migration|class-string<Migration>> $migrations
+     */
+    public function migrations(array $migrations): self
+    {
+        if ($this->registered) {
+            throw new LifecycleException('Migrations must be added before boot().');
+        }
+
+        foreach ($migrations as $migration) {
+            if (!$migration instanceof Migration && !is_subclass_of($migration, Migration::class)) {
+                throw new InvalidConfigException(sprintf('Every migration must be a %s object or class name.', Migration::class));
+            }
+            $this->migrations[] = $migration;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @internal CoreServices builds the Migrator from these.
+     * @return list<Migration>
+     */
+    public function resolvedMigrations(): array
+    {
+        return array_map(
+            fn (Migration|string $m): Migration => $m instanceof Migration ? $m : $this->container->get($m),
+            $this->migrations
+        );
+    }
+
+    /**
      * Register every provider now; boot them on `init`.
      */
     public function boot(): self
@@ -144,6 +183,10 @@ final class Application
             $provider = new $class($this);
             $provider->register();
             $this->providers[] = $provider;
+        }
+
+        if ($this->migrations !== []) {
+            $this->container->get(MigrationRunner::class)->register($this->hooks);
         }
 
         if ($this->config->get('type', 'plugin') === 'plugin') {
@@ -234,6 +277,10 @@ final class Application
         }
 
         $this->callOnProviders('activate');
+
+        if ($this->migrations !== []) {
+            $this->container->get(MigrationRunner::class)->runIfPending();
+        }
     }
 
     /**

@@ -53,13 +53,16 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.3b Migrations ([ADR-0018](../adr/0018-versioned-data-migrations-expand-contract.md))
 
-- [ ] `Data\Migrations\Migration` (`id()`, `up()`, optional `down()`, optional batching)
-- [ ] `Migrator`: applied ids in `{slug}_migrations`; lock with expiry; idempotent runs; stops and
-      logs on failure; admin notice
-- [ ] Batched migrations via WP-Cron with recorded progress and resume
-- [ ] Runs on activation and on `admin_init` when the latest id isn't recorded
-- [ ] Settings upcasters (old stored shape → current shape on read)
-- [ ] Integration tests: rename a meta key on 1,000 posts in batches; interrupted run resumes;
+- [x] `Data\Migrations\Migration` (`id()`, `up()`, optional `down()`) and `BatchedMigration`;
+      helpers `RenameMetaKey` (batched, all rows) and `RenameOption` (keeps autoload)
+- [x] `Migrator`: applied ids in `{slug}_migrations`; lock with expiry (atomic `add_option`);
+      idempotent runs; stops and logs on failure; admin notice (`MigrationRunner`)
+- [x] Batched migrations via WP-Cron with recorded progress and resume
+- [x] Runs on activation and on `admin_init` when any registered id isn't recorded
+      (`Application::migrations([...])`)
+- [ ] Settings upcasters (old stored shape → current shape on read) — **moved to Phase 5** with
+      `Settings`, which owns the stored shape
+- [x] Integration tests: rename a meta key on 1,000 posts in batches; interrupted run resumes;
       concurrent runs blocked by the lock; rollback restores
 
 ### 4.4 Query builder

@@ -12,13 +12,17 @@ use Codad5\WPToolkit\Adapters\Cache\CacheFactory;
 use Codad5\WPToolkit\Adapters\Clock\SystemClock;
 use Codad5\WPToolkit\Adapters\Http\WpHttpClient;
 use Codad5\WPToolkit\Adapters\Log\LoggerFactory;
+use Codad5\WPToolkit\Adapters\Migrations\OptionMigrationStore;
 use Codad5\WPToolkit\Adapters\Repository\RepositoryFactory;
 use Codad5\WPToolkit\Contracts\Cache\CacheStore;
 use Codad5\WPToolkit\Contracts\Clock\Clock;
 use Codad5\WPToolkit\Contracts\Container\Container;
 use Codad5\WPToolkit\Contracts\Http\HttpClient;
 use Codad5\WPToolkit\Contracts\Log\Logger;
+use Codad5\WPToolkit\Contracts\Data\MigrationStore;
 use Codad5\WPToolkit\Data\EntityRegistrar;
+use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
+use Codad5\WPToolkit\Data\Migrations\Migrator;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
 use Codad5\WPToolkit\Http\Dispatcher;
 use Codad5\WPToolkit\Http\Router;
@@ -83,6 +87,15 @@ final class CoreServices
             $app->identity(),
             $c->get(CacheFactory::class)->make('flash')
         ));
+
+        $container->singleton(MigrationStore::class, static fn () => new OptionMigrationStore($app->identity()));
+        $container->singleton(Migrator::class, static fn (Container $c) => new Migrator(
+            $app->resolvedMigrations(),
+            $c->get(MigrationStore::class),
+            $c->get(Clock::class),
+            $c->get(Logger::class)
+        ));
+        $container->singleton(MigrationRunner::class, static fn (Container $c) => new MigrationRunner($c->get(Migrator::class), $app->identity()));
 
         $container->singleton(Router::class, static function (Container $c) use ($app): Router {
             $router = new Router($app->hooks(), $c->get(RestTransport::class), $c->get(AjaxTransport::class), $app->isDevelopment());
