@@ -23,13 +23,13 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.1 The strangler layout
 
-- [ ] Move 0.x code to `legacy/` (namespaces unchanged: `Codad5\WPToolkit\Utils\*`, `\DB\*`,
+- [x] Move 0.x code to `legacy/` (namespaces unchanged: `Codad5\WPToolkit\Utils\*`, `\DB\*`,
       `\Registry`) so the example plugin keeps working while modules are ported
-- [ ] New code under `src/` in the layered namespaces (`Foundation`, `Contracts`, `Adapters`, `Http`,
+- [x] New code under `src/` in the layered namespaces (`Foundation`, `Contracts`, `Adapters`, `Http`,
       `Data`, `View`, `Admin`, `Assets`, `Support`) — see
       [02-system-architecture.md](../architecture/02-system-architecture.md)
-- [ ] `composer.json` on `next`: `"php": ">=8.1"`, autoload both `src/` and `legacy/`
-- [ ] PHPStan level 8 on `src/` (no baseline); `legacy/` keeps Phase 0's baseline
+- [x] `composer.json` on `next`: `"php": ">=8.1"`, autoload both `src/` and `legacy/`
+- [x] PHPStan level 8 on `src/` (no baseline); `legacy/` keeps Phase 0's baseline
 
 ### 1.1b Usage inventory of the real consumers
 
@@ -42,16 +42,16 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.2 The kernel ([ADR-0007](../adr/0007-own-container-no-static-registry.md))
 
-- [ ] `Contracts\Container` + `Foundation\Container`: bind, singleton, factory, autowiring by
+- [x] `Contracts\Container` + `Foundation\Container`: bind, singleton, factory, autowiring by
       constructor type, circular-dependency error naming the cycle
-- [ ] `Foundation\ServiceProvider` (`register()` then `boot()`), deferred providers
-- [ ] `Foundation\Application::create(string $pluginFile, array $config)` → `->providers([...])` →
+- [x] `Foundation\ServiceProvider` (`register()` then `boot()`), deferred providers
+- [x] `Foundation\Application::create(string $pluginFile, array $config)` → `->providers([...])` →
       `->boot()`; no statics
-- [ ] `Foundation\HookRegistrar`: add/remove actions and filters, remembers everything it added,
+- [x] `Foundation\HookRegistrar`: add/remove actions and filters, remembers everything it added,
       `removeAll()` on deactivation (replaces `add_tracked_action`)
-- [ ] `Foundation\Config`: readonly value object (closes the `Config::$slug` TODO); no `__get`/`__set`
+- [x] `Foundation\Config`: readonly value object (closes the `Config::$slug` TODO); no `__get`/`__set`
 - [ ] Lifecycle: activation, deactivation, uninstall hooks wired through the application
-- [ ] Boot timing: `register()` runs when the plugin loads; the application loads the
+- [x] Boot timing: `register()` runs when the plugin loads; the application loads the
       **consumer's** text domain (from `Text Domain` / `Domain Path`) and then runs every
       provider's `boot()` on `init` — so consumer code that calls `__()` while building pages or
       routes can't trigger WordPress 6.7's "translation loading triggered too early" notice

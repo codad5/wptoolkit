@@ -20,30 +20,30 @@ the same checks run locally with one command.**
 
 ### 0.1 Repository hygiene (on `next`)
 
-- [ ] `git rm -r --cached .idea/` and ignore it
-- [ ] `LICENSE` (GPL-2.0-or-later); `composer.json` license, PHP constraint, metadata
+- [x] `git rm -r --cached .idea/` and ignore it
+- [x] `LICENSE` (GPL-2.0-or-later); `composer.json` license, PHP constraint, metadata
       ([ADR-0003](../adr/0003-gpl-2-0-or-later.md))
-- [ ] `.gitattributes`: `* text=auto eol=lf`; `export-ignore` for `tests/`, `docs/`, `examples/`,
+- [x] `.gitattributes`: `* text=auto eol=lf`; `export-ignore` for `tests/`, `docs/`, `examples/`,
       `.github/`, `.claude/`, dotfiles
-- [ ] Remove the fake "Build: Passing" badge from README
+- [x] Remove the fake "Build: Passing" badge from README
 
 ### 0.2 Tooling
 
-- [ ] Composer dev deps: PHPUnit, Brain Monkey, PHPStan + `szepeviktor/phpstan-wordpress`,
+- [x] Composer dev deps: PHPUnit, Brain Monkey, PHPStan + `szepeviktor/phpstan-wordpress`,
       PHPCS + WPCS + PHPCompatibilityWP; versions recorded in
       [tech-stack.md](../reference/tech-stack.md)
-- [ ] `config.platform.php` = 8.1 so dependencies resolve for the floor, not the dev machine
-- [ ] `phpunit.xml.dist`, `phpstan.neon.dist` (level 8 on `src/`; `legacy/` excluded until ported),
+- [x] `config.platform.php` = 8.1 so dependencies resolve for the floor, not the dev machine
+- [x] `phpunit.xml.dist`, `phpstan.neon.dist` (level 8 on `src/`; `legacy/` excluded until ported),
       `phpcs.xml.dist`
-- [ ] Composer scripts: `lint`, `cs`, `analyse`, `test`, `verify`
-- [ ] Shared test harness: Brain Monkey base `TestCase`, WordPress class stubs, JSON-response capture
+- [x] Composer scripts: `lint`, `cs`, `analyse`, `test`, `verify`
+- [x] Shared test harness: Brain Monkey base `TestCase`, WordPress class stubs, JSON-response capture
       (carried over from the parked branch)
 
 ### 0.3 CI
 
-- [ ] `.github/workflows/ci.yml` on `next` and PRs: validate (composer validate + audit) · lint ·
+- [x] `.github/workflows/ci.yml` on `next` and PRs: validate (composer validate + audit) · lint ·
       cs · analyse · unit (PHP 8.1 → newest stable)
-- [ ] `dependabot.yml` (composer, github-actions)
+- [x] `dependabot.yml` (composer, github-actions)
 - [ ] Real CI badge in README
 
 ### 0.4 Agent and docs scaffolding
