@@ -11,6 +11,7 @@ use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Exceptions\LifecycleException;
 use Codad5\WPToolkit\Foundation\Application;
 use Codad5\WPToolkit\Foundation\Config;
+use Codad5\WPToolkit\Foundation\Identity;
 use Codad5\WPToolkit\Tests\Fixtures\Container\Logger;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\EventLog;
 use Codad5\WPToolkit\Tests\Fixtures\Providers\FirstProvider;
@@ -98,6 +99,8 @@ final class ApplicationTest extends TestCase
         self::assertSame($app, $app->container()->get(Application::class));
         self::assertSame($app->config(), $app->container()->get(Config::class));
         self::assertSame($app->container(), $app->container()->get(Container::class));
+        self::assertSame('my-plugin', $app->identity()->slug);
+        self::assertSame($app->identity(), $app->container()->get(Identity::class));
     }
 
     public function test_two_applications_share_nothing(): void

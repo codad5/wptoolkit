@@ -49,6 +49,7 @@ final class Application
 
         $this->container->instance(self::class, $this);
         $this->container->instance(Config::class, $config);
+        $this->container->instance(Identity::class, new Identity($config->slug));
         $this->container->instance(HookRegistrar::class, $this->hooks);
         $this->container->instance(Container::class, $this->container);
         $this->container->instance(ContainerContract::class, $this->container);
@@ -185,6 +186,11 @@ final class Application
     public function config(): Config
     {
         return $this->config;
+    }
+
+    public function identity(): Identity
+    {
+        return $this->container->get(Identity::class);
     }
 
     public function container(): ContainerContract
