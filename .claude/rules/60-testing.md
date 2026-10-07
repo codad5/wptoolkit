@@ -15,7 +15,7 @@ Decision: [ADR-0010](../../docs/adr/0010-testing-strategy.md). Detail: [05](../.
 | Anything global to WordPress    | Coexistence E2E still green                                         |
 | Guard / bootstrap               | Safe-boot E2E + `php -l` on the oldest PHP                          |
 | User-facing string              | i18n gate (make-pot drift) passes                                   |
-| Porting a 0.x class             | Characterization tests against `legacy/` first                      |
+| Reading 0.x data                | A fixture of the rows 0.x wrote (`DataCompatibilityTest`), ADR-0016 |
 
 ## Rules
 

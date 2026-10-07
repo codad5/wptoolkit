@@ -8,4 +8,3 @@ parameters:
         - packages/build/src
         - examples/todo/src
     tmpDir: .phpstan.cache
-    # legacy/ (0.x) is not analysed: it is being ported, not maintained (ADR-0001).

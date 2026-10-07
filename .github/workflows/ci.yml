@@ -42,7 +42,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-      - run: php bin/lint.php src legacy tests bin
+      - run: php bin/lint.php src tests bin bootstrap examples
 
   guard:
     # ADR-0013: the guard must parse on servers too old for the library, so it can fail politely.

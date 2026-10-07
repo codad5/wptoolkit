@@ -25,4 +25,4 @@ migration guide (Phase 6) is written from this table.
 | `Utils/Page`                 |  1831 | **Split** → `Admin\Page` + router frontend routes                                          | 5     | ✅ `Admin\Page`, `Admin\Pages`; frontend pages → `Frontend\PublicPages` |
 | `Utils/Settings`             |  1210 | **Ported** → `Admin\Settings` on the field system                                          | 5     | ✅ `Admin\Settings\Settings`, `SettingsForm` |
 | `Utils/Notification`         |   819 | **Ported** → `Admin\Notice`                                                                | 5     | ✅ `Admin\Notices`, `NoticeType` |
-| `Cli/ExampleCommand`         |    43 | **Replaced** by `make:*` commands                                                          | 6     | ☐      |
+| `Cli/ExampleCommand`         |    43 | **Replaced** by `make:*` commands                                                          | 6     | 🗑 deleted with `legacy/`; `make:*` lands in Phase 6 |

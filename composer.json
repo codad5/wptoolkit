@@ -39,10 +39,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Codad5\\WPToolkit\\": [
-                "src/",
-                "legacy/"
-            ]
+            "Codad5\\WPToolkit\\": "src/"
         }
     },
     "autoload-dev": {
@@ -62,7 +59,7 @@
         "sort-packages": true
     },
     "scripts": {
-        "lint": "@php bin/lint.php src legacy tests bin bootstrap",
+        "lint": "@php bin/lint.php src tests bin bootstrap examples",
         "cs": "phpcs",
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": "phpunit",

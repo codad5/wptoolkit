@@ -22,7 +22,7 @@ it never crashes ([ADR-0020](../adr/0020-incompatible-unscoped-copies-refuse-act
    php lib/wptoolkit/bin/scope.php "MyPlugin\WPToolkit" lib/wptoolkit
    ```
 
-   It rewrites every namespace and class reference in the copy's `src/`, `legacy/` and
+   It rewrites every namespace and class reference in the copy's `src/` and
    `bootstrap/`, and refuses to run twice. Re-run it on each library update (after replacing the
    folder).
 3. Start your plugin through the guard (main plugin file — keep it PHP 5.6-compatible):

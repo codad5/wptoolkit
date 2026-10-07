@@ -7,7 +7,7 @@
  *   php bin/scope.php "MyPlugin\WPToolkit" [path/to/wptoolkit]
  *
  * Rewrites every namespace, `use` and class reference that starts with `Codad5\WPToolkit` in the
- * copy's src/, legacy/ and bootstrap/ — in place. Strings are left alone (the library never names
+ * copy's src/ and bootstrap/ — in place. Strings are left alone (the library never names
  * its own classes in strings), so the coexistence ledger stays shared between copies.
  *
  * Exit codes: 0 rewritten, 1 bad arguments, 2 nothing to rewrite (already scoped?).
@@ -35,7 +35,7 @@ if (strcasecmp($target, ORIGINAL) === 0) {
 $files = 0;
 $references = 0;
 
-foreach (['src', 'legacy', 'bootstrap'] as $folder) {
+foreach (['src', 'bootstrap'] as $folder) {
     $root = $copy . '/' . $folder;
     if (!is_dir($root)) {
         continue;

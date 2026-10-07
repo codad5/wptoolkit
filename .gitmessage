@@ -10,6 +10,6 @@
 #
 # TYPES   feat fix refactor perf docs test build ci chore style revert
 # SCOPES  bootstrap foundation http data view admin assets i18n cache log
-#         cli coexistence legacy docs adr ci deps
+#         cli coexistence frontend docs adr ci deps
 #
 # Full rules: .claude/rules/50-git-and-commits.md

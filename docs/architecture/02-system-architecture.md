@@ -39,8 +39,7 @@ Enforced by PHPStan rules (Phase 1). See [.claude/rules/10-architecture-boundari
 ```
 bootstrap/    guard.php, autoload.php
 bin/          scope.php
-src/          Foundation/ Contracts/ Adapters/ Http/ Data/ View/ Admin/ Assets/ Support/ Integrations/
-legacy/       0.x code during the port (deleted at the end of Phase 5)
+src/          Foundation/ Contracts/ Adapters/ Http/ Data/ View/ Admin/ Assets/ Frontend/ Support/
 languages/    wptoolkit.pot, *.mo, *.json
 resources/    views/, js/, css/
 tests/        Unit/ Contract/ Integration/ E2E/ Fixtures/

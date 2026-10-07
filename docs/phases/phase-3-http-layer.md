@@ -64,7 +64,7 @@ nonces, capabilities and rate limits — and disagree on defaults. That is how S
 
 ### 3.7 Port and delete
 
-- [ ] → **Phase 5 §5.6** (delete `legacy/` as a whole): port `legacy/Utils/Ajax.php` and `legacy/Utils/RestRoute.php` consumers in the example plugin;
+- [x] → **Phase 5 §5.6** (delete `legacy/` as a whole, done): port `legacy/Utils/Ajax.php` and `legacy/Utils/RestRoute.php` consumers in the example plugin;
       fill in the migration map
 
 ---

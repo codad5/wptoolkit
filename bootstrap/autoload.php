@@ -3,7 +3,7 @@
 /**
  * Standalone autoloader for installs without Composer (ADR-0014).
  *
- * - Maps this copy's root namespace to its own `src/` (and `legacy/` during the 1.0 port).
+ * - Maps this copy's root namespace to its own `src/`.
  * - Idempotent per copy: requiring it twice, or alongside Composer, registers nothing new.
  * - Defines no global functions, classes, constants or variables (ADR-0005): the loader is an
  *   anonymous class that registers itself. The root namespace is read from a class reference, so
@@ -41,13 +41,9 @@ declare(strict_types=1);
             return;
         }
 
-        $relative = str_replace('\\', '/', substr($class, strlen($this->prefix))) . '.php';
-        foreach (['/src/', '/legacy/'] as $root) {
-            $file = $this->wptoolkitDirectory . $root . $relative;
-            if (is_file($file)) {
-                require $file;
-                return;
-            }
+        $file = $this->wptoolkitDirectory . '/src/' . str_replace('\\', '/', substr($class, strlen($this->prefix))) . '.php';
+        if (is_file($file)) {
+            require $file;
         }
     }
 })->register();

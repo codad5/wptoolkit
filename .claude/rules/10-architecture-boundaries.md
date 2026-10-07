@@ -9,10 +9,9 @@ Entry point: [CLAUDE.md](../../CLAUDE.md). Design: [02-system-architecture.md](.
 | `Contracts`                                   | nothing                                        | everything else               |
 | `Support`                                     | `Contracts`                                    | `Adapters`, domain layers     |
 | `Adapters`                                    | `Contracts`, `Support`, WordPress              | domain layers                 |
-| `Http`, `Data`, `View`, `Admin`, `Assets`     | `Contracts`, `Support`, each other's public API | `Adapters` (the container injects them) |
+| `Http`, `Data`, `View`, `Admin`, `Assets`, `Frontend` | `Contracts`, `Support`, each other's public API | `Adapters` (the container injects them) |
 | `Foundation`                                  | everything (it wires the app)                  | —                             |
 | `bootstrap/`                                  | nothing (PHP 5.6 syntax, no namespaced code)   | everything                    |
-| `src/` anything                               | —                                              | `legacy/`                     |
 
 ## Concretely
 

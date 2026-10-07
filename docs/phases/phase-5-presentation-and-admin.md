@@ -72,8 +72,10 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 ### 5.6 Delete `legacy/`
 
-- [ ] Every row in [07-migration-from-0x.md](../architecture/07-migration-from-0x.md) is "done"
-- [ ] `legacy/` and its PHPStan baseline deleted; `Autoloader` and `Registry` gone
+- [x] Every row in [07-migration-from-0x.md](../architecture/07-migration-from-0x.md) is "done" (the CLI
+      example is deleted; its replacement, `make:*`, is Phase 6)
+- [x] `legacy/` deleted (there was no PHPStan baseline: legacy was never analysed); `Autoloader` and
+      `Registry` gone, with the root `autoloader.php` shim and the 0.x `views/` and `assets/` folders
 
 ---
 
