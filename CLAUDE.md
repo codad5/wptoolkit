@@ -43,7 +43,7 @@ writing code. It is binding. Where it conflicts with your defaults, this file wi
    `/* translators: */` comment when it has placeholders.
 7. **Escape on output, sanitize on input, validate before use.** Late escaping, in the view layer.
 8. **No class over ~400 lines, no method over ~40.** Split by responsibility, not by line count.
-9. **PHP floor is 8.1** on `next`/1.x; **8.0** on `0.x`. Use nothing newer than the floor.
+9. **PHP floor is 8.1** on `next`/1.x. Use nothing newer than the floor.
    ([ADR-0002](docs/adr/0002-php-8-1-and-wordpress-6-4-floor.md))
 10. **Every decision a future reader could reasonably question becomes an ADR**, in the same PR as
     the code.
@@ -89,7 +89,8 @@ writing code. It is binding. Where it conflicts with your defaults, this file wi
 - Enqueue or print assets outside `wp_enqueue_scripts` / `admin_enqueue_scripts` / footer hooks.
 - Load translations before `init`.
 - "Fix" a failing test by weakening its assertion.
-- Change `0.x` for anything except security and data-loss fixes.
+- Change 0.x at all — it is frozen ([track-0x-maintenance.md](docs/phases/track-0x-maintenance.md)).
+- Change a stored meta key, option key or value format ([ADR-0016](docs/adr/0016-1-0-reads-0x-data-unchanged.md)).
 
 ---
 
@@ -98,6 +99,6 @@ writing code. It is binding. Where it conflicts with your defaults, this file wi
 | Branch | What it is                                                                 |
 | ------ | -------------------------------------------------------------------------- |
 | `main` | Released code. Protected.                                                  |
-| `0.x`  | Maintenance line for 0.x consumers. Security fixes only.                   |
+| `fix/0.2.1-security` | Parked, unreleased 0.x security fixes. Frozen.               |
 | `next` | The 1.0 re-architecture. Merges to `main` at `1.0.0`.                      |
-| `dev`  | Legacy integration branch; retired once `0.x` and `next` exist.            |
+| `dev`  | Last 0.x code. Frozen.                                                     |

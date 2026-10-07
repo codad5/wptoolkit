@@ -46,6 +46,13 @@ plugin quickly, because the safe path is the default path and it's written down 
 
 - [ ] `docs/guides/migrating-from-0x.md`: class-by-class from
       [07-migration-from-0x.md](../architecture/07-migration-from-0x.md), with before/after code
+      **taken from the real consumers** (`pau`, `silverbird-fusionintel`, `nile-distribution`),
+      using the Phase 1 usage inventory
+- [ ] A "watch out for" section from those ports: routes that relied on the open REST default
+      (now need `->public()`), Ajax actions relying on `'public' => true` by default, `__()` calls
+      at `plugins_loaded`, `Registry::get()` calls, git-cloned copies of the library (→ scoped
+      standalone zip), `dev-main` constraints (→ `^1.0`)
+- [ ] States plainly: **no data migration needed** (ADR-0016)
 - [ ] Rector rules for the mechanical renames, where feasible
 
 ---

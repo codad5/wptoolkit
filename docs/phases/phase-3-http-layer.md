@@ -67,6 +67,16 @@ nonces, capabilities and rate limits — and disagree on defaults. That is how S
 
 ---
 
+### 3.8 Security acceptance scenarios (carried over from 0.x)
+
+Each is a named test against the new layer; the parked 0.x versions on `fix/0.2.1-security` are the
+reference ([track-0x-maintenance.md](track-0x-maintenance.md)).
+
+- [ ] `test_route_without_access_rule_is_denied` (S3)
+- [ ] `test_anonymous_user_cannot_call_a_logged_in_route` (S3)
+- [ ] `test_exception_message_never_reaches_the_client` (S4) — on both transports
+- [ ] `test_error_responses_carry_the_real_http_status` (C2) — on both transports
+
 ## Definition of Done
 
 - **The S1–S4 regression tests from Phase 0, rewritten against the new layer, pass on both

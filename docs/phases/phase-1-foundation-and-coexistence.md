@@ -31,6 +31,15 @@ ruinous to retrofit once every module has invented its own hook names and option
 - [ ] `composer.json` on `next`: `"php": ">=8.1"`, autoload both `src/` and `legacy/`
 - [ ] PHPStan level 8 on `src/` (no baseline); `legacy/` keeps Phase 0's baseline
 
+### 1.1b Usage inventory of the real consumers
+
+- [ ] Catalogue every 0.x API used by `pau`, `silverbird-fusionintel` and `nile-distribution`
+      (class, method, options passed, data written) into
+      [docs/reference/0x-usage-inventory.md](../reference/0x-usage-inventory.md) — this decides
+      what 1.0 must cover and feeds the migration guide
+- [ ] Capture each project's stored data shapes (meta keys, option keys) as fixtures for the
+      data-compatibility suite ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md))
+
 ### 1.2 The kernel ([ADR-0007](../adr/0007-own-container-no-static-registry.md))
 
 - [ ] `Contracts\Container` + `Foundation\Container`: bind, singleton, factory, autowiring by
@@ -42,6 +51,11 @@ ruinous to retrofit once every module has invented its own hook names and option
       `removeAll()` on deactivation (replaces `add_tracked_action`)
 - [ ] `Foundation\Config`: readonly value object (closes the `Config::$slug` TODO); no `__get`/`__set`
 - [ ] Lifecycle: activation, deactivation, uninstall hooks wired through the application
+- [ ] Boot timing: `register()` runs when the plugin loads; the application loads the
+      **consumer's** text domain (from `Text Domain` / `Domain Path`) and then runs every
+      provider's `boot()` on `init` — so consumer code that calls `__()` while building pages or
+      routes can't trigger WordPress 6.7's "translation loading triggered too early" notice
+      (the pau bug in the old `BUGFIX_INSTRUCTIONS.md`)
 
 ### 1.3 Identity — the consumer's names ([ADR-0006](../adr/0006-library-text-domain-and-consumer-prefixes.md))
 

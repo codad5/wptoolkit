@@ -1,6 +1,8 @@
 # 07 — Migration map from 0.x
 
-What happens to each 0.x class. The **Status** column is updated as each port lands; the consumer
+What happens to each 0.x class. **Stored data does not change** — meta keys, option keys and value
+formats are frozen ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md)); only the PHP API does.
+ The **Status** column is updated as each port lands; the consumer
 migration guide (Phase 6) is written from this table.
 
 | 0.x class                    | Lines | 1.0 fate                                                                                   | Phase | Status |

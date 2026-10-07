@@ -1,19 +1,43 @@
-# Track 0.x — Maintenance (parallel to all phases)
+# Track 0.x — Frozen and deprecated
 
-**Branch:** `0.x` · **PHP:** 8.0+ · **Policy:** security and data-loss fixes only.
+**Status:** frozen since 2026-10-07 (maintainer's call) · **PHP:** 8.0+ · **Successor:** 1.0
 
 ---
 
-## Rules
+## Policy
 
-1. A fix lands on `0.x` with a regression test, then is forward-ported to `next` (or confirmed
-   impossible there by design, and noted).
-2. No features, no refactors, no dependency upgrades except for security.
-3. Every fix is a patch release (`v0.2.x`) with a changelog entry.
-4. Support ends **12 months after `v1.0.0`**; announced in the README and the release notes.
+1. **No releases, no tooling, no refactors.** All effort goes to 1.0.
+2. **Exception — a hole becomes reachable on a live site.** Then resume the parked work, run its
+   tests, and release a patch. The triggers are written down so nobody has to judge it from memory:
 
-## Log
+| Hole | Reachable when…                                                                                          | Parked fix |
+| ---- | -------------------------------------------------------------------------------------------------------- | ---------- |
+| S1 — Model search open to logged-out users | a site calls `enqueue_search_scripts()` (prints the nonce for every visitor)          | yes        |
+| S2 — metabox data readable via Ajax        | a site lets users register, or has untrusted logged-in users (contact-form submissions live in meta) | yes |
+| S3 — REST routes open by default           | a consumer adds a route returning private data without a `permission_callback`        | no — documented in pau, which already disabled `/users` and `/settings` |
+| S4 — exception messages returned           | always, but only leaks internals when something throws                               | yes        |
 
-| Version | Date | What | Forward-ported |
-| ------- | ---- | ---- | -------------- |
-| v0.2.1  | —    | S1–S4, C2, C4, C5 (Phase 0) | by design in Phases 3–5 |
+3. **Every 1.0 phase that replaces a 0.x module re-proves these scenarios** against the new code
+   (Phases 3 and 4 list them by name).
+4. **Support ends** when the last known consumer (`pau`, `silverbird-fusionintel`,
+   `nile-distribution`) runs 1.0.
+
+## Parked work
+
+Branch **`fix/0.2.1-security`** (pushed, unreleased), commit `d63e7c0`:
+
+- S1 and S4 in `Model` search/autocomplete; S2 in `MetaBox::handle_ajax`.
+- PHPUnit + Brain Monkey harness and regression tests.
+- **The tests have never been run** (the dependency install didn't complete). Run them before any
+  release.
+
+Planned but not started (would have been `v0.3.0`, breaking): deny-by-default REST routes and Ajax
+actions, real HTTP status codes with a matching JS client fix.
+
+## Known consumers
+
+| Project                   | How it loads 0.x                                  | Uses                                          |
+| ------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| `pau` (plugin)            | Composer, `codad5/wptoolkit: dev-main` (unpinned) | Config, Settings, Page, Notification, Debugger, RestRoute, Model, MetaBox |
+| `silverbird-fusionintel` (theme) | git clone in `wptoolkit/`                  | Ajax, EnqueueManager, Settings, Debugger, Model, MetaBox |
+| `nile-distribution` (theme) | git clone in `wptoolkit/` (different git state) | same as silverbird                            |

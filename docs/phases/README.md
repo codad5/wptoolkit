@@ -19,7 +19,7 @@ is written.
 
 | #   | Phase                                                                     | Effort | Unblocks                          |
 | --- | ------------------------------------------------------------------------- | ------ | --------------------------------- |
-| 0   | [Stabilize 0.x and lay the gates](phase-0-stabilize-and-gates.md)         | S      | Everything; protects today's users |
+| 0   | [Lay the gates](phase-0-stabilize-and-gates.md)                           | S      | Everything                        |
 | 1   | [Foundation and the coexistence proof](phase-1-foundation-and-coexistence.md) | M  | Every module                      |
 | 2   | [Infrastructure adapters](phase-2-infrastructure-adapters.md)             | M      | HTTP, data, logging               |
 | 3   | [HTTP layer: one pipeline for Ajax and REST](phase-3-http-layer.md)       | M      | Data endpoints, admin             |
@@ -27,7 +27,7 @@ is written.
 | 5   | [Presentation and admin](phase-5-presentation-and-admin.md)               | M      | Deleting `legacy/`                |
 | 6   | [Developer experience, docs and AI-readiness](phase-6-dx-docs-ai.md)      | M      | Adoption                          |
 | 7   | [Release 1.0](phase-7-release.md)                                         | S      | 1.0.0                             |
-| 0.x | [Maintenance track](track-0x-maintenance.md) — **parallel, not a phase**  | —      | Nothing; blocks nothing           |
+| 0.x | [Frozen and deprecated](track-0x-maintenance.md) — fixes only if a hole becomes reachable | — | Nothing |
 | P   | [Packager](track-p-packager.md) — **parallel, can start after Phase 0**   | S–M    | Correct zips for every project now |
 
 ```
@@ -70,7 +70,7 @@ Raw scaling says ~2 active days. That is wrong, because this work has costs bolb
 
 | Phase | Active days (bolblar pace) |
 | ----- | -------------------------- |
-| 0     | 1                          |
+| 0     | 0.5                        |
 | 1     | 1.5                        |
 | 2     | 0.75                       |
 | 3     | 1                          |
@@ -78,7 +78,7 @@ Raw scaling says ~2 active days. That is wrong, because this work has costs bolb
 | 5     | 1                          |
 | 6     | 0.75                       |
 | 7     | 0.5 + dogfood wait         |
-| **Total** | **~8–8.5 active days → ~2–3 calendar weeks** at bolblar's 64% active ratio |
+| **Total** | **~7.5–8 active days → ~2–3 calendar weeks** at bolblar's 64% active ratio |
 
 **Caveats, stated plainly.** Bolblar's rate measures output, not quality, and it was greenfield;
 porting is slower per line. Phase 7 includes migrating `pau-alumni-manager`, which runs at the speed

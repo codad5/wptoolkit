@@ -62,7 +62,24 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 - [ ] `Admin\Columns` extracted from `Model`: declared per entity, sortable, quick-edit aware
 
-### 4.7 Port and delete
+### 4.7 Security acceptance scenarios (carried over from 0.x)
+
+- [ ] `test_anonymous_user_cannot_read_metabox_data` (S2)
+- [ ] `test_metabox_data_requires_edit_post_and_matching_post_type` (S2)
+- [ ] `test_non_public_post_type_is_not_searchable_by_logged_out_users` (S1)
+- [ ] `test_public_search_returns_only_published_posts` (S1 — admin-ajax runs with `is_admin()` true)
+- [ ] `test_public_search_never_returns_or_searches_meta` (S1)
+- [ ] `test_search_page_size_is_capped` (S1)
+
+### 4.8 Data compatibility ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md))
+
+- [ ] Fixture database with 0.x-written meta (single, serialized array, multiple media rows,
+      custom prefix) and options (hyphenated slug)
+- [ ] 1.0 `MetaBox`/`PostTypeRepository` and `Settings` read every fixture value identically, and
+      writes produce the same keys and formats
+- [ ] Round trip: 1.0 writes → 0.x reads (downgrade stays possible)
+
+### 4.9 Port and delete
 
 - [ ] Todo example on entities + repositories; port `pau-alumni-manager`'s model shapes as fixtures
 - [ ] Delete `legacy/DB/Model.php` and `legacy/DB/MetaBox.php`; fill in the migration map
