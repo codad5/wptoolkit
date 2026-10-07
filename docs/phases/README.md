@@ -80,6 +80,19 @@ Raw scaling says ~2 active days. That is wrong, because this work has costs bolb
 | 7     | 0.5 + dogfood wait         |
 | **Total** | **~7.5–8 active days → ~2–3 calendar weeks** at bolblar's 64% active ratio |
 
+### Measured against reality (2026-10-07, after Phases 0–3 and most of Track P)
+
+| | Estimate above | Actual (git) |
+| --- | --- | --- |
+| Phases 0–3 + Track P core | ~4¼ active days | **~5.3 hours** (14:16 → 19:34, 46 commits, ~17.8k lines incl. tests and docs) |
+
+The estimate was ~6× pessimistic. Lines of code proved a weak proxy (docs written up front made
+later phases fast; coexistence work cost far more thought per line than adapters), and "active day"
+was undefined. What actually paced the work: CI round-trips (~10 min per push) and design decisions.
+**Revised remaining estimate: ~6–8 hours of build work** (Phase 4 ~2–3 h, Phase 5 ~1.5–2 h,
+Phase 6 ~1–1.5 h, Phase 7 + Track P ~1 h), **plus the human-paced steps** that don't compress:
+review and merge, pinning pau, migrating pau on staging and its soak period.
+
 **Caveats, stated plainly.** Bolblar's rate measures output, not quality, and it was greenfield;
 porting is slower per line. Phase 7 includes migrating `pau-alumni-manager`, which runs at the speed
 of whoever owns that site. Without AI assistance, the same plan is ~12–15 weeks part-time — the order
