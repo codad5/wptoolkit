@@ -1,7 +1,8 @@
 # Rule 20 — PHP
 
 - `declare(strict_types=1);` in every `src/` file. GPL-2.0-or-later header.
-- PHP **8.1** on `next`; **8.0** on `0.x`; **5.6 syntax** in `bootstrap/` and consumer main files.
+- PSR-12 style, PSR-4 file names, camelCase methods and properties ([ADR-0017](../../docs/adr/0017-psr-12-style-with-wpcs-security-sniffs.md)).
+- PHP **8.1** on `next`; **5.6 syntax** in `bootstrap/` and consumer main files.
 - Types on every parameter, return and property. `mixed` only with a comment saying why.
 - `readonly` for value objects; `enum` for closed sets; `final` by default — open a class for
   extension deliberately.

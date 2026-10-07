@@ -1,18 +1,61 @@
 {
     "name": "codad5/wptoolkit",
-    "description": "Your go to WP lib",
+    "description": "A typed, secure-by-default toolkit for building WordPress plugins and themes.",
     "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Codad5\\WPToolkit\\": "src/"
-        }
-    },
+    "license": "GPL-2.0-or-later",
+    "keywords": ["wordpress", "plugin", "theme", "framework", "toolkit"],
     "authors": [
         {
             "name": "codad5",
             "email": "aniezeoformic@gmail.com"
         }
     ],
-    "require": {}
+    "support": {
+        "issues": "https://github.com/codad5/wptoolkit/issues",
+        "source": "https://github.com/codad5/wptoolkit"
+    },
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "brain/monkey": "^2.6",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^10.5",
+        "squizlabs/php_codesniffer": "^3.10",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\": ["src/", "legacy/"]
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.1.30"
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "lint": "@php bin/lint.php src legacy tests bin",
+        "cs": "phpcs",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "test": "phpunit",
+        "verify": [
+            "@lint",
+            "@cs",
+            "@analyse",
+            "@test"
+        ]
+    }
 }
