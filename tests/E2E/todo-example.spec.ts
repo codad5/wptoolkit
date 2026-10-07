@@ -68,6 +68,7 @@ test.describe.serial('the todo example (Phase 5 DoD)', () => {
         expect(board?.status()).toBe(200);
         await expect(page.locator('.wptk-todo-board')).toContainText('Write the guide');
         await expect(page).toHaveTitle(/Todo board/);
+        await expect(page.locator('link#wptk-todo-board-css')).toHaveAttribute('href', /assets\/board\.css/);
 
         expect(problems(takeDebugLog())).toEqual([]);
     });
@@ -97,7 +98,8 @@ test.describe.serial('the todo example (Phase 5 DoD)', () => {
         await page.goto('/todo-board/');
         await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
         await expect(page.locator('#wptk-todo-board-title')).toHaveText('لوحة المهام');
-        await expect(page.locator('link#wptk-todo-board-css')).toHaveAttribute('href', /board-rtl\.css/);
+        // With 'rtl' => 'replace', WordPress swaps the file and gives the tag the id {handle}-rtl-css.
+        await expect(page.locator('link#wptk-todo-board-rtl-css')).toHaveAttribute('href', /board-rtl\.css/);
 
         expect(problems(takeDebugLog())).toEqual([]);
         wp('site', 'switch-language', 'en_US');
