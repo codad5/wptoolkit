@@ -827,6 +827,301 @@ final class EnqueueManager
         }
     }
 
+	/**
+	 * Register a script group without enqueuing it.
+	 */
+	public function registerScriptGroup(string $group_name): static
+	{
+		if (!isset($this->script_groups[$group_name])) {
+			throw new InvalidArgumentException("Script group '{$group_name}' does not exist");
+		}
+
+		$group_data = $this->script_groups[$group_name];
+
+		if (!$this->shouldLoadGroup($group_data['config'])) {
+			return $this;
+		}
+
+		foreach ($group_data['scripts'] as $handle => $config) {
+			$this->registerIndividualScript($handle, $config);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Register a style group without enqueuing it.
+	 */
+	public function registerStyleGroup(string $group_name): static
+	{
+		if (!isset($this->style_groups[$group_name])) {
+			throw new InvalidArgumentException("Style group '{$group_name}' does not exist");
+		}
+
+		$group_data = $this->style_groups[$group_name];
+
+		if (!$this->shouldLoadGroup($group_data['config'])) {
+			return $this;
+		}
+
+		foreach ($group_data['styles'] as $handle => $config) {
+			$this->registerIndividualStyle($handle, $config);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Register multiple groups.
+	 */
+	public function registerGroups(array $group_names, string $type = 'both'): static
+	{
+		foreach ($group_names as $group_name) {
+			if ($type === 'both' || $type === 'scripts') {
+				$this->registerScriptGroup($group_name);
+			}
+
+			if ($type === 'both' || $type === 'styles') {
+				$this->registerStyleGroup($group_name);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Register an individual script.
+	 */
+	public function registerScript(string $handle): static
+	{
+		if (!isset($this->individual_scripts[$handle])) {
+			throw new InvalidArgumentException("Script '{$handle}' does not exist");
+		}
+
+		$config = $this->individual_scripts[$handle];
+		$this->registerIndividualScript($handle, $config);
+
+		return $this;
+	}
+
+	/**
+	 * Register an individual style.
+	 */
+	public function registerStyle(string $handle): static
+	{
+		if (!isset($this->individual_styles[$handle])) {
+			throw new InvalidArgumentException("Style '{$handle}' does not exist");
+		}
+
+		$config = $this->individual_styles[$handle];
+		$this->registerIndividualStyle($handle, $config);
+
+		return $this;
+	}
+
+	/**
+	 * Register scripts and styles by handles.
+	 */
+	public function registerByHandles(array $handles): static
+	{
+		foreach ($handles as $handle) {
+			// Check individual scripts first
+			if (isset($this->individual_scripts[$handle])) {
+				$this->registerIndividualScript($handle, $this->individual_scripts[$handle]);
+				continue;
+			}
+
+			// Check individual styles
+			if (isset($this->individual_styles[$handle])) {
+				$this->registerIndividualStyle($handle, $this->individual_styles[$handle]);
+				continue;
+			}
+
+			// Check in groups
+			foreach ($this->script_groups as $group_name => $group_data) {
+				if (isset($group_data['scripts'][$handle])) {
+					$this->registerIndividualScript($handle, $group_data['scripts'][$handle]);
+					break;
+				}
+			}
+
+			foreach ($this->style_groups as $group_name => $group_data) {
+				if (isset($group_data['styles'][$handle])) {
+					$this->registerIndividualStyle($handle, $group_data['styles'][$handle]);
+					break;
+				}
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Register an individual script without enqueuing.
+	 */
+	protected function registerIndividualScript(string $handle, array $config): void
+	{
+		// Check condition
+		if ($config['condition'] && is_callable($config['condition'])) {
+			if (!call_user_func($config['condition'])) {
+				return;
+			}
+		}
+
+		wp_register_script(
+			$handle,
+			$config['src'],
+			$config['deps'],
+			$config['version'],
+			$config['in_footer']
+		);
+
+		// Add strategy (WP 6.3+)
+		if (!empty($config['strategy']) && function_exists('wp_script_add_data')) {
+			wp_script_add_data($handle, 'strategy', $config['strategy']);
+		}
+
+		// Note: Localization and inline scripts are NOT added during registration
+		// They should only be added when the script is actually enqueued
+	}
+
+	/**
+	 * Register an individual style without enqueuing.
+	 */
+	protected function registerIndividualStyle(string $handle, array $config): void
+	{
+		// Check condition
+		if ($config['condition'] && is_callable($config['condition'])) {
+			if (!call_user_func($config['condition'])) {
+				return;
+			}
+		}
+
+		wp_register_style(
+			$handle,
+			$config['src'],
+			$config['deps'],
+			$config['version'],
+			$config['media']
+		);
+
+		// Note: Inline styles are NOT added during registration
+		// They should only be added when the style is actually enqueued
+	}
+
+	/**
+	 * Check if a script is registered.
+	 */
+	public function isScriptRegistered(string $handle): bool
+	{
+		return wp_script_is($handle, 'registered');
+	}
+
+	/**
+	 * Check if a style is registered.
+	 */
+	public function isStyleRegistered(string $handle): bool
+	{
+		return wp_style_is($handle, 'registered');
+	}
+
+	/**
+	 * Enqueue a previously registered script by handle.
+	 */
+	public function enqueueRegisteredScript(string $handle): EnqueueManager
+	{
+		if (!$this->isScriptRegistered($handle)) {
+			throw new InvalidArgumentException("Script '{$handle}' is not registered");
+		}
+
+		wp_enqueue_script($handle);
+
+		// Find and apply localization and inline scripts
+		$config = $this->findScriptConfig($handle);
+		if ($config) {
+			$this->handleScriptLocalization($handle, $config);
+			$this->addInlineScripts($handle, $config);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Enqueue a previously registered style by handle.
+	 */
+	public function enqueueRegisteredStyle(string $handle): static
+	{
+		if (!$this->isStyleRegistered($handle)) {
+			throw new InvalidArgumentException("Style '{$handle}' is not registered");
+		}
+
+		wp_enqueue_style($handle);
+
+		// Find and apply inline styles
+		$config = $this->findStyleConfig($handle);
+		if ($config) {
+			if (!empty($config['inline_before'])) {
+				wp_add_inline_style($handle, $config['inline_before']);
+			}
+
+			if (!empty($config['inline_after'])) {
+				wp_add_inline_style($handle, $config['inline_after']);
+			}
+
+			if (isset($this->inline_styles[$handle])) {
+				foreach ($this->inline_styles[$handle]['before'] as $style) {
+					wp_add_inline_style($handle, $style);
+				}
+
+				foreach ($this->inline_styles[$handle]['after'] as $style) {
+					wp_add_inline_style($handle, $style);
+				}
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Find script configuration by handle.
+	 */
+	protected function findScriptConfig(string $handle): ?array
+	{
+		// Check individual scripts
+		if (isset($this->individual_scripts[$handle])) {
+			return $this->individual_scripts[$handle];
+		}
+
+		// Check in groups
+		foreach ($this->script_groups as $group_data) {
+			if (isset($group_data['scripts'][$handle])) {
+				return $group_data['scripts'][$handle];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Find style configuration by handle.
+	 */
+	protected function findStyleConfig(string $handle): ?array
+	{
+		// Check individual styles
+		if (isset($this->individual_styles[$handle])) {
+			return $this->individual_styles[$handle];
+		}
+
+		// Check in groups
+		foreach ($this->style_groups as $group_data) {
+			if (isset($group_data['styles'][$handle])) {
+				return $group_data['styles'][$handle];
+			}
+		}
+
+		return null;
+	}
+
     /**
      * Handle script localization with global data support.
      */

@@ -12,8 +12,6 @@ declare(strict_types=1);
 
 namespace Codad5\WPToolkit\Utils;
 
-use Codad5\WPToolkit\Utils\Cache;
-
 /**
  * ViewLoader utility class for loading template files.
  * 
@@ -85,11 +83,13 @@ class ViewLoader
      * @param array $data Data to be extracted as variables
      * @param bool $echo Whether to echo the output
      * @param string|null $base_path Override base path for this load
+     * @param bool $overridable Whether to check for theme overrides
+     * @param string $plugin_prefix Plugin prefix for theme override path
      * @return string|false Rendered output or false on failure
      */
-    public static function load(string $view, array $data = [], bool $echo = true, ?string $base_path = null): string|false
-    {
-        $template_path = self::resolve_template_path($view, $base_path);
+	public static function load(string $view, array $data = [], bool $echo = true, ?string $base_path = null, bool $overridable = false, string $plugin_prefix = 'wptoolkit'): string|false
+	{
+		$template_path = self::resolve_template_path($view, $base_path, $overridable, $plugin_prefix);
 
         if (!$template_path) {
             return self::handle_template_not_found($view, $echo);
@@ -112,34 +112,10 @@ class ViewLoader
         $data = array_merge(self::$global_data, $data);
 
         // Add helper functions to data
-        $data['view'] = new class {
-            public static function load(string $view, array $data = []): string
-            {
-                return ViewLoader::load($view, $data, false) ?: '';
-            }
+		$data['view'] = self::create_view_helper($base_path, $plugin_prefix, $overridable);
 
-            public static function include(string $view, array $data = []): void
-            {
-                ViewLoader::load($view, $data, true);
-            }
 
-            public static function section(string $name): void
-            {
-                ViewLoader::start_section($name);
-            }
-
-            public static function end_section(): void
-            {
-                ViewLoader::end_section();
-            }
-
-            public static function yield(string $name, string $default = ''): void
-            {
-                echo ViewLoader::get_section($name, $default);
-            }
-        };
-
-        // Render the template
+		// Render the template
         $output = self::render_template($template_path, $data);
 
         if ($output === false) {
@@ -158,6 +134,20 @@ class ViewLoader
         return $output;
     }
 
+
+	/**
+	 * Create a view helper instance.
+	 *
+	 * @param string|null $base_path Default base path
+	 * @param string $plugin_prefix Default plugin prefix
+	 * @param bool $overridable Whether the view is overridable by theme
+	 * @return ViewHelper View helper instance
+	 */
+	private static function create_view_helper(?string $base_path, string $plugin_prefix, bool $overridable = false): ViewHelper
+	{
+		return new ViewHelper($base_path, $plugin_prefix, $overridable);
+	}
+
     /**
      * Load a view and return output without echoing.
      *
@@ -170,6 +160,20 @@ class ViewLoader
     {
         return self::load($view, $data, false, $base_path) ?: '';
     }
+
+	/**
+	 * Load a view with WordPress theme override support.
+	 *
+	 * @param string $view View path relative to plugin templates
+	 * @param array $data Data to be extracted as variables
+	 * @param bool $echo Whether to echo the output
+	 * @param string $plugin_prefix Plugin prefix for theme override path
+	 * @return string|false Rendered output or false on failure
+	 */
+	public static function get_overridable(string $view, array $data = [], bool $echo = true, string $plugin_prefix = 'wptoolkit'): string|false
+	{
+		return self::load($view, $data, $echo, null, true, $plugin_prefix);
+	}
 
     /**
      * Check if a view exists.
@@ -443,16 +447,34 @@ class ViewLoader
         return self::$extensions;
     }
 
-    /**
-     * Resolve template path from view name.
-     *
-     * @param string $view View name
-     * @param string|null $base_path Override base path
-     * @return string|false Resolved path or false if not found
-     */
-    private static function resolve_template_path(string $view, ?string $base_path = null): string|false
-    {
-        $view = ltrim($view, '/');
+	/**
+	 * Resolve template path from view name.
+	 *
+	 * @param string $view View name
+	 * @param string|null $base_path Override base path
+	 * @param bool $overridable Whether to check for theme overrides
+	 * @param string $plugin_prefix Plugin prefix for theme override path
+	 * @return string|false Resolved path or false if not found
+	 */
+	private static function resolve_template_path(string $view, ?string $base_path = null, bool $overridable = false, string $plugin_prefix = 'wptoolkit'): string|false
+	{
+	    $view = ltrim($view, '/');
+
+	    // Check for WordPress theme override first if overridable
+	    if ($overridable) {
+		    $theme_template = locate_template("{$plugin_prefix}/{$view}");
+		    if ($theme_template) {
+			    return $theme_template;
+		    }
+
+		    // Also check with .php extension if not present
+		    if (!pathinfo($view, PATHINFO_EXTENSION)) {
+			    $theme_template = locate_template("{$plugin_prefix}/{$view}.php");
+			    if ($theme_template) {
+				    return $theme_template;
+			    }
+		    }
+	    }
         $search_paths = [];
 
         // Add override base path first
@@ -596,7 +618,7 @@ class ViewLoader
      * @param bool $echo Whether to echo error
      * @return false
      */
-    private static function handle_template_not_found(string $view, bool $echo): false
+    private static function handle_template_not_found(string $view, bool $echo): bool
     {
         $error_message = "Template not found: {$view}";
 
@@ -617,7 +639,7 @@ class ViewLoader
      * @param bool $echo Whether to echo error
      * @return false
      */
-    private static function handle_render_error(string $view, bool $echo): false
+    private static function handle_render_error(string $view, bool $echo): bool
     {
         $error_message = "Error rendering template: {$view}";
 

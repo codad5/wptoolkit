@@ -39,10 +39,11 @@ abstract class APIHelper
     /**
      * API endpoints configuration - should be overridden in child classes.
      *
-     * @var array<string, array{
+     * @return array<string, array{
      *     route: string,
      *     method?: string,
      *     params?: array<string, mixed>,
+     *     body?: array<string, mixed>,
      *     headers?: array<string, string>,
      *     cache?: bool|int|callable
      * }>
@@ -190,11 +191,12 @@ abstract class APIHelper
      * @param string $method HTTP method
      * @param string $url Request URL
      * @param array<string, mixed> $params Request parameters
+     * @param array<string, mixed> $body Request body data
      * @param array<string, mixed> $args Additional request arguments
      * @return mixed Response data
      * @throws \Exception When request fails or response is invalid
      */
-    public static function request(string $method, string $url, array $params = [], array $args = []): mixed
+    public static function request(string $method, string $url, array $params = [], array $body = [], array $args = []): mixed
     {
         $method = strtoupper(sanitize_text_field($method));
         $url = esc_url_raw($url);
@@ -209,9 +211,15 @@ abstract class APIHelper
             ),
         ]);
 
+        // Add query parameters to URL for all methods
+        if (!empty($params)) {
+            $url = static::prepare_request_url($url, $params);
+        }
+
         // Add body for non-GET requests
-        if ($method !== 'GET' && !empty($params)) {
-            $request_args['body'] = $params;
+        if ($method !== 'GET' && !empty($body)) {
+            $content_type = static::resolve_content_type($request_args['headers']);
+            $request_args['body'] = static::prepare_request_body($body, $content_type);
         }
 
         $response = wp_remote_request($url, $request_args);
@@ -233,8 +241,8 @@ abstract class APIHelper
             );
         }
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+        $body_response = wp_remote_retrieve_body($response);
+        $data = json_decode($body_response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception(
@@ -256,6 +264,55 @@ abstract class APIHelper
 
         static::update_api_call_count();
         return $data;
+    }
+
+    /**
+     * Prepare request body based on content type and data.
+     *
+     * @param array<string, mixed> $body Request body data
+     * @param string $content_type Content type header value
+     * @param bool $force_json_encode Force JSON encoding regardless of content type
+     * @return string|array Prepared request body
+     */
+    protected static function prepare_request_body(array $body, string $content_type = 'application/json', bool $force_json_encode = true): string|array
+    {
+        if (empty($body)) {
+            return [];
+        }
+
+        // Force JSON encoding by default or when content type is JSON
+        if ($force_json_encode || str_contains($content_type, 'application/json')) {
+            return json_encode($body);
+        }
+
+        // Handle form data
+        if (str_contains($content_type, 'application/x-www-form-urlencoded')) {
+            return http_build_query($body);
+        }
+
+        // Handle multipart form data or other types - return as array
+        return $body;
+    }
+
+    /**
+     * Get default content type for requests.
+     *
+     * @return string Default content type
+     */
+    protected static function get_default_content_type(): string
+    {
+        return 'application/json';
+    }
+
+    /**
+     * Determine content type from request headers or use default.
+     *
+     * @param array<string, string> $headers Request headers
+     * @return string Content type
+     */
+    protected static function resolve_content_type(array $headers): string
+    {
+        return $headers['Content-Type'] ?? static::get_default_content_type();
     }
 
     /**
@@ -362,11 +419,12 @@ abstract class APIHelper
      *
      * @param string $endpoint_name Endpoint identifier
      * @param array<string, mixed> $params Request parameters
+     * @param array<string, mixed> $body Request body data
      * @param array<string, string> $substitutions URL placeholder substitutions
      * @return mixed Response data
      * @throws \Exception When endpoint is invalid or request fails
      */
-    public static function make_request(string $endpoint_name, array $params = [], array $substitutions = []): mixed
+    public static function make_request(string $endpoint_name, array $params = [], array $body = [], array $substitutions = []): mixed
     {
         $endpoint = static::get_endpoints()[$endpoint_name] ?? null;
         if (!$endpoint) {
@@ -401,6 +459,22 @@ abstract class APIHelper
             }
         }
 
+
+        $endpoint_body = $endpoint['body'] ?? [];
+        $body = array_merge($endpoint_body, $body);
+
+        // Filter body to only include those defined in endpoint
+        if (!empty($endpoint_body)) {
+            $body = array_intersect_key($body, $endpoint_body);
+        }
+
+        // Execute callable body values
+        foreach ($body as $key => $value) {
+            if (is_callable($value)) {
+                $body[$key] = $value();
+            }
+        }
+
         $method = $endpoint['method'] ?? 'GET';
         $url = rtrim(static::get_base_url(), '/') . '/' . ltrim($route, '/');
 
@@ -417,7 +491,7 @@ abstract class APIHelper
             $params = []; // Parameters already in URL
         }
 
-        return static::request($method, $url, $params, $endpoint);
+        return static::request($method, $url, $params, $body, $endpoint);
     }
 
     /**
