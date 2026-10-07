@@ -35,7 +35,7 @@ passing the same contract test suite.**
       no persistent object cache exists
 - [x] Keys always go through `Identity::transientKey()`; group flush without `LIKE` scans where the
       backend supports it
-- [ ] Optional `Psr16Bridge` (only usable when the consumer installs `psr/simple-cache` themselves)
+- [x] Optional `Psr16Bridge` (only usable when the consumer installs `psr/simple-cache` themselves)
 
 ### 2.3 Logging — replaces 0.x `Utils/Debugger`
 
@@ -43,7 +43,7 @@ passing the same contract test suite.**
 - [x] Adapters: `ErrorLogLogger`, `QueryMonitorLogger` (when the plugin is active), `BrowserConsoleLogger`
       (buffers; prints only in `wp_footer` / `admin_footer`; only for users who can `manage_options`
       and only when `WP_DEBUG`), `NullLogger`, `ArrayLogger` (tests)
-- [ ] `Psr3Bridge` (optional, same rule as 2.2)
+- [x] `Psr3Bridge` (optional, same rule as 2.2)
 
 ### 2.4 HTTP client — ports 0.x `Utils/APIHelper`
 
@@ -62,8 +62,8 @@ passing the same contract test suite.**
 
 ### 2.6 Filesystem — ports 0.x `Utils/Filesystem` (trimmed)
 
-- [ ] `Contracts\Filesystem\Filesystem` + `WpFilesystem` (`WP_Filesystem`) + `InMemoryFilesystem`
-- [ ] Path-traversal guard: every path is resolved inside an allowed root
+- [x] `Contracts\Filesystem\Filesystem` + `WpFilesystem` (`WP_Filesystem`) + `InMemoryFilesystem`
+- [x] Path-traversal guard: every path is resolved inside an allowed root
 
 ### 2.7 Clock
 
@@ -72,6 +72,12 @@ passing the same contract test suite.**
 ---
 
 ## Definition of Done
+
+> **Met 2026-10-07.** Contract suites pass for every cache and filesystem adapter (unit, plus
+> WP_Filesystem and real transients/object cache in the integration matrix PHP 8.1/8.3 × WP 6.4/latest);
+> rate limits hold across separate limiter instances on real WordPress; ApiClient retries 5xx/429 with
+> backoff and never logs secrets; the migration map marks Cache, Debugger, APIHelper, Filesystem ported.
+> The HTTP-level 429 response itself arrives with the Phase 3 router.
 
 - Every contract has a shared contract-test suite, and **every adapter passes it**.
 - A rate-limited route returns 429 on the N+1st request **across separate HTTP requests** on wp-env

@@ -7,14 +7,14 @@
 
 ---
 
-## Now: Phase 2 — Infrastructure adapters
+## Now: Phase 3 — HTTP layer (one pipeline for Ajax and REST)
 
 | Phase | State |
 | ----- | ----- |
 | 0 — Gates | ✅ CI green on PHP 8.1–8.4 |
 | 1 — Foundation & coexistence | ✅ DoD demonstrated: 9/9 E2E on real WordPress (run 37643432573), 118 unit tests |
-| 2 — Infrastructure adapters | 🔄 cache + clock in progress |
-| P — Build tool (`Build::plugin()->…`) | next after Phase 2 |
+| 2 — Infrastructure adapters | ✅ cache, log, HTTP client, rate limit, filesystem, clock, PSR bridges; integration on WP 6.4/latest |
+| P — Build tool (`Build::plugin()->…`) | ✅ library + `wptoolkit-build`; ☐ doctor, CI workflow, migrating the 3 projects |
 | 3–7 | ☐ |
 
 Phase 1 delivered: kernel (container, providers, lifecycle, hook containment), `Identity`,
