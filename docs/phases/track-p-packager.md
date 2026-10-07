@@ -118,15 +118,15 @@ jobs:
 
 ### P.0 Fluent build library
 
-- [ ] `Build`, `BuildStep`, `BuildContext`, `Version` sources; every built-in step a class
-- [ ] `syncVersionTo()`: write one version into the header, `readme.txt` Stable tag and a constant
-- [ ] Pattern sources for `exclude()`/`include()` besides plain globs (maintainer's idea):
+- [x] `Build`, `BuildStep`, `BuildContext`, `Version` sources; every built-in step a class
+- [x] `syncVersionTo()`: write one version into the header, `readme.txt` Stable tag and a constant
+- [x] Pattern sources for `exclude()`/`include()` besides plain globs (maintainer's idea):
       `Patterns::fromDistignore()`, `fromGitattributesExportIgnore()`, `fromGitignore()`. Docs steer
       to `.distignore`: a `.gitignore` excludes build output that should ship (`assets/dist`,
       `vendor`) and misses dev files that shouldn't; `verify()` warns when an excluded file is one
       the plugin references
 - [ ] Published as `codad5/wptoolkit-build` (dev dependency); included in the standalone download
-- [ ] `wptoolkit.json` / `wptoolkit package` build the same pipeline
+- [x] `wptoolkit.json` / `wptoolkit package` build the same pipeline
 
 ### P.1 Command and detection
 
@@ -138,22 +138,22 @@ jobs:
 
 ### P.2 Staging pipeline
 
-- [ ] Copy to a temp staging dir; never mutate the working tree
-- [ ] Optional build hook from config (`npm run build`) run **before** staging
-- [ ] `composer install --no-dev --optimize-autoloader` in staging when `composer.json` exists
-- [ ] Scope the bundled toolkit when configured (Strauss for Composer, `bin/scope.php` for standalone)
-- [ ] Optional `wp i18n make-pot`
-- [ ] `.distignore` (WP-CLI format) + built-in defaults; globs relative to the root
+- [x] Copy to a temp staging dir; never mutate the working tree
+- [x] Optional build hook from config (`npm run build`) run **before** staging
+- [x] `composer install --no-dev --optimize-autoloader` in staging when `composer.json` exists
+- [x] Scope the bundled toolkit when configured (Strauss for Composer, `bin/scope.php` for standalone)
+- [x] Optional `wp i18n make-pot`
+- [x] `.distignore` (WP-CLI format) + built-in defaults; globs relative to the root
 - [ ] `php -l` every PHP file in staging
 
 ### P.3 Zip and verify
 
-- [ ] Zip under one top-level folder named after the slug; deterministic file order
-- [ ] Verification failures: dev deps in `vendor/`, `vendor/bin`, `.git`, `.github`, `.claude`,
+- [x] Zip under one top-level folder named after the slug; deterministic file order
+- [x] Verification failures: dev deps in `vendor/`, `vendor/bin`, `.git`, `.github`, `.claude`,
       `.agents`, `.idea`, `node_modules`, `tests`, `*.zip`, `composer.lock`/`package*.json`,
       header/guard version mismatch
 - [ ] Report: size, file count, 10 largest directories; write `<zip>.sha256`
-- [ ] Exit codes: 0 success, 1 verification failed, 2 build error
+- [x] Exit codes: 0 success, 1 verification failed, 2 build error
 
 ### P.4 CI wrapper
 
@@ -171,6 +171,11 @@ jobs:
 ---
 
 ## Definition of Done
+
+> **Progress 2026-10-07:** library + `wptoolkit-build package|init` built and tested (reproducible zips,
+> verification). Run against a copy of `pau`, it refuses the 2,623 dev-tool files the old script shipped.
+> Still open: `doctor`, `verify <zip>`, `--dry-run`, size report details, the reusable CI workflow, and
+> migrating the three projects (needs the maintainer's go-ahead — they are separate repositories).
 
 - Fixture plugin and fixture theme: the zip's file list **exactly** matches a committed snapshot.
 - Packaging a project with dev dependencies installed locally produces a zip with **none** of them.

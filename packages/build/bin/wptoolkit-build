@@ -1,0 +1,66 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * wptoolkit-build — package a WordPress plugin or theme from wptoolkit.json (or defaults).
+ *
+ *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH]
+ *   vendor/bin/wptoolkit-build init    [--project=DIR]
+ *
+ * For anything beyond the config file, write a build.php with the fluent API instead.
+ *
+ * @license GPL-2.0-or-later
+ */
+
+declare(strict_types=1);
+
+use Codad5\WPToolkit\Build\BuildException;
+use Codad5\WPToolkit\Build\JsonConfig;
+
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php', __DIR__ . '/../../../vendor/autoload.php'] as $autoload) {
+    if (is_file($autoload)) {
+        require $autoload;
+        break;
+    }
+}
+
+$command = $argv[1] ?? 'help';
+$options = [];
+foreach (array_slice($argv, 2) as $argument) {
+    if (preg_match('/^--([a-z-]+)=(.*)$/', $argument, $m) === 1) {
+        $options[$m[1]] = $m[2];
+    }
+}
+$project = realpath($options['project'] ?? getcwd()) ?: getcwd();
+
+try {
+    switch ($command) {
+        case 'package':
+            [$build, $zip] = JsonConfig::load($project);
+            $build->zip($options['zip'] ?? $zip);
+            exit(0);
+
+        case 'init':
+            $file = $project . '/wptoolkit.json';
+            if (is_file($file)) {
+                fwrite(STDERR, "wptoolkit.json already exists.\n");
+                exit(1);
+            }
+            file_put_contents($file, json_encode([
+                'version' => is_file($project . '/package.json') ? 'package.json' : 'header',
+                'syncVersionTo' => ['header'],
+                'composer' => is_file($project . '/composer.json') ? 'no-dev' : false,
+                'exclude' => is_file($project . '/.distignore') ? ['.distignore'] : [],
+                'zip' => 'dist/{slug}-{version}.zip',
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+            fwrite(STDOUT, "Wrote wptoolkit.json\n");
+            exit(0);
+
+        default:
+            fwrite(STDOUT, "Usage:\n  wptoolkit-build package [--project=DIR] [--zip=PATH]\n  wptoolkit-build init [--project=DIR]\n");
+            exit($command === 'help' ? 0 : 1);
+    }
+} catch (BuildException $failure) {
+    fwrite(STDERR, 'Build failed: ' . $failure->getMessage() . PHP_EOL);
+    exit(1);
+}
