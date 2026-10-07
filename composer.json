@@ -47,7 +47,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Codad5\\WPToolkit\\Tests\\": "tests/"
+            "Codad5\\WPToolkit\\Tests\\": "tests/",
+            "Codad5\\WPToolkit\\Build\\": "packages/build/src/"
         }
     },
     "config": {

@@ -5,6 +5,7 @@
     <file>src</file>
     <file>bin</file>
     <file>bootstrap</file>
+    <file>packages/build/src</file>
 
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
@@ -56,9 +57,10 @@
         <exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
     </rule>
 
-    <!-- CLI scripts print to a terminal, not a page. -->
+    <!-- CLI scripts and the build tool print to a terminal, not a page. -->
     <rule ref="WordPress.Security.EscapeOutput">
         <exclude-pattern>bin/*</exclude-pattern>
+        <exclude-pattern>packages/build/*</exclude-pattern>
     </rule>
     <!-- bin/ scripts are executables with side effects, not class files. -->
     <rule ref="PSR1.Files.SideEffects.FoundWithSymbols">

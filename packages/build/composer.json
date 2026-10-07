@@ -1,0 +1,16 @@
+{
+    "name": "codad5/wptoolkit-build",
+    "description": "Fluent, verified packaging for WordPress plugins and themes (dev dependency).",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "keywords": ["wordpress", "build", "zip", "packaging", "release"],
+    "require": {
+        "php": ">=8.1",
+        "ext-zip": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codad5\WPToolkit\Build\\": "src/"
+        }
+    }
+}
