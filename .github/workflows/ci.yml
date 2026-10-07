@@ -70,6 +70,22 @@ jobs:
       - run: composer install --no-interaction --no-progress --prefer-dist
       - run: composer analyse -- --no-progress --error-format=github
 
+  i18n:
+    name: Translation template is current
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: composer i18n
+      # The timestamp and generator lines change on every run; any other difference means a
+      # library string changed without regenerating languages/wptoolkit.pot (run: composer i18n).
+      - run: git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -- languages/
+
   unit:
     name: Unit tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04

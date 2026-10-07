@@ -22,7 +22,7 @@ implementation plus a test double that tests genuinely need. Adapters are chosen
 from configuration, so adding a backend never edits core.
 
 The contracts at 1.0: `CacheStore`, `Logger`, `HttpClient`, `RateLimiterStore`, `Filesystem`,
-`Clock`, `Translator`, `Repository`, `Renderer`, `Container`, `Middleware`.
+`Clock`, `Repository`, `Renderer`, `Container`, `Middleware`. (`Translator` was dropped by [ADR-0019](0019-no-translator-abstraction.md).)
 
 ## Options considered
 

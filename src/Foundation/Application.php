@@ -158,6 +158,7 @@ final class Application
         }
         $this->booted = true;
 
+        (new LibraryTranslations($this->identity(), LibraryTranslations::bundledDirectory()))->load();
         $this->loadTextDomain();
         $this->callOnProviders('boot');
     }

@@ -50,7 +50,7 @@ ruinous to retrofit once every module has invented its own hook names and option
 - [x] `Foundation\HookRegistrar`: add/remove actions and filters, remembers everything it added,
       `removeAll()` on deactivation (replaces `add_tracked_action`)
 - [x] `Foundation\Config`: readonly value object (closes the `Config::$slug` TODO); no `__get`/`__set`
-- [ ] Lifecycle: activation, deactivation, uninstall hooks wired through the application
+- [x] Lifecycle: activation, deactivation, uninstall hooks wired through the application
 - [x] Boot timing: `register()` runs when the plugin loads; the application loads the
       **consumer's** text domain (from `Text Domain` / `Domain Path`) and then runs every
       provider's `boot()` on `init` — so consumer code that calls `__()` while building pages or
@@ -59,19 +59,20 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.3 Identity — the consumer's names ([ADR-0006](../adr/0006-library-text-domain-and-consumer-prefixes.md))
 
-- [ ] `Foundation\Identity`: derives every WP-global name from the slug — `hook()`, `ajaxAction()`,
+- [x] `Foundation\Identity`: derives every WP-global name from the slug — `hook()`, `ajaxAction()`,
       `restNamespace()`, `optionKey()`, `transientKey()`, `table()`, `cronHook()`, `handle()`,
       `jsGlobal()`, `nonceAction()`
-- [ ] Unit tests: two identities never produce the same key; keys respect WordPress length limits
+- [x] Unit tests: two identities never produce the same key; keys respect WordPress length limits
       (option names 191, transient keys 172, hook names unlimited but sane)
 
 ### 1.4 Localization foundation ([04-localization.md](../architecture/04-localization.md))
 
-- [ ] `Contracts\Translator` + `Adapters\I18n\WpTranslator` + `ArrayTranslator` (tests)
-- [ ] `languages/` directory; library strings use text domain `wptoolkit`
-- [ ] Library translations loaded on `init` via `load_textdomain()` from the package's own path,
+- [x] ~~`Contracts\Translator`~~ dropped ([ADR-0019](../adr/0019-no-translator-abstraction.md)): it
+      would hide strings from `make-pot`; `Foundation\LibraryTranslations` loads the `.mo` files
+- [x] `languages/` directory; library strings use text domain `wptoolkit`
+- [x] Library translations loaded on `init` via `load_textdomain()` from the package's own path,
       overridable by a consumer-prefixed filter
-- [ ] `composer i18n` → `wp i18n make-pot`; CI fails if `languages/wptoolkit.pot` is stale
+- [x] `composer i18n` → `wp i18n make-pot`; CI fails if `languages/wptoolkit.pot` is stale
 
 ### 1.5 Coexistence ([03-multi-version-coexistence.md](../architecture/03-multi-version-coexistence.md))
 

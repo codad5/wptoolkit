@@ -27,6 +27,7 @@ final class ApplicationTest extends TestCase
         EventLog::$events = [];
         Functions\when('is_textdomain_loaded')->justReturn(false);
         Functions\when('plugin_basename')->justReturn('my-plugin/my-plugin.php');
+        Functions\when('determine_locale')->justReturn('en_US');
         Functions\when('register_activation_hook')->justReturn(null);
         Functions\when('register_deactivation_hook')->justReturn(null);
         Functions\when('load_plugin_textdomain')->alias(static function (string $domain): bool {

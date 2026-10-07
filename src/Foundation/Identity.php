@@ -43,6 +43,8 @@ final class Identity
 
     /**
      * An action or filter name: `my-plugin/http/before_dispatch`.
+     *
+     * @return non-empty-string
      */
     public function hook(string $name): string
     {
@@ -51,6 +53,8 @@ final class Identity
 
     /**
      * An admin-ajax action: `my_plugin_books_search`.
+     *
+     * @return non-empty-string
      */
     public function ajaxAction(string $name): string
     {
@@ -59,6 +63,8 @@ final class Identity
 
     /**
      * A REST namespace: `my-plugin/v1`.
+     *
+     * @return non-empty-string
      */
     public function restNamespace(string $version = 'v1'): string
     {
@@ -69,6 +75,8 @@ final class Identity
      * An option name, in 0.x's shape: `{slug}_{sanitize_key(key)}` — e.g. `pau-alumni-manager_api_key`.
      *
      * @throws InvalidConfigException When the result is longer than the options table allows.
+     *
+     * @return non-empty-string
      */
     public function optionKey(string $key): string
     {
@@ -88,6 +96,8 @@ final class Identity
 
     /**
      * A transient name. Long keys are shortened with a hash so they always fit.
+     *
+     * @return non-empty-string
      */
     public function transientKey(string $key, bool $site = false): string
     {
@@ -106,16 +116,25 @@ final class Identity
      *
      * Pass `$prefix` when the box was given a custom prefix (0.x `set_prefix()`); it then replaces
      * `{box_id}_{post_type}_` entirely, exactly as 0.x did.
+     *
+     * @return non-empty-string
      */
     public function metaKey(string $boxId, string $postType, string $field, ?string $prefix = null): string
     {
         $prefix ??= $this->sanitizeKey($boxId) . '_' . $postType . '_';
+        $key = str_starts_with($field, $prefix) ? $field : $prefix . $field;
 
-        return str_starts_with($field, $prefix) ? $field : $prefix . $field;
+        if ($field === '' || $key === '') {
+            throw new InvalidConfigException('A meta key needs a non-empty field name.');
+        }
+
+        return $key;
     }
 
     /**
      * A custom table name, without `$wpdb->prefix`: `my_plugin_books`.
+     *
+     * @return non-empty-string
      */
     public function table(string $name): string
     {
@@ -124,6 +143,8 @@ final class Identity
 
     /**
      * A WP-Cron hook: `my_plugin_cleanup`.
+     *
+     * @return non-empty-string
      */
     public function cronHook(string $name): string
     {
@@ -132,6 +153,8 @@ final class Identity
 
     /**
      * A script or style handle: `my-plugin-toolkit-api`.
+     *
+     * @return non-empty-string
      */
     public function handle(string $name): string
     {
@@ -140,6 +163,8 @@ final class Identity
 
     /**
      * The JavaScript global the library localizes data under: `myPluginToolkit`.
+     *
+     * @return non-empty-string
      */
     public function jsGlobal(): string
     {
@@ -151,6 +176,8 @@ final class Identity
 
     /**
      * A nonce action: `my-plugin:books.search`.
+     *
+     * @return non-empty-string
      */
     public function nonceAction(string $name): string
     {

@@ -52,3 +52,4 @@ Not for a naming choice, a library with no real alternative, or anything you wou
 | [0016](0016-1-0-reads-0x-data-unchanged.md)                          | 1.0 reads and writes 0.x data unchanged; only the PHP API breaks          | Accepted |
 | [0017](0017-psr-12-style-with-wpcs-security-sniffs.md)               | PSR-12 style, plus WPCS's security, database and i18n sniffs              | Accepted |
 | [0018](0018-versioned-data-migrations-expand-contract.md)            | Data changes go through versioned migrations, expand → migrate → contract | Accepted |
+| [0019](0019-no-translator-abstraction.md)                            | No `Translator` abstraction: library strings call WordPress i18n directly | Accepted |

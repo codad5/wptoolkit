@@ -13,7 +13,7 @@ Decision: [ADR-0006](../adr/0006-library-text-domain-and-consumer-prefixes.md).
 | Dates and numbers | `wp_date()`, `number_format_i18n()`, `size_format()` — never `date()` / `number_format()` in output |
 | RTL               | Logical CSS properties (`margin-inline-start`); generated `-rtl.css` registered with `wp_style_add_data($h, 'rtl', 'replace')` |
 | Error messages    | Keyed (`validation.required`) and translated at the edge, so clients can map keys            |
-| Abstraction       | `Contracts\Translator` with `WpTranslator`; `ArrayTranslator` in tests                        |
+| Abstraction       | None for translating: literal `__()` calls so `make-pot` can extract them ([ADR-0019](../adr/0019-no-translator-abstraction.md)); `Foundation\LibraryTranslations` only loads the `.mo` files |
 | Accessibility     | `<label for>`, `aria-describedby` for field errors, notices with `role="status"`/`"alert"`  |
 
 ## CI gates

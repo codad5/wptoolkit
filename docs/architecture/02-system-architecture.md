@@ -20,7 +20,7 @@
 │ Support     Validation · Sanitization · I18n · Str · Arr                │
 ├──────────────────────────────── Contracts ──────────────────────────────┤
 │ Container · CacheStore · Logger · HttpClient · RateLimiterStore         │
-│ Filesystem · Clock · Translator · Repository · Renderer · Middleware    │
+│ Filesystem · Clock · Repository · Renderer · Middleware                 │
 ├──────────────────────────────── Adapters ───────────────────────────────┤
 │ Cache: Transient · ObjectCache · Array · Null    Log: ErrorLog · QueryMonitor · BrowserConsole · Null │
 │ Http: WpHttp · Fake    Data: PostType · Options · CustomTable           │
