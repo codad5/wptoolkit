@@ -50,6 +50,16 @@ final class RestTransport
     }
 
     /**
+     * Where the JS client sends this route: `{namespace}/{path}` under the REST root.
+     *
+     * @return array{namespace: string, path: string}
+     */
+    public function clientConfig(Route $route): array
+    {
+        return ['namespace' => $this->identity->restNamespace($route->apiVersion()), 'path' => trim($route->path, '/')];
+    }
+
+    /**
      * @param WP_REST_Request<array<string, mixed>> $request
      */
     public function fromWordPress(WP_REST_Request $request): Request

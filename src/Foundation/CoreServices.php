@@ -14,6 +14,8 @@ use Codad5\WPToolkit\Adapters\Http\WpHttpClient;
 use Codad5\WPToolkit\Adapters\Log\LoggerFactory;
 use Codad5\WPToolkit\Adapters\Migrations\OptionMigrationStore;
 use Codad5\WPToolkit\Adapters\Repository\RepositoryFactory;
+use Codad5\WPToolkit\Assets\AssetManager;
+use Codad5\WPToolkit\Assets\JsNamespace;
 use Codad5\WPToolkit\Contracts\Cache\CacheStore;
 use Codad5\WPToolkit\Contracts\Clock\Clock;
 use Codad5\WPToolkit\Contracts\Container\Container;
@@ -102,6 +104,24 @@ final class CoreServices
         });
         $container->singleton(Renderer::class, static fn (Container $c) => new PhpTemplateRenderer($c->get(TemplateLocator::class)));
 
+        // Assets: declared any time, handed to WordPress only inside the enqueue hooks (C4).
+        $container->singleton(AssetManager::class, static function () use ($app, $config): AssetManager {
+            $dir = dirname($config->file);
+            $library = dirname(__DIR__, 2);
+            $assets = new AssetManager(
+                $app->identity(),
+                new JsNamespace($app->identity(), Application::VERSION),
+                $dir,
+                self::contentUrl($dir),
+                $library,
+                self::contentUrl($library),
+                $config->textDomain(),
+                $dir . '/' . trim((string) $config->get('domain_path', 'languages'), '/')
+            );
+            $assets->register($app->hooks());
+            return $assets;
+        });
+
         $container->singleton(MigrationStore::class, static fn () => new OptionMigrationStore($app->identity()));
         $container->singleton(Migrator::class, static fn (Container $c) => new Migrator(
             $app->resolvedMigrations(),
@@ -117,5 +137,16 @@ final class CoreServices
             $app->onBooted(static fn () => $router->register());
             return $router;
         });
+    }
+
+    /**
+     * The URL of a directory under wp-content — plugins, mu-plugins and themes alike.
+     */
+    private static function contentUrl(string $dir): string
+    {
+        $content = wp_normalize_path(WP_CONTENT_DIR);
+        $path = wp_normalize_path($dir);
+
+        return str_starts_with($path, $content . '/') ? content_url(substr($path, strlen($content))) : content_url();
     }
 }

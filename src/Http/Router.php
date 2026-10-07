@@ -132,6 +132,33 @@ final class Router
     }
 
     /**
+     * What the JS client needs to call every route by name (`api.call('todos', …)`): URLs, the REST
+     * nonce and, per route, its methods and REST path or Ajax action and nonce. REST is used when a
+     * route offers it. Build this while enqueuing — nonces belong to the current user.
+     *
+     * @return array{restUrl: string, restNonce: string, ajaxUrl: string, routes: array<string, array<string, mixed>>}
+     */
+    public function clientConfig(): array
+    {
+        $routes = [];
+        foreach ($this->routes as $route) {
+            $name = $route->routeName();
+            $useRest = in_array('rest', $route->transports(), true);
+            $entry = $routes[$name] ?? ['methods' => [], 'transport' => $useRest ? 'rest' : 'ajax']
+                + ($useRest ? $this->rest->clientConfig($route) : $this->ajax->clientConfig($route));
+            $entry['methods'] = array_values(array_unique([...$entry['methods'], ...$route->methods]));
+            $routes[$name] = $entry;
+        }
+
+        return [
+            'restUrl' => rest_url(),
+            'restNonce' => wp_create_nonce('wp_rest'),
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'routes' => $routes,
+        ];
+    }
+
+    /**
      * Every route, for `routes:list` and tests.
      *
      * @return list<Route>

@@ -26,17 +26,19 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 ### 5.2 Assets — ports `EnqueueManager` (fixes C4 by design)
 
-- [ ] `Assets\AssetManager`: registration only happens on `wp_enqueue_scripts`,
+- [x] `Assets\AssetManager`: registration only happens on `wp_enqueue_scripts`,
       `admin_enqueue_scripts`, `login_enqueue_scripts`; calling early queues instead of erroring
-- [ ] Reads `@wordpress/scripts` `*.asset.php` manifests (dependencies + version)
-- [ ] Handles via `Identity::handle()`; `wp_set_script_translations` for every script with strings
-- [ ] Localized data goes to `window.wptoolkit[slug]` (`Identity::jsAccessor()`), written with a
+- [x] Reads `@wordpress/scripts` `*.asset.php` manifests (dependencies + version)
+- [x] Handles via `Identity::handle()`; `wp_set_script_translations` for every script that depends on `wp-i18n`
+- [x] Localized data goes to `window.wptoolkit[slug]` (`Identity::jsAccessor()`), written with a
       merge (`window.wptoolkit = window.wptoolkit || {}`) so no plugin can wipe another's entry;
       each entry carries `toolkitVersion` — there is no single top-level version
-- [ ] Lock the namespace itself (`Object.defineProperty(window, 'wptoolkit', { value: …, writable:
+- [x] Lock the namespace itself (`Object.defineProperty(window, 'wptoolkit', { value: …, writable:
       false, configurable: false })`) so no script can replace it; entries stay writable by
-      their own plugin. E2E: a script assigning `window.wptoolkit = {}` doesn't wipe other entries
-- [ ] RTL: `wp_style_add_data($handle, 'rtl', 'replace')` for styles that ship an `-rtl.css`
+      their own plugin. Proven by running the generated script in Node (`AssetManagerTest`): assigning
+      `window.wptoolkit = {}` doesn't wipe other entries. The JS client is wired the same way
+      (`AssetManager::client($router)` → `window.wptoolkit[slug].api`, routes from `Router::clientConfig()`)
+- [x] RTL: `wp_style_add_data($handle, 'rtl', 'replace')` for styles that ship an `-rtl.css`
 
 ### 5.3 Admin pages and frontend routes — splits `Page` (1,831 lines)
 
