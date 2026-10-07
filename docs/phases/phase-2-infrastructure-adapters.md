@@ -1,0 +1,89 @@
+# Phase 2 — Infrastructure adapters
+
+**Effort:** M (~0.75 active day) · **Depends on:** Phase 1 · **Unblocks:** Phases 3 and 4
+
+---
+
+## Goal
+
+**Every external thing the library touches — cache, HTTP, logging, rate limiting, the filesystem —
+sits behind one of our contracts, with at least one WordPress adapter and one in-memory adapter, all
+passing the same contract test suite.**
+
+([ADR-0004](../adr/0004-ports-and-adapters-at-real-seams.md),
+[ADR-0012](../adr/0012-zero-runtime-dependencies.md))
+
+---
+
+## Scope
+
+### 2.1 The contract-test pattern
+
+- [ ] An abstract PHPUnit test case per contract (`CacheStoreContractTest`, …). Every adapter's test
+      extends it, so one behaviour list holds for every backend.
+
+### 2.2 Cache — ports 0.x `Utils/Cache`
+
+- [ ] `Contracts\Cache\CacheStore` (get, set, delete, has, remember, many, increment, flushGroup)
+- [ ] Adapters: `TransientStore`, `ObjectCacheStore`, `ArrayStore`, `NullStore`
+- [ ] `CacheFactory`: picks a driver from `config['cache']['driver']`, falls back to transients when
+      no persistent object cache exists
+- [ ] Keys always go through `Identity::transientKey()`; group flush without `LIKE` scans where the
+      backend supports it
+- [ ] Optional `Psr16Bridge` (only usable when the consumer installs `psr/simple-cache` themselves)
+
+### 2.3 Logging — replaces 0.x `Utils/Debugger`
+
+- [ ] `Contracts\Log\Logger` (PSR-3-shaped levels and context interpolation)
+- [ ] Adapters: `ErrorLogLogger`, `QueryMonitorLogger` (when the plugin is active), `BrowserConsoleLogger`
+      (buffers; prints only in `wp_footer` / `admin_footer`; only for users who can `manage_options`
+      and only when `WP_DEBUG`), `NullLogger`, `ArrayLogger` (tests)
+- [ ] `Psr3Bridge` (optional, same rule as 2.2)
+
+### 2.4 HTTP client — ports 0.x `Utils/APIHelper`
+
+- [ ] `Contracts\Http\HttpClient` + typed `HttpResponse` and `HttpException`
+- [ ] `WpHttpClient` (`wp_remote_request`), `FakeHttpClient` (queued responses, records requests)
+- [ ] `ApiClient` on top: base URL, auth strategies, retry with backoff on 429/5xx, timeouts, cached
+      GETs via `CacheStore`, request/response logging with secrets redacted
+
+### 2.5 Rate limiting — fixes C3
+
+- [ ] `Contracts\RateLimit\RateLimiterStore` + fixed-window and sliding-window limiters
+- [ ] Store backed by `CacheStore`; **refuses** non-persistent backends (an in-request array cache
+      can't rate-limit across requests) and warns once
+- [ ] Identifier strategies: user ID, IP (honouring a configurable trusted-proxy list, never raw
+      `X-Forwarded-For`), custom callable
+
+### 2.6 Filesystem — ports 0.x `Utils/Filesystem` (trimmed)
+
+- [ ] `Contracts\Filesystem\Filesystem` + `WpFilesystem` (`WP_Filesystem`) + `InMemoryFilesystem`
+- [ ] Path-traversal guard: every path is resolved inside an allowed root
+
+### 2.7 Clock
+
+- [ ] `Contracts\Clock` + `SystemClock` + `FrozenClock` — so cache expiry and rate windows are testable
+
+---
+
+## Definition of Done
+
+- Every contract has a shared contract-test suite, and **every adapter passes it**.
+- A rate-limited route returns 429 on the N+1st request **across separate HTTP requests** on wp-env
+  (proves C3 is fixed) — and with only an array cache configured, the app warns instead of silently
+  not limiting.
+- `ApiClient` retries a 503 then succeeds against `FakeHttpClient`; a secret header never appears in
+  the log output.
+- 0.x `Cache`, `Debugger`, `APIHelper`, `Filesystem` have equivalents in `src/`; their entries in
+  [07-migration-from-0x.md](../architecture/07-migration-from-0x.md) are filled in.
+
+## Deliberately not in this phase
+
+Redis/Memcached-specific adapters (the object cache adapter covers them through WordPress). A Guzzle
+adapter (consumers can write one against the contract).
+
+## Risks
+
+| Risk                                                    | Mitigation                                          |
+| ------------------------------------------------------- | --------------------------------------------------- |
+| Our contracts drift from PSR shapes and bridges get awkward | Keep method names and semantics PSR-identical; bridges are thin |
