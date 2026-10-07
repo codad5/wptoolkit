@@ -18,7 +18,13 @@ foreach ($dirs as $dir) {
         continue;
     }
 
-    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS));
+    // Skip hidden directories (build output such as tests/E2E/.build, which holds a deliberately
+    // broken fixture) and node_modules.
+    $files = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
+        new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+        static fn (SplFileInfo $item): bool => !$item->isDir()
+            || ($item->getFilename()[0] !== '.' && $item->getFilename() !== 'node_modules')
+    ));
     foreach ($files as $file) {
         if ($file->getExtension() !== 'php') {
             continue;

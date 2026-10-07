@@ -5,3 +5,8 @@ composer.lock
 .idea/
 *.test.md
 .phpstan.cache/
+node_modules/
+tests/E2E/.build/
+test-results/
+playwright-report/
+.auth/

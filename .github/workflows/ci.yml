@@ -104,6 +104,35 @@ jobs:
       # library string changed without regenerating languages/wptoolkit.pot (run: composer i18n).
       - run: git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -- languages/
 
+  e2e:
+    # Phase 1 Definition of Done on a real WordPress: safe boot (ADR-0013) and coexistence of two
+    # WPToolkit versions (ADR-0005, ADR-0020).
+    name: End-to-end (WordPress in Docker)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:start
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   unit:
     name: Unit tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04
