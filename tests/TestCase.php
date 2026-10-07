@@ -34,6 +34,10 @@ abstract class TestCase extends PHPUnitTestCase
             'absint' => static fn ($value) => abs((int) $value),
             'wp_unslash' => static fn ($value) => $value,
             'is_wp_error' => static fn ($thing) => $thing instanceof \WP_Error,
+            // Matches the WP_PLUGIN_DIR layout defined in tests/bootstrap.php.
+            'get_theme_root' => static fn () => ABSPATH . 'wp-content/themes',
+            // Unit tests only check that output goes through it; the real filtering is WordPress's.
+            'wp_kses_post' => static fn ($html) => (string) $html,
         ]);
 
         Functions\when('wp_send_json_success')->alias(

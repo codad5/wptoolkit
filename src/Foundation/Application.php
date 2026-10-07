@@ -42,8 +42,12 @@ final class Application
 
     private bool $booted = false;
 
+    private ?ToolkitCompatibility $incompatibility = null;
+
     private function __construct(private readonly Config $config)
     {
+        Coexistence::record(self::VERSION, Coexistence::thisCopyPath(), Coexistence::thisCopyNamespace());
+
         $this->container = new Container();
         $this->hooks = new HookRegistrar();
 
@@ -94,6 +98,12 @@ final class Application
         }
         $this->registered = true;
 
+        $compatibility = new ToolkitCompatibility($this->config);
+        if (!$compatibility->isCompatible()) {
+            $this->stayInert($compatibility);
+            return $this;
+        }
+
         foreach ($this->providerClasses as $class) {
             $provider = new $class($this);
             $provider->register();
@@ -112,6 +122,61 @@ final class Application
         }
 
         return $this;
+    }
+
+    /**
+     * Whether the application refused to start because the loaded WPToolkit doesn't satisfy
+     * `requires_toolkit` (ADR-0020).
+     */
+    public function isInert(): bool
+    {
+        return $this->incompatibility !== null;
+    }
+
+    /**
+     * Start nothing. Refuse activation if this is an activation request; otherwise tell administrators.
+     */
+    private function stayInert(ToolkitCompatibility $compatibility): void
+    {
+        $this->incompatibility = $compatibility;
+
+        if ($this->config->get('type', 'plugin') === 'plugin') {
+            register_activation_hook($this->config->file, [$this, 'refuseActivation']);
+        }
+
+        $this->hooks->addAction('admin_notices', [$this, 'printInertNotice']);
+        $this->hooks->addAction('network_admin_notices', [$this, 'printInertNotice']);
+    }
+
+    /**
+     * @internal Activation hook while inert: stops WordPress recording the plugin as active.
+     */
+    public function refuseActivation(): void
+    {
+        if ($this->incompatibility === null) {
+            return;
+        }
+
+        wp_die(
+            wp_kses_post($this->incompatibility->html()),
+            esc_html__('Plugin not activated', 'wptoolkit'),
+            ['back_link' => true, 'response' => 200]
+        );
+    }
+
+    /**
+     * @internal Admin notice while inert.
+     */
+    public function printInertNotice(): void
+    {
+        if ($this->incompatibility === null || !current_user_can('activate_plugins')) {
+            return;
+        }
+
+        printf(
+            '<div class="notice notice-error" role="alert">%s</div>',
+            wp_kses_post($this->incompatibility->html())
+        );
     }
 
     /**

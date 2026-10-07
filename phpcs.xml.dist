@@ -14,6 +14,17 @@
     <config name="minimum_wp_version" value="6.4"/>
 
     <rule ref="PSR12"/>
+
+    <!--
+        Translatable text must be one string literal (WordPress.WP.I18n), so a long sentence can't
+        be wrapped with concatenation. 160 leaves room for those; it is still a warning, not a hard limit.
+    -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="160"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
     <rule ref="PHPCompatibilityWP"/>
 
     <!-- The parts of WPCS that catch real bugs: escaping, nonces, input, SQL, i18n. -->

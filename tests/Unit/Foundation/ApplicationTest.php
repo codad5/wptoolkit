@@ -10,6 +10,7 @@ use Codad5\WPToolkit\Contracts\Container\Container;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 use Codad5\WPToolkit\Exceptions\LifecycleException;
 use Codad5\WPToolkit\Foundation\Application;
+use Codad5\WPToolkit\Foundation\Coexistence;
 use Codad5\WPToolkit\Foundation\Config;
 use Codad5\WPToolkit\Foundation\Identity;
 use Codad5\WPToolkit\Tests\Fixtures\Container\Logger;
@@ -217,6 +218,81 @@ final class ApplicationTest extends TestCase
         Application::create('/themes/t/functions.php', ['slug' => 't', 'type' => 'theme'])->boot();
 
         self::assertFalse($called);
+    }
+
+    public function test_create_records_this_copy_in_the_coexistence_ledger(): void
+    {
+        $this->app();
+
+        $copies = Coexistence::copies();
+        self::assertArrayHasKey(Coexistence::thisCopyPath(), $copies);
+        self::assertSame(Application::VERSION, $copies[Coexistence::thisCopyPath()]['version']);
+        self::assertSame('Codad5\\WPToolkit', $copies[Coexistence::thisCopyPath()]['namespace']);
+    }
+
+    public function test_a_satisfied_requires_toolkit_boots_normally(): void
+    {
+        do_action('init');
+
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'requires_toolkit' => '^1.0'])
+            ->providers([FirstProvider::class])
+            ->boot();
+
+        self::assertFalse($app->isInert());
+        self::assertContains('boot:first', EventLog::$events);
+    }
+
+    public function test_an_unsatisfied_requires_toolkit_starts_nothing_and_tells_administrators(): void
+    {
+        do_action('init');
+        Functions\when('current_user_can')->justReturn(true);
+
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'name' => 'My <Plugin>', 'requires_toolkit' => '^9.0'])
+            ->providers([FirstProvider::class])
+            ->boot();
+
+        self::assertTrue($app->isInert());
+        self::assertSame([], EventLog::$events, 'no provider was registered or booted');
+        self::assertNotFalse(has_action('admin_notices', [$app, 'printInertNotice']));
+
+        ob_start();
+        $app->printInertNotice();
+        $notice = (string) ob_get_clean();
+
+        self::assertStringContainsString('My &lt;Plugin&gt; needs WPToolkit ^9.0', $notice);
+        self::assertStringContainsString(Application::VERSION, $notice);
+    }
+
+    public function test_inert_notice_is_only_for_users_who_manage_plugins(): void
+    {
+        Functions\when('current_user_can')->justReturn(false);
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'requires_toolkit' => '^9.0'])->boot();
+
+        ob_start();
+        $app->printInertNotice();
+
+        self::assertSame('', ob_get_clean());
+    }
+
+    public function test_activating_an_incompatible_plugin_is_refused(): void
+    {
+        $activation = null;
+        Functions\when('register_activation_hook')->alias(function ($file, $cb) use (&$activation) {
+            $activation = $cb;
+        });
+        Functions\expect('wp_die')->once()->with(\Mockery::pattern('/needs WPToolkit \^9\.0/'), \Mockery::any(), \Mockery::any());
+
+        $app = Application::create('/p/p.php', ['slug' => 'my-plugin', 'requires_toolkit' => '^9.0'])->boot();
+
+        self::assertSame([$app, 'refuseActivation'], $activation);
+        $app->refuseActivation();
+    }
+
+    public function test_requires_toolkit_must_be_a_string(): void
+    {
+        $this->expectException(InvalidConfigException::class);
+
+        Application::create('/p/p.php', ['slug' => 'my-plugin', 'requires_toolkit' => 1])->boot();
     }
 
     private function app(): Application

@@ -77,9 +77,9 @@ ruinous to retrofit once every module has invented its own hook names and option
 ### 1.5 Coexistence ([03-multi-version-coexistence.md](../architecture/03-multi-version-coexistence.md))
 
 - [ ] `Application::VERSION` constant, bumped by the release workflow
-- [ ] The coexistence ledger: each copy records `{version, path, namespace}` at load
-- [ ] `requires_toolkit` constraint in `Application::create()`; on mismatch → admin notice naming
-      both plugins and the fix, **refuse to boot** (no fatal)
+- [x] The coexistence ledger: each copy records `{version, path, namespace}` at load
+- [x] `requires_toolkit` constraint; on mismatch → stays inert, **refuses activation**, admin notice
+      naming the plugin/theme whose copy won and what to do ([ADR-0020](../adr/0020-incompatible-unscoped-copies-refuse-activation.md))
 - [ ] Strauss configuration documented and used by both fixture plugins
 - [ ] **Composer is optional** ([ADR-0014](../adr/0014-composer-is-optional.md)):
       `bootstrap/autoload.php` (~50-line PSR-4 loader, no globals) replaces the 654-line 0.x
