@@ -30,6 +30,9 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 - [ ] Localized data goes to `window.wptoolkit[slug]` (`Identity::jsAccessor()`), written with a
       merge (`window.wptoolkit = window.wptoolkit || {}`) so no plugin can wipe another's entry;
       each entry carries `toolkitVersion` — there is no single top-level version
+- [ ] Lock the namespace itself (`Object.defineProperty(window, 'wptoolkit', { value: …, writable:
+      false, configurable: false })`) so no script can replace it; entries stay writable by
+      their own plugin. E2E: a script assigning `window.wptoolkit = {}` doesn't wipe other entries
 - [ ] RTL: `wp_style_add_data($handle, 'rtl', 'replace')` for styles that ship an `-rtl.css`
 
 ### 5.3 Admin pages and frontend routes — splits `Page` (1,831 lines)

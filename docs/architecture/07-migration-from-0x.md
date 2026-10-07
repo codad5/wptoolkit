@@ -7,14 +7,14 @@ migration guide (Phase 6) is written from this table.
 
 | 0.x class                    | Lines | 1.0 fate                                                                                   | Phase | Status |
 | ---------------------------- | ----: | ------------------------------------------------------------------------------------------ | ----- | ------ |
-| `Registry`                   |   556 | **Replaced** by `Application` + `Container`                                                | 1     | ☐      |
-| `Utils/Autoloader`           |   654 | **Replaced** by `bootstrap/autoload.php` (~50 lines) + Composer ([ADR-0014](../adr/0014-composer-is-optional.md)) | 1 | ☐ |
-| `Utils/Config`               |   534 | **Ported** → readonly `Foundation\Config`                                                  | 1     | ☐      |
-| `Utils/Requirements`         |   129 | **Folded into** `bootstrap/guard.php` ([ADR-0013](../adr/0013-plugins-boot-through-a-syntax-safe-guard.md)) | 1 | ☐ |
-| `Utils/Cache`                |   398 | **Ported** → `CacheStore` + adapters                                                       | 2     | ☐      |
-| `Utils/Debugger`             |   668 | **Replaced** → `Logger` adapters                                                           | 2     | ☐      |
-| `Utils/APIHelper`            |   564 | **Ported** → `HttpClient` + `ApiClient`                                                    | 2     | ☐      |
-| `Utils/Filesystem`           |  1273 | **Ported, trimmed** → `Filesystem` adapter                                                 | 2     | ☐      |
+| `Registry`                   |   556 | **Replaced** by `Application` + `Container`                                                | 1     | ✅ `Foundation\Application`, `Container` |
+| `Utils/Autoloader`           |   654 | **Replaced** by `bootstrap/autoload.php` (~50 lines) + Composer ([ADR-0014](../adr/0014-composer-is-optional.md)) | 1 | ✅ `bootstrap/autoload.php` |
+| `Utils/Config`               |   534 | **Ported** → readonly `Foundation\Config`                                                  | 1     | ✅ `Foundation\Config` (key `text_domain` kept) |
+| `Utils/Requirements`         |   129 | **Folded into** `bootstrap/guard.php` ([ADR-0013](../adr/0013-plugins-boot-through-a-syntax-safe-guard.md)) | 1 | ✅ `bootstrap/guard.php` |
+| `Utils/Cache`                |   398 | **Ported** → `CacheStore` + adapters                                                       | 2     | ✅ `Contracts\Cache\CacheStore` + adapters |
+| `Utils/Debugger`             |   668 | **Replaced** → `Logger` adapters                                                           | 2     | ✅ `Contracts\Log\Logger` + adapters |
+| `Utils/APIHelper`            |   564 | **Ported** → `HttpClient` + `ApiClient`                                                    | 2     | ✅ `Http\Client\ApiClient` |
+| `Utils/Filesystem`           |  1273 | **Ported, trimmed** → `Filesystem` adapter                                                 | 2     | ✅ `Contracts\Filesystem\Filesystem` + adapters |
 | `Utils/Ajax`                 |   777 | **Merged** → `Http\Router` + middleware + `AjaxTransport`                                  | 3     | ☐      |
 | `Utils/RestRoute`            |  1002 | **Merged** → same, `RestTransport`                                                         | 3     | ☐      |
 | `Utils/InputValidator`       |   581 | **Ported** → `Support\Validation` rule objects                                             | 3     | ☐      |
