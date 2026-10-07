@@ -1,40 +1,16 @@
-# Copyright (C) 2026 Codad5
-# This file is distributed under the same license as the WPToolkit Todo List plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: WPToolkit 1.0.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wptoolkit\n"
+"Project-Id-Version: WPToolkit\n"
+"Report-Msgid-Bugs-To: \n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T19:54:20+00:00\n"
+"POT-Creation-Date: 2026-10-07T20:02:02+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wptoolkit\n"
-
-#. Plugin Name of the plugin
-#: codad5-wptoolkit.php:3
-msgid "WPToolkit Todo List"
-msgstr ""
-
-#. Plugin URI of the plugin
-#. Author URI of the plugin
-#: codad5-wptoolkit.php:4
-#: codad5-wptoolkit.php:8
-msgid "https://codad5.me"
-msgstr ""
-
-#. Description of the plugin
-#: codad5-wptoolkit.php:5
-msgid "Simple Todo List plugin for testing WPToolkit framework"
-msgstr ""
-
-#. Author of the plugin
-#: codad5-wptoolkit.php:7
-msgid "Codad5"
-msgstr ""
 
 #. translators: 1: required PHP version, 2: current PHP version
 #: bootstrap/guard.php:166

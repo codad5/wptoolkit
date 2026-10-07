@@ -15,11 +15,11 @@ migration guide (Phase 6) is written from this table.
 | `Utils/Debugger`             |   668 | **Replaced** → `Logger` adapters                                                           | 2     | ✅ `Contracts\Log\Logger` + adapters |
 | `Utils/APIHelper`            |   564 | **Ported** → `HttpClient` + `ApiClient`                                                    | 2     | ✅ `Http\Client\ApiClient` |
 | `Utils/Filesystem`           |  1273 | **Ported, trimmed** → `Filesystem` adapter                                                 | 2     | ✅ `Contracts\Filesystem\Filesystem` + adapters |
-| `Utils/Ajax`                 |   777 | **Merged** → `Http\Router` + middleware + `AjaxTransport`                                  | 3     | ☐      |
-| `Utils/RestRoute`            |  1002 | **Merged** → same, `RestTransport`                                                         | 3     | ☐      |
-| `Utils/InputValidator`       |   581 | **Ported** → `Support\Validation` rule objects                                             | 3     | ☐      |
-| `DB/MetaBox`                 |  1272 | **Rebuilt** on `Field` + `FieldFactory`                                                    | 4     | ☐      |
-| `DB/Model`                   |  2655 | **Split** → `Entity`, repositories, `Search`, `Admin\Columns`, `Authorize` middleware       | 4     | ☐      |
+| `Utils/Ajax`                 |   777 | **Merged** → `Http\Router` + middleware + `AjaxTransport`                                  | 3     | ✅ `Http\Router`, `Dispatcher`, `AjaxTransport` (file deleted with `legacy/`, Phase 5) |
+| `Utils/RestRoute`            |  1002 | **Merged** → same, `RestTransport`                                                         | 3     | ✅ `Http\Transport\RestTransport` (file deleted with `legacy/`, Phase 5) |
+| `Utils/InputValidator`       |   581 | **Ported** → `Support\Validation` rule objects                                             | 3     | ✅ `Support\Validation\{Rules, Validator, Sanitizer}` |
+| `DB/MetaBox`                 |  1272 | **Rebuilt** on `Field` + `FieldFactory`                                                    | 4     | ✅ `Data\MetaBox` + `Data\Field\*`; **deleted** |
+| `DB/Model`                   |  2655 | **Split** → `Entity`, repositories, `Search`, `Admin\Columns`, `Authorize` middleware       | 4     | ✅ `Data\Entity`, `Adapters\Repository\*`, `Data\Search`, `Admin\Columns`, route access rules; **deleted** |
 | `Utils/ViewLoader` + `ViewHelper` | 655 + 95 | **Ported** → `View\Renderer` + `TemplateLocator` + `Escaper`                   | 5     | ☐      |
 | `Utils/EnqueueManager`       |  1286 | **Ported** → `Assets\AssetManager`                                                         | 5     | ☐      |
 | `Utils/Page`                 |  1831 | **Split** → `Admin\Page` + router frontend routes                                          | 5     | ☐      |

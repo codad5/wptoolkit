@@ -11,7 +11,7 @@
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-blue.svg)](https://php.net)
 [![WordPress](https://img.shields.io/badge/WordPress-%3E%3D6.4-blue.svg)](https://wordpress.org)
 
-[**📖 Documentation**](API.md) • [**🚀 Quick Start**](#-quick-start) • [**💡 Examples**](sample-plugins/) • [**🔧 API Reference**](API.md)
+[**📖 Documentation**](API.md) • [**🚀 Quick Start**](#-quick-start) • [**💡 Examples**](examples/) • [**🔧 API Reference**](API.md)
 
 </div>
 
@@ -302,7 +302,7 @@ That's it! You now have:
 
 ## 📚 Complete Example: Todo List Plugin
 
-Check out our complete [Todo List Plugin](sample-plugins/Todo/) that demonstrates:
+Check out our complete [Todo List Plugin](examples/todo/) that demonstrates:
 
 ### Real-World Features
 - **Custom Post Type** with advanced MetaBox fields
@@ -455,7 +455,7 @@ $ajax->addAction('save_data', [$controller, 'saveData'], [
 ## 🎓 Learning Path
 
 ### Beginner
-1. **[Todo Plugin](sample-plugins/Todo/)** - Complete CRUD application
+1. **[Todo Plugin](examples/todo/)** - Complete CRUD application
 2. **Basic Model** - Custom post types with MetaBoxes
 3. **Settings Pages** - Configuration management
 4. **Admin Columns** - Custom admin interface

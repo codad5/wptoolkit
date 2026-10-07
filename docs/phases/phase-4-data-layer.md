@@ -108,12 +108,20 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.9 Port and delete
 
-- [ ] Todo example on entities + repositories; port `pau-alumni-manager`'s model shapes as fixtures
-- [ ] Delete `legacy/DB/Model.php` and `legacy/DB/MetaBox.php`; fill in the migration map
+- [x] Todo example on entities + repositories (`examples/todo`, booted by `TodoExampleTest`); pau's and
+      silverbird's model shapes are fixtures (`PauExecutive`, `SilverbirdMovie`, `DataCompatibilityTest`)
+- [x] Delete `legacy/DB/Model.php` and `legacy/DB/MetaBox.php`; fill in the migration map. The 0.x
+      `sample-plugins/Todo` and the root `codad5-wptoolkit.php` that loaded it went with them
+      (`legacy/Utils/Page.php` still names `Model` in a type hint; it goes in Phase 5)
 
 ---
 
 ## Definition of Done
+
+**Status: done (2026-10-07).** Each line below is a test that runs in CI: `SearchOnWordPressTest`
+(C1, S1), `FieldTest::test_custom_types_plug_in_without_changing_the_library`, the repository contract
+on `PostTypeRepositoryOnWordPressTest` and `CustomTableRepositoryOnWordPressTest`, and
+`MetaBoxTest::test_anonymous_user_cannot_read_metabox_data`.
 
 - Search "foo" across title + meta returns posts matching **either** (C1 regression test), never a
   draft or private post to a user who can't read it, and never a meta key outside the allow-list.
