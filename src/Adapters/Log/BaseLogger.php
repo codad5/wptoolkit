@@ -10,6 +10,7 @@ namespace Codad5\WPToolkit\Adapters\Log;
 
 use Codad5\WPToolkit\Contracts\Log\Logger;
 use Codad5\WPToolkit\Contracts\Log\LogLevel;
+use Codad5\WPToolkit\Contracts\Log\RedactsKeys;
 use DateTimeInterface;
 use Stringable;
 use Throwable;
@@ -18,8 +19,11 @@ use Throwable;
  * The shared part of every logger: level filtering, `{placeholder}` interpolation and redaction of
  * secrets, so an adapter only decides where a finished line goes.
  */
-abstract class BaseLogger implements Logger
+abstract class BaseLogger implements Logger, RedactsKeys
 {
+    /** @var list<string> Lowercase keys registered as secret, matched exactly. */
+    private array $secretKeys = [];
+
     /** Context keys whose values never reach a log (matched case-insensitively, as substrings). */
     private const SECRET_KEYS = ['password', 'passwd', 'secret', 'token', 'api_key', 'apikey', 'authorization', 'cookie', 'nonce'];
 
@@ -36,6 +40,11 @@ abstract class BaseLogger implements Logger
      */
     abstract protected function write(LogLevel $level, string $message, array $context): void;
 
+    public function redactKeys(string ...$keys): void
+    {
+        $this->secretKeys = array_values(array_unique([...$this->secretKeys, ...array_map('strtolower', $keys)]));
+    }
+
     public function log(LogLevel|string $level, string|Stringable $message, array $context = []): void
     {
         $level = $level instanceof LogLevel ? $level : LogLevel::fromName($level);
@@ -43,7 +52,7 @@ abstract class BaseLogger implements Logger
             return;
         }
 
-        $context = self::redact($context);
+        $context = self::redact($context, $this->secretKeys);
         $this->write($level, self::interpolate((string) $message, $context), $context);
     }
 
@@ -103,18 +112,19 @@ abstract class BaseLogger implements Logger
     }
 
     /**
-     * Hide values whose key looks secret, at any depth.
+     * Hide values whose key looks secret, or is one of `$secretKeys`, at any depth.
      *
      * @param array<array-key, mixed> $context
+     * @param list<string> $secretKeys Lowercase keys that are always secret.
      * @return array<array-key, mixed>
      */
-    public static function redact(array $context): array
+    public static function redact(array $context, array $secretKeys = []): array
     {
         foreach ($context as $key => $value) {
-            if (is_string($key) && self::looksSecret($key)) {
+            if (is_string($key) && (self::looksSecret($key) || in_array(strtolower($key), $secretKeys, true))) {
                 $context[$key] = self::REDACTED;
             } elseif (is_array($value)) {
-                $context[$key] = self::redact($value);
+                $context[$key] = self::redact($value, $secretKeys);
             }
         }
 

@@ -10,6 +10,7 @@ namespace Codad5\WPToolkit\Adapters\Log;
 
 use Codad5\WPToolkit\Contracts\Log\Logger;
 use Codad5\WPToolkit\Contracts\Log\LogLevel;
+use Codad5\WPToolkit\Contracts\Log\RedactsKeys;
 use Stringable;
 
 /**
@@ -24,6 +25,16 @@ final class StackLogger extends BaseLogger
     {
         parent::__construct(LogLevel::Debug);
         $this->loggers = array_values($loggers);
+    }
+
+    public function redactKeys(string ...$keys): void
+    {
+        parent::redactKeys(...$keys);
+        foreach ($this->loggers as $logger) {
+            if ($logger instanceof RedactsKeys) {
+                $logger->redactKeys(...$keys);
+            }
+        }
     }
 
     public function log(LogLevel|string $level, string|Stringable $message, array $context = []): void

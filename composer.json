@@ -78,6 +78,7 @@
         "test:integration": "npx wp-env run tests-cli --env-cwd=wp-content/plugins/wptoolkit vendor/bin/phpunit -c phpunit.integration.xml.dist"
     },
     "suggest": {
+        "ext-sodium": "To encrypt sensitive settings at rest without WordPress's slower sodium_compat fallback",
         "psr/log": "To use Psr3Bridge / PsrLoggerAdapter with PSR-3 loggers such as Monolog",
         "psr/simple-cache": "To expose a CacheStore as PSR-16 (Psr16Bridge)",
         "psr/container": "To expose the container as PSR-11 (Psr11Bridge)"

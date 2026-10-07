@@ -47,13 +47,16 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 ### 5.4 Settings — ports `Settings`
 
-- [ ] On the Settings API, built from the Phase 4 field system; per-field sanitize/validate
-- [ ] Storage through `OptionsRepository` with `Identity::optionKey()`
-- [ ] **Sensitive fields** ([ADR-0021](../adr/0021-sensitive-settings-are-read-only-by-name.md)): readable only by
+- [x] On the Settings API, built from the Phase 4 field system; per-field sanitize/validate
+      (`Admin\Settings\Settings` + `SettingsForm`; an invalid value keeps the old one and shows why)
+- [x] Storage with `Identity::optionKey()` — one option per setting, exactly 0.x's keys and formats
+      (`OptionsRepository` keeps a whole collection in one option, which would have broken ADR-0016)
+- [x] **Sensitive fields** ([ADR-0021](../adr/0021-sensitive-settings-are-read-only-by-name.md)): readable only by
       name; omitted from `all()`, JSON, exports and REST/Ajax; password input that never echoes
       the stored value (blank keeps it); keys registered for log redaction; refused in JS
       localization; optional sodium encryption at rest
-- [ ] Regression test reproducing pau's `/settings` route: the API key is absent from the response
+- [x] Regression test reproducing pau's `/settings` route: the API key is absent from the response
+- [x] Settings upcasters (moved from Phase 4.3b): `Settings::upcast($name, fn ($old) => …)`
 
 ### 5.5 Notices — ports `Notification`
 

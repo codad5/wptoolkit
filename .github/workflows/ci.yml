@@ -195,6 +195,8 @@ jobs:
           php-version: ${{ matrix.php }}
           tools: composer:v2
           coverage: none
+          # Encrypted settings (ADR-0021) — WordPress ships sodium_compat; unit tests use the extension.
+          extensions: sodium
       # The lock-free install resolves for the 8.1 platform pin; newer PHPs run the same set.
       - run: composer install --no-interaction --no-progress --prefer-dist
       - run: composer test
