@@ -149,6 +149,23 @@ final class ContainerTest extends TestCase
         $this->container->get(NeedsScalar::class);
     }
 
+    public function test_optional_parameters_keep_their_default_unless_the_class_is_bound(): void
+    {
+        $unbound = $this->container->get(Newsletter::class . 'WithClock');
+        self::assertNull($unbound->audit, 'an optional dependency is not autowired');
+
+        $logger = new Logger();
+        $this->container->instance(Logger::class, $logger);
+        self::assertSame($logger, $this->container->get(Newsletter::class . 'WithClock')->audit, 'but a bound one is used');
+    }
+
+    public function test_an_optional_dependency_that_cannot_be_built_does_not_break_construction(): void
+    {
+        // FrozenClock(?DateTimeImmutable $now = null): DateTimeImmutable isn't buildable from the
+        // container, and mustn't be attempted.
+        self::assertInstanceOf(\Codad5\WPToolkit\Adapters\Clock\FrozenClock::class, $this->container->get(\Codad5\WPToolkit\Adapters\Clock\FrozenClock::class));
+    }
+
     public function test_call_injects_class_parameters_and_accepts_named_values(): void
     {
         $result = $this->container->call(

@@ -171,8 +171,11 @@ final class Container implements ContainerContract
                     $class = $parameter->getDeclaringClass()?->getName() ?? $class;
                 }
 
-                // A class we can't provide still falls back to its default or null.
-                if ($this->has($class) || (!$parameter->isDefaultValueAvailable() && !$type->allowsNull())) {
+                // Required: autowire. Optional (default or nullable): only use the container when
+                // the class was bound explicitly — otherwise respect the default, rather than
+                // autowiring something the author made optional on purpose.
+                $optional = $parameter->isDefaultValueAvailable() || $type->allowsNull();
+                if (!$optional || $this->isBound($class)) {
                     $arguments[] = $this->get($class);
                     continue;
                 }
@@ -192,6 +195,11 @@ final class Container implements ContainerContract
         }
 
         return $arguments;
+    }
+
+    private function isBound(string $id): bool
+    {
+        return array_key_exists($id, $this->instances) || isset($this->definitions[$id]);
     }
 
     private function isInstantiableClass(string $id): bool
