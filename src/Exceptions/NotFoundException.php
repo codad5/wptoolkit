@@ -15,6 +15,9 @@ final class NotFoundException extends ContainerException
 {
     public static function forId(string $id): self
     {
-        return new self(sprintf('No entry or class found for "%s". Register it with bind(), singleton() or instance().', $id));
+        return new self(sprintf(
+            'No entry or class found for "%s". Register it with bind(), singleton() or instance().',
+            $id
+        ));
     }
 }

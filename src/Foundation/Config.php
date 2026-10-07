@@ -38,7 +38,8 @@ final class Config
         $slug = $values['slug'] ?? null;
         if (!is_string($slug) || preg_match('/^[a-z0-9][a-z0-9_-]*$/', $slug) !== 1) {
             throw new InvalidConfigException(
-                'Config needs a "slug" of lowercase letters, digits, hyphens and underscores, starting with a letter or digit.'
+                'Config needs a "slug" of lowercase letters, digits, hyphens and underscores, '
+                . 'starting with a letter or digit.'
             );
         }
 

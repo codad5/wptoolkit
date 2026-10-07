@@ -38,7 +38,11 @@ final class Container implements ContainerContract
     /** @var list<string> Ids currently being resolved, outermost first. */
     private array $resolving = [];
 
-    /** @var array<class-string, list<ReflectionParameter>|null> Constructor parameters per class; null = no constructor. */
+    /**
+     * Constructor parameters per class; null means the class has no constructor.
+     *
+     * @var array<class-string, list<ReflectionParameter>|null>
+     */
     private array $constructorCache = [];
 
     public function get(string $id): mixed

@@ -26,6 +26,10 @@ class ContainerException extends RuntimeException implements WPToolkitException
 
     public static function notInstantiable(string $class): self
     {
-        return new self(sprintf('%s is not instantiable (abstract class, interface or private constructor). Bind it to a concrete class or factory.', $class));
+        return new self(sprintf(
+            '%s is not instantiable (abstract class, interface or private constructor). '
+            . 'Bind it to a concrete class or factory.',
+            $class
+        ));
     }
 }

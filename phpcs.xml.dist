@@ -28,6 +28,15 @@
         </properties>
     </rule>
 
+    <!--
+        Exception messages are for logs and developers, not HTML output. The library never prints
+        one raw: clients get a generic, translated message (ADR-0008). Escaping them with
+        esc_html() would corrupt what ends up in the log.
+    -->
+    <rule ref="WordPress.Security.EscapeOutput">
+        <exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
+    </rule>
+
     <!-- CLI scripts print to a terminal, not a page. -->
     <rule ref="WordPress.Security.EscapeOutput">
         <exclude-pattern>bin/*</exclude-pattern>

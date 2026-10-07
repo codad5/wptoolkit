@@ -21,13 +21,13 @@ final class HookRegistrar
     public function addAction(string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1): void
     {
         add_action($hook, $callback, $priority, $acceptedArgs);
-        $this->hooks[] = ['type' => 'action', 'hook' => $hook, 'callback' => $callback, 'priority' => $priority, 'args' => $acceptedArgs];
+        $this->remember('action', $hook, $callback, $priority, $acceptedArgs);
     }
 
     public function addFilter(string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1): void
     {
         add_filter($hook, $callback, $priority, $acceptedArgs);
-        $this->hooks[] = ['type' => 'filter', 'hook' => $hook, 'callback' => $callback, 'priority' => $priority, 'args' => $acceptedArgs];
+        $this->remember('filter', $hook, $callback, $priority, $acceptedArgs);
     }
 
     /**
@@ -44,6 +44,20 @@ final class HookRegistrar
         }
 
         $this->hooks = [];
+    }
+
+    /**
+     * @param 'action'|'filter' $type
+     */
+    private function remember(string $type, string $hook, callable $callback, int $priority, int $acceptedArgs): void
+    {
+        $this->hooks[] = [
+            'type' => $type,
+            'hook' => $hook,
+            'callback' => $callback,
+            'priority' => $priority,
+            'args' => $acceptedArgs,
+        ];
     }
 
     /**
