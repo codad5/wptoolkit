@@ -19,21 +19,24 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.1 Field system (Factory + Strategy)
 
-- [ ] `Data\Field\Field` (immutable definition) with `sanitize()`, `validate()`, `render()` delegated
+- [x] `Data\Field\Field` (immutable definition) with `sanitize()`, `validate()`, `render()` delegated
       to its type
-- [ ] `Data\Field\FieldFactory`: `text`, `textarea`, `number`, `email`, `url`, `select`, `checkbox`,
-      `radio`, `date`, `color`, `media`, `wysiwyg`, `relation`, `repeater`, `group`
-- [ ] **Third-party field types register with the factory** — no edits to core (replaces the
+- [x] `Data\Field\FieldFactory`: `text`, `textarea`, `number`, `email`, `url`, `tel`, `select`,
+      `checkbox`, `radio`, `date`, `color`, `hidden`, `password`, `media` (alias `wp_media`), `wysiwyg`.
+      `relation`, `repeater` and `group` moved to 1.x — no consumer uses them and 0.x never had them
+- [x] **Third-party field types register with the factory** — no edits to core (replaces the
       `match ($field['type'])` blocks)
-- [ ] Every field: `<label for>`, `aria-describedby` for its error, translatable labels
-- [ ] A `sensitive` flag on field definitions (used by Settings, ADR-0021)
+- [x] Every field: `<label for>`, `aria-describedby` for its description, translatable labels
+      (save errors are an admin notice with `role="alert"`, not per-field)
+- [x] A `sensitive` flag on field definitions (used by Settings, ADR-0021)
 
 ### 4.2 MetaBox, rebuilt on fields
 
-- [ ] `Data\MetaBox` built from fields; closes the `MetaBox::$id` read-only TODO
-- [ ] On every save and every Ajax read: nonce, `edit_post` capability, post type matches the box's
+- [x] `Data\MetaBox` built from fields; closes the `MetaBox::$id` read-only TODO
+- [x] On every save and every Ajax read: nonce, `edit_post` capability, post type matches the box's
       screens, autosave/revision skipped
-- [ ] Quick edit support kept
+- [x] Quick edit support kept — values travel in the row's `add_inline_data` block (editors only),
+      so 0.x's public `nopriv` fetch endpoint is gone rather than guarded
 
 ### 4.3 Entities and repositories (Adapter)
 
