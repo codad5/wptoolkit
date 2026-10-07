@@ -39,6 +39,23 @@ it and breaking later; and keep a site-wide record of the loaded version.
 6. Messages are translated only at render time (admin notice, activation request), never while
    booting, so WordPress 6.7's early-translation notice can't fire.
 
+### The check runs in the consumer's own guard, not in the loaded classes
+
+Raised by the maintainer the same day: with unscoped copies, `Application` is *the other copy's*
+class, so a check written inside it runs the other copy's code — possibly a 0.x with no check, or a
+future version with different rules. A check can't trust the classes it's checking.
+
+So the authoritative check lives in `bootstrap/guard.php`, which every plugin loads **by file
+path** and which returns a closure — a file path can't be taken by another copy the way a class
+name can. The guard reads its own copy's namespace and version from its own files without loading
+a class, uses reflection to see whether `Application` was already loaded **from a different file**,
+reads that copy's version, and matches the consumer's `toolkit` constraint with a version matcher
+built into the guard itself. On a mismatch it never touches a WPToolkit class: its own activation
+closure refuses activation, and its own notice explains.
+
+`ToolkitCompatibility` inside `Application` remains as a second layer for consumers who don't use
+the guard — with the documented limit that it is then the loaded copy's code doing the judging.
+
 ## Options considered
 
 ### Option A — Activate, then go inert (first draft)

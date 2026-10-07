@@ -81,10 +81,10 @@ ruinous to retrofit once every module has invented its own hook names and option
 - [x] `requires_toolkit` constraint; on mismatch → stays inert, **refuses activation**, admin notice
       naming the plugin/theme whose copy won and what to do ([ADR-0020](../adr/0020-incompatible-unscoped-copies-refuse-activation.md))
 - [ ] Strauss configuration documented and used by both fixture plugins
-- [ ] **Composer is optional** ([ADR-0014](../adr/0014-composer-is-optional.md)):
+- [x] **Composer is optional** ([ADR-0014](../adr/0014-composer-is-optional.md)):
       `bootstrap/autoload.php` (~50-line PSR-4 loader, no globals) replaces the 654-line 0.x
       `Autoloader`; `bin/scope.php MyPlugin` rewrites the namespace with only the PHP CLI
-- [ ] Guard `autoload: 'auto'`: uses the plugin's `vendor/autoload.php` when present, else the
+- [x] Guard `autoload: 'auto'`: uses the plugin's `vendor/autoload.php` when present, else the
       standalone loader; standalone loader is idempotent per copy (tests for both paths)
 - [ ] Coexistence fixtures in **both** flavours: two Strauss-scoped Composer copies, and two
       `bin/scope.php`-scoped standalone copies
@@ -93,16 +93,16 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.6 Safe boot — the guard ([ADR-0013](../adr/0013-plugins-boot-through-a-syntax-safe-guard.md))
 
-- [ ] `bootstrap/guard.php` in PHP 5.6 syntax; `return`s a closure; defines no global names
-- [ ] Checks: PHP version, WordPress version, required extensions, optional required plugins
-- [ ] On a failed check: load nothing; plugin stays active but inert; admin notice (plugin name,
+- [x] `bootstrap/guard.php` in PHP 5.6 syntax; `return`s a closure; defines no global names
+- [x] Checks: PHP version, WordPress version, required extensions, optional required plugins
+- [x] On a failed check: load nothing; plugin stays active but inert; admin notice (plugin name,
       needs vs has, deactivate link); WP-CLI warning; activation refused with a clear message
-- [ ] Boot callback wrapped in `catch (Throwable)`: `ParseError`, Composer platform-check failures and
+- [x] Boot callback wrapped in `catch (Throwable)`: `ParseError`, Composer platform-check failures and
       boot exceptions make the plugin inert + logged + noticed, never a white screen
 - [ ] `HookRegistrar` containment mode: callbacks wrapped, exceptions logged; on in production, off
       in development
 - [ ] Example and fixture plugins' main files use the guard
-- [ ] CI: `php -l` on the guard and those main files under the oldest PHP image available; PHPCS
+- [x] CI: `php -l` on the guard and those main files under the oldest PHP image available; PHPCS
       PHPCompatibility `testVersion 5.6-` scoped to those files
 
 ### 1.7 Test infrastructure

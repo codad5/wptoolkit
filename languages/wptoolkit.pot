@@ -1,69 +1,156 @@
+# Copyright (C) 2026 Codad5
+# This file is distributed under the same license as the WPToolkit Todo List plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: WPToolkit\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: WPToolkit 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/codad5-wptoolkit\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T14:52:04+00:00\n"
+"POT-Creation-Date: 2026-10-07T15:01:54+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wptoolkit\n"
 
-#: Foundation/Application.php:162
+#. Plugin Name of the plugin
+#: codad5-wptoolkit.php:3
+msgid "WPToolkit Todo List"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: codad5-wptoolkit.php:4
+#: codad5-wptoolkit.php:8
+msgid "https://codad5.me"
+msgstr ""
+
+#. Description of the plugin
+#: codad5-wptoolkit.php:5
+msgid "Simple Todo List plugin for testing WPToolkit framework"
+msgstr ""
+
+#. Author of the plugin
+#: codad5-wptoolkit.php:7
+msgid "Codad5"
+msgstr ""
+
+#. translators: 1: required PHP version, 2: current PHP version
+#: bootstrap/guard.php:163
+#, php-format
+msgid "PHP %1$s or newer is required; this site runs PHP %2$s."
+msgstr ""
+
+#. translators: 1: required WordPress version, 2: current WordPress version
+#: bootstrap/guard.php:166
+#, php-format
+msgid "WordPress %1$s or newer is required; this site runs %2$s."
+msgstr ""
+
+#. translators: %s: PHP extension name
+#: bootstrap/guard.php:169
+#, php-format
+msgid "The PHP extension \"%s\" is required but not installed."
+msgstr ""
+
+#. translators: %s: plugin basename
+#: bootstrap/guard.php:172
+#, php-format
+msgid "The plugin \"%s\" must be active."
+msgstr ""
+
+#. translators: 1: required WPToolkit version, 2: loaded version, 3: path of the loaded copy
+#: bootstrap/guard.php:176
+#, php-format
+msgid "WPToolkit %1$s is required, but WPToolkit %2$s was already loaded from %3$s by another plugin or theme."
+msgstr ""
+
+#. translators: %s: loaded WPToolkit version
+#: bootstrap/guard.php:178
+#, php-format
+msgid "Deactivate that one, or use a version of this plugin built for WPToolkit %s."
+msgstr ""
+
+#: bootstrap/guard.php:179
+msgid "Developers: ship a scoped copy of WPToolkit."
+msgstr ""
+
+#. translators: 1: required WPToolkit version, 2: bundled version
+#: bootstrap/guard.php:183
+#, php-format
+msgid "WPToolkit %1$s is required, but this plugin bundles %2$s."
+msgstr ""
+
+#: bootstrap/guard.php:185
+msgid "It failed while starting. The error has been written to the PHP error log."
+msgstr ""
+
+#. translators: %s: path of the missing autoloader file
+#: bootstrap/guard.php:188
+#, php-format
+msgid "Its class loader is missing (%s). Reinstall the plugin."
+msgstr ""
+
+#. translators: %s: plugin name
+#: bootstrap/guard.php:199
+#, php-format
+msgid "%s has been paused and is not running:"
+msgstr ""
+
+#: bootstrap/guard.php:216
+#: src/Foundation/Application.php:162
 msgid "Plugin not activated"
 msgstr ""
 
 #. translators: 1: plugin name, 2: required version, 3: loaded version, 4: path of the loaded copy
-#: Foundation/ToolkitCompatibility.php:48
+#: src/Foundation/ToolkitCompatibility.php:48
 #, php-format
 msgid "%1$s needs WPToolkit %2$s, but WPToolkit %3$s was already loaded from %4$s."
 msgstr ""
 
 #. translators: 1: plugin name, 2: required version, 3: loaded version, 4: plugin type, 5: its name, 6: path
-#: Foundation/ToolkitCompatibility.php:58
+#: src/Foundation/ToolkitCompatibility.php:58
 #, php-format
 msgid "%1$s needs WPToolkit %2$s, but WPToolkit %3$s was already loaded by the %4$s \"%5$s\" (%6$s)."
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:76
+#: src/Foundation/ToolkitCompatibility.php:76
 msgid "the other plugin"
 msgstr ""
 
 #. translators: 1: the other plugin or theme, 2: this plugin
-#: Foundation/ToolkitCompatibility.php:82
+#: src/Foundation/ToolkitCompatibility.php:82
 #, php-format
 msgid "Deactivate %1$s, then %2$s can start. The two cannot run together until one of them is updated."
 msgstr ""
 
 #. translators: 1: this plugin, 2: WPToolkit major version such as 1.x, 3: the other plugin or theme
-#: Foundation/ToolkitCompatibility.php:88
+#: src/Foundation/ToolkitCompatibility.php:88
 #, php-format
 msgid "Install a version of %1$s built for WPToolkit %2$s, or update %3$s."
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:93
+#: src/Foundation/ToolkitCompatibility.php:93
 msgid "Developers: ship a scoped copy of WPToolkit so each plugin uses its own and this conflict cannot happen."
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:107
+#: src/Foundation/ToolkitCompatibility.php:107
 msgid "It has not been started."
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:108
+#: src/Foundation/ToolkitCompatibility.php:108
 msgid "What you can do:"
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:139
+#: src/Foundation/ToolkitCompatibility.php:139
 msgid "plugin"
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:140
+#: src/Foundation/ToolkitCompatibility.php:140
 msgid "must-use plugin"
 msgstr ""
 
-#: Foundation/ToolkitCompatibility.php:141
+#: src/Foundation/ToolkitCompatibility.php:141
 msgid "theme"
 msgstr ""

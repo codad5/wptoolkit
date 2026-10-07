@@ -57,7 +57,7 @@
         "sort-packages": true
     },
     "scripts": {
-        "lint": "@php bin/lint.php src legacy tests bin",
+        "lint": "@php bin/lint.php src legacy tests bin bootstrap",
         "cs": "phpcs",
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": "phpunit",
@@ -67,6 +67,6 @@
             "@analyse",
             "@test"
         ],
-        "i18n": "wp i18n make-pot src languages/wptoolkit.pot --domain=wptoolkit --package-name=WPToolkit"
+        "i18n": "wp i18n make-pot . languages/wptoolkit.pot --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap"
     }
 }

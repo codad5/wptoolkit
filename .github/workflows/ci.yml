@@ -44,6 +44,22 @@ jobs:
           coverage: none
       - run: php bin/lint.php src legacy tests bin
 
+  guard:
+    # ADR-0013: the guard must parse on servers too old for the library, so it can fail politely.
+    name: Guard parses on PHP ${{ matrix.php }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['5.6', '7.0', '7.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: php -l bootstrap/guard.php
+
   cs:
     name: Coding standards
     runs-on: ubuntu-24.04
@@ -56,6 +72,8 @@ jobs:
           coverage: none
       - run: composer install --no-interaction --no-progress --prefer-dist
       - run: vendor/bin/phpcs -q --report=checkstyle | cs2pr
+      - name: Guard uses only PHP 5.6 syntax
+        run: vendor/bin/phpcs -q --standard=PHPCompatibility --runtime-set testVersion 5.6- bootstrap/guard.php
 
   analyse:
     name: Static analysis

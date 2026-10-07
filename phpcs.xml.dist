@@ -4,6 +4,7 @@
 
     <file>src</file>
     <file>bin</file>
+    <file>bootstrap</file>
 
     <arg name="extensions" value="php"/>
     <arg name="colors"/>

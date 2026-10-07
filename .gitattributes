@@ -19,3 +19,4 @@
 /phpunit.xml.dist export-ignore
 /phpstan.neon.dist export-ignore
 /phpcs.xml.dist export-ignore
+/patchwork.json export-ignore
