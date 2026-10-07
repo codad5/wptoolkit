@@ -195,5 +195,29 @@ if (!class_exists('WP_Query')) {
     {
         /** @var WP_Post[] */
         public array $posts = [];
+
+        /** @var array<string, mixed> */
+        public array $query_vars = [];
+
+        /** @param array<string, mixed> $query */
+        public function __construct(array $query = [], public bool $mainQuery = true)
+        {
+            $this->query_vars = $query;
+        }
+
+        public function get(string $key, mixed $default = null): mixed
+        {
+            return $this->query_vars[$key] ?? $default;
+        }
+
+        public function set(string $key, mixed $value): void
+        {
+            $this->query_vars[$key] = $value;
+        }
+
+        public function is_main_query(): bool
+        {
+            return $this->mainQuery;
+        }
     }
 }

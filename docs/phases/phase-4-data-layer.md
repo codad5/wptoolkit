@@ -82,7 +82,10 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.6 Admin columns
 
-- [ ] `Admin\Columns` extracted from `Model`: declared per entity, sortable, quick-edit aware
+- [x] `Admin\Columns` extracted from `Model`: declared per meta box (so per entity via
+      `EntityRegistrar::entity()`'s box), placed like 0.x (`after_title`/`after_date`/`end`), sortable by
+      meta value or a callback, formatted (date, number, currency, choice labels, media thumbnails),
+      and quick-edit aware — the column id is the meta key the meta box's quick edit answers to
 
 ### 4.7 Security acceptance scenarios (carried over from 0.x)
 
