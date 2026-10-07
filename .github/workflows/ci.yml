@@ -104,6 +104,39 @@ jobs:
       # library string changed without regenerating languages/wptoolkit.pot (run: composer i18n).
       - run: git diff --exit-code -I 'POT-Creation-Date' -I 'X-Generator' -- languages/
 
+  integration:
+    # Adapters against a real WordPress + MySQL (wp-env tests container), PHPUnit 10 with a
+    # wp-load.php bootstrap (ADR-0010 amendment).
+    name: Integration (PHP ${{ matrix.php }}, WP ${{ matrix.wp }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
+        wp: ['6.4', 'latest']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: npm ci
+      - name: Pin PHP and WordPress for this matrix cell
+        run: |
+          core='null'
+          if [ "${{ matrix.wp }}" != "latest" ]; then core='"WordPress/WordPress#${{ matrix.wp }}"'; fi
+          echo "{\"phpVersion\": \"${{ matrix.php }}\", \"core\": ${core}}" > .wp-env.override.json
+          cat .wp-env.override.json
+      - run: npm run e2e:start
+      - run: composer test:integration
+
   e2e:
     # Phase 1 Definition of Done on a real WordPress: safe boot (ADR-0013) and coexistence of two
     # WPToolkit versions (ADR-0005, ADR-0020).

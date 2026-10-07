@@ -8,6 +8,7 @@
         "WP_DEBUG_DISPLAY": false
     },
     "mappings": {
+        "wp-content/plugins/wptoolkit": ".",
         "wp-content/e2e-bin": "./tests/E2E/bin",
         "wp-content/plugins/safe-ok": "./tests/E2E/.build/plugins/safe-ok",
         "wp-content/plugins/safe-php99": "./tests/E2E/.build/plugins/safe-php99",

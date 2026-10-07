@@ -26,3 +26,4 @@
 /.wp-env.json export-ignore
 /bin/phpstan-errors.php export-ignore
 /bin/lint.php export-ignore
+/phpunit.integration.xml.dist export-ignore

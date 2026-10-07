@@ -23,6 +23,15 @@ behaviour as a user sees it (admin screens, RTL, two plugins on one site).
 
 Every bug fix starts with a test that fails. Every security control has a regression test.
 
+### Amendment (2026-10-07): integration tests boot WordPress with wp-load.php, not wp-phpunit
+
+WordPress's own PHPUnit test library supports PHPUnit only up to 9.6; this project uses PHPUnit 10.
+Rather than run two PHPUnit versions, the integration suite (`tests/Integration`,
+`phpunit.integration.xml.dist`) runs inside wp-env's tests container and bootstraps a real WordPress
+with `wp-load.php`: real MySQL, transients, object cache, HTTP API and WP_Filesystem. Tests isolate
+themselves with unique keys and clean up after themselves instead of relying on the library's
+transaction rollback. Run with `composer test:integration` (wp-env must be started).
+
 ## Options considered
 
 ### Option A — Integration tests only

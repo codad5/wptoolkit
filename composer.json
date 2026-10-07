@@ -70,7 +70,8 @@
             "@analyse",
             "@test"
         ],
-        "i18n": "wp i18n make-pot . languages/wptoolkit.pot --slug=wptoolkit --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap"
+        "i18n": "wp i18n make-pot . languages/wptoolkit.pot --slug=wptoolkit --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap",
+        "test:integration": "npx wp-env run tests-cli --env-cwd=wp-content/plugins/wptoolkit vendor/bin/phpunit -c phpunit.integration.xml.dist"
     },
     "suggest": {
         "psr/log": "To use Psr3Bridge / PsrLoggerAdapter with PSR-3 loggers such as Monolog",

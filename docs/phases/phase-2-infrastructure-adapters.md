@@ -19,8 +19,8 @@ passing the same contract test suite.**
 
 ### 2.0 Integration test infrastructure (moved from Phase 1 §1.7)
 
-- [ ] `composer test:integration`: wp-phpunit + the WordPress test suite inside wp-env
-- [ ] CI `integration` job: MySQL; PHP {8.1, 8.4} × WP {6.4, latest}
+- [x] `composer test:integration`: real WordPress via `wp-load.php` inside wp-env (not wp-phpunit, which is PHPUnit ≤ 9 — ADR-0010 amendment)
+- [x] CI `integration` job: wp-env's MySQL; PHP {8.1, 8.3} × WP {6.4, latest}
 
 ### 2.1 The contract-test pattern
 
