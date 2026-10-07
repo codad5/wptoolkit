@@ -19,6 +19,7 @@ use Codad5\WPToolkit\Contracts\Clock\Clock;
 use Codad5\WPToolkit\Contracts\Container\Container;
 use Codad5\WPToolkit\Contracts\Http\HttpClient;
 use Codad5\WPToolkit\Contracts\Log\Logger;
+use Codad5\WPToolkit\Contracts\View\Renderer;
 use Codad5\WPToolkit\Contracts\Data\MigrationStore;
 use Codad5\WPToolkit\Data\EntityRegistrar;
 use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
@@ -30,6 +31,8 @@ use Codad5\WPToolkit\Http\Transport\AjaxTransport;
 use Codad5\WPToolkit\Http\Transport\RestTransport;
 use Codad5\WPToolkit\Support\RateLimit\ClientIp;
 use Codad5\WPToolkit\Support\RateLimit\RateLimiter;
+use Codad5\WPToolkit\View\PhpTemplateRenderer;
+use Codad5\WPToolkit\View\TemplateLocator;
 
 /**
  * The services every application gets, as lazy singletons — nothing is built until something asks
@@ -87,6 +90,17 @@ final class CoreServices
             $app->identity(),
             $c->get(CacheFactory::class)->make('flash')
         ));
+
+        // Views: config 'views' (directories) or {plugin}/views; themes override under {theme}/{slug}/.
+        $container->singleton(TemplateLocator::class, static function () use ($config): TemplateLocator {
+            $paths = $config->get('views', [dirname($config->file) . '/views']);
+            $folder = $config->get('view_theme_folder', $config->slug);
+            return new TemplateLocator(
+                is_array($paths) ? array_values(array_map('strval', $paths)) : [],
+                $folder === false ? null : (string) $folder
+            );
+        });
+        $container->singleton(Renderer::class, static fn (Container $c) => new PhpTemplateRenderer($c->get(TemplateLocator::class)));
 
         $container->singleton(MigrationStore::class, static fn () => new OptionMigrationStore($app->identity()));
         $container->singleton(Migrator::class, static fn (Container $c) => new Migrator(

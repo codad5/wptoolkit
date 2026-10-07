@@ -15,11 +15,14 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
 
 ### 5.1 Views — ports `ViewLoader` + `ViewHelper`
 
-- [ ] `Contracts\View\Renderer` + `PhpTemplateRenderer` (a Twig adapter is a separate package, later)
-- [ ] `View\TemplateLocator`: theme override paths kept (`{theme}/{slug}/…`), then plugin, then library
-- [ ] `View\Escaper` passed to templates as `$e` (`$e->html()`, `$e->attr()`, `$e->url()`) — templates
-      never echo raw data
-- [ ] Sections/partials kept from `ViewHelper`
+- [x] `Contracts\View\Renderer` + `PhpTemplateRenderer` (a Twig adapter is a separate package, later);
+      templates run in a sealed scope and failures throw instead of 0.x's silent `false`
+- [x] `View\TemplateLocator`: theme override paths kept (`{theme}/{slug}/…`), then plugin, then
+      `{dir}/index.php`; `..` refused and matches must resolve inside their directory. No consumer used
+      0.x `ViewLoader`, so there are no old override paths to keep as a fallback
+- [x] `View\Escaper` passed to templates as `$e` (`$e->html()`, `$e->attr()`, `$e->url()`, …) — its
+      methods print, so templates never need `echo`; `TemplateEscapingSniffTest` proves a raw echo fails PHPCS
+- [x] Sections/partials kept from `ViewHelper` (`$view->layout()`, `start()`/`stop()`, `section()`, `insert()`)
 
 ### 5.2 Assets — ports `EnqueueManager` (fixes C4 by design)
 
