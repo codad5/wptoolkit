@@ -20,6 +20,13 @@
 - [ ] `Application::VERSION` bumped by the workflow, and the build fails if it doesn't match the tag
 - [ ] Packagist package registered *(maintainer)*
 
+### 7.1b The build tool ships with 1.0 (Track P)
+
+- [ ] Track P complete: `doctor`, `verify <zip>`, `--dry-run`, reusable `package-wordpress.yml`
+- [ ] `codad5/wptoolkit-build` published from `packages/build` (split or path release), version 1.0.0
+- [ ] The release workflow builds WPToolkit's own standalone zip **with** the build tool (dogfooding)
+- [ ] At least one real project (pau) packaged with it — with the maintainer's go-ahead
+
 ### 7.2 Hardening
 
 - [ ] Security checklist ([06-security.md](../architecture/06-security.md)) walked end to end

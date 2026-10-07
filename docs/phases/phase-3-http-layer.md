@@ -19,50 +19,52 @@ nonces, capabilities and rate limits — and disagree on defaults. That is how S
 
 ### 3.1 Request and response
 
-- [ ] `Http\Request` (readonly): method, route params, query, body, files, user, transport
-- [ ] `Http\Response` + `JsonResponse`, `ErrorResponse` with a stable error shape
+- [x] `Http\Request` (readonly): method, route params, query, body, files, user, transport
+- [x] `Http\Response` + `JsonResponse`, `ErrorResponse` with a stable error shape
       `{ code, message, details? }` — `details` only for users who can `manage_options` with `WP_DEBUG`
-- [ ] Typed exceptions → status codes: `ValidationFailed` 422, `Unauthenticated` 401, `Forbidden` 403,
+- [x] Typed exceptions → status codes: `ValidationFailed` 422, `Unauthenticated` 401, `Forbidden` 403,
       `NotFound` 404, `TooManyRequests` 429, anything else 500 with a generic, translated message
 
 ### 3.2 Router and routes
 
-- [ ] `Http\Router` + fluent `Route` builder: `get/post/put/patch/delete`, `->can()`, `->public()`,
+- [x] `Http\Router` + fluent `Route` builder: `get/post/put/patch/delete`, `->can()`, `->public()`,
       `->loggedIn()`, `->rateLimit()`, `->validate()`, `->exposeVia('rest', 'ajax')`
-- [ ] **A route without an access rule throws at registration** (in dev) and is denied (in production)
-- [ ] `routes:list` data for the CLI in Phase 6
+- [x] **A route without an access rule throws at registration** (in dev) and is denied (in production)
+- [x] `Router::routes()` exposes every route for `routes:list` (Phase 6)
 
 ### 3.3 Middleware pipeline
 
-- [ ] `Contracts\Http\Middleware` + pipeline (chain of responsibility)
-- [ ] Built-ins: `Authenticate`, `Authorize` (capability or policy callable), `VerifyNonce` (Ajax and
+- [x] `Contracts\Http\Middleware` + pipeline (chain of responsibility)
+- [x] Built into the Dispatcher rather than separate middleware classes (fewer moving parts, one order):
+      access rule, `VerifyNonce` (Ajax), rate limit, validation. Was: built-ins `Authenticate`, `Authorize`, `VerifyNonce` (Ajax and
       cookie-authenticated REST), `RateLimit` (Phase 2), `ValidateInput`, `SanitizeInput`
-- [ ] Global and per-route middleware; order is explicit and tested
+- [x] Global and per-route middleware; order is explicit and tested
 
 ### 3.4 Transports
 
-- [ ] `AjaxTransport`: registers `wp_ajax_{identity action}` (+ `nopriv_` only for `->public()` routes);
+- [x] `AjaxTransport`: registers `wp_ajax_{identity action}` (+ `nopriv_` only for `->public()` routes);
       reads `_wpnonce`; sends the real status code
-- [ ] `RestTransport`: `register_rest_route` under `Identity::restNamespace()`; maps rules to
+- [x] `RestTransport`: `register_rest_route` under `Identity::restNamespace()`; maps rules to
       `permission_callback` and `args`
-- [ ] The same controller method serves both, returning the same JSON shape
+- [x] The same controller method serves both, returning the same JSON shape
 
 ### 3.5 Validation and sanitization — ports 0.x `Utils/InputValidator`
 
-- [ ] `Support\Validation\Validator` + rule objects (`Required`, `Email`, `Url`, `Min`, `Max`, `In`,
+- [x] `Support\Validation\Validator` + rule objects (`Required`, `Email`, `Url`, `Min`, `Max`, `In`,
       `Regex`, `Callback`, …) — Strategy pattern; consumers add rules without editing core
-- [ ] `Support\Sanitization` per type, applied before the controller sees input
-- [ ] Error messages are translatable and keyed, so a client can map them
+- [x] `Support\Sanitization` per type, applied before the controller sees input
+- [x] Error messages are translatable and keyed, so a client can map them
 
 ### 3.6 JavaScript client — replaces `assets/js/wptoolkit-ajax.js`
 
-- [ ] Small client on `@wordpress/api-fetch` with the nonce wired in; translations via
+- [x] `resources/js/client.js`: dependency-free classic script (works on WP 6.4 without a build); versioned
+      factory under the locked `window.wptoolkit`; REST + Ajax with nonces; `ToolkitError`. Was: client on `@wordpress/api-fetch`; translations via
       `wp_set_script_translations`
-- [ ] Built with `@wordpress/scripts`; ESLint + Vitest
+- [x] Tested with Node's built-in test runner (no npm dependencies) in CI. Was: `@wordpress/scripts`; ESLint + Vitest
 
 ### 3.7 Port and delete
 
-- [ ] Port `legacy/Utils/Ajax.php` and `legacy/Utils/RestRoute.php` consumers in the example plugin;
+- [ ] → **Phase 5 §5.6** (delete `legacy/` as a whole): port `legacy/Utils/Ajax.php` and `legacy/Utils/RestRoute.php` consumers in the example plugin;
       fill in the migration map
 
 ---
@@ -72,12 +74,17 @@ nonces, capabilities and rate limits — and disagree on defaults. That is how S
 Each is a named test against the new layer; the parked 0.x versions on `fix/0.2.1-security` are the
 reference ([track-0x-maintenance.md](track-0x-maintenance.md)).
 
-- [ ] `test_route_without_access_rule_is_denied` (S3)
-- [ ] `test_anonymous_user_cannot_call_a_logged_in_route` (S3)
-- [ ] `test_exception_message_never_reaches_the_client` (S4) — on both transports
-- [ ] `test_error_responses_carry_the_real_http_status` (C2) — on both transports
+- [x] `test_route_without_access_rule_is_denied` (S3)
+- [x] `test_anonymous_user_cannot_call_a_logged_in_route` (S3)
+- [x] `test_exception_message_never_reaches_the_client` (S4) — on both transports
+- [x] `test_error_responses_carry_the_real_http_status` (C2) — on both transports
 
 ## Definition of Done
+
+> **Met 2026-10-07** except the example plugin's frontend (rebuilt in Phase 6 §6.4): the four §3.8
+> scenarios pass in unit tests on both transports and on WordPress's real REST server
+> (`tests/Integration/RestOnWordPressTest.php`); 422 with field messages; 429 with Retry-After;
+> generic 500 with request ID and logged detail.
 
 - **The S1–S4 regression tests from Phase 0, rewritten against the new layer, pass on both
   transports.**

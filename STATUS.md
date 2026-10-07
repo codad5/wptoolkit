@@ -7,7 +7,7 @@
 
 ---
 
-## Now: Phase 3 — HTTP layer (one pipeline for Ajax and REST)
+## Now: Phase 4 — Data layer
 
 | Phase | State |
 | ----- | ----- |
@@ -15,7 +15,8 @@
 | 1 — Foundation & coexistence | ✅ DoD demonstrated: 9/9 E2E on real WordPress (run 37643432573), 118 unit tests |
 | 2 — Infrastructure adapters | ✅ cache, log, HTTP client, rate limit, filesystem, clock, PSR bridges; integration on WP 6.4/latest |
 | P — Build tool (`Build::plugin()->…`) | ✅ library + `wptoolkit-build`; ☐ doctor, CI workflow, migrating the 3 projects |
-| 3–7 | ☐ |
+| 3 — HTTP layer | ✅ router + one pipeline for REST/Ajax, deny-by-default, validation, 429s, JS client |
+| 4–7 | ☐ |
 
 Phase 1 delivered: kernel (container, providers, lifecycle, hook containment), `Identity`,
 library translations, coexistence ledger, `requires_toolkit` with activation refusal naming the
