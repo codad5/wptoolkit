@@ -74,11 +74,11 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.5 Search — fixes C1
 
-- [ ] `Data\Search\Search` with OR semantics across title, content, chosen meta keys and terms
-      (implemented with `posts_search` / `posts_where` + `$wpdb->prepare`, or ID-union of sub-queries)
-- [ ] Respects post status and the entity's visibility policy; meta in results only via an explicit
-      allow-list
-- [ ] Relevance scorers are strategies (`TitleScorer`, `MetaScorer`, …)
+- [x] `Data\Search\Search` with OR semantics across title, content, chosen meta keys and terms
+      (ID-union of WP_Query sub-queries, each capped at 500 candidates — no raw SQL)
+- [x] Respects post status and the entity's visibility policy (capabilities, not `is_admin()`); meta
+      in results only via an explicit allow-list (`expose()`); sensitive fields refused
+- [x] Relevance scorers are strategies (`Scorer`; built-ins `Scorers::title()`, `content()`, `fields()`)
 
 ### 4.6 Admin columns
 
@@ -86,12 +86,12 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.7 Security acceptance scenarios (carried over from 0.x)
 
-- [ ] `test_anonymous_user_cannot_read_metabox_data` (S2)
-- [ ] `test_metabox_data_requires_edit_post_and_matching_post_type` (S2)
-- [ ] `test_non_public_post_type_is_not_searchable_by_logged_out_users` (S1)
-- [ ] `test_public_search_returns_only_published_posts` (S1 — admin-ajax runs with `is_admin()` true)
-- [ ] `test_public_search_never_returns_or_searches_meta` (S1)
-- [ ] `test_search_page_size_is_capped` (S1)
+- [x] `test_anonymous_user_cannot_read_metabox_data` (S2) — `MetaBoxTest`
+- [x] `test_metabox_data_requires_edit_post_and_matching_post_type` (S2) — `MetaBoxTest`
+- [x] `test_non_public_post_type_is_not_searchable_by_logged_out_users` (S1) — `SearchOnWordPressTest`
+- [x] `test_public_search_returns_only_published_posts` (S1 — visibility never consults `is_admin()`)
+- [x] `test_public_search_never_returns_or_searches_meta` (S1)
+- [x] `test_search_page_size_is_capped` (S1)
 
 ### 4.8 Data compatibility ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md))
 

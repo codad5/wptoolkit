@@ -188,6 +188,49 @@ final class MetaBoxTest extends TestCase
         self::assertSame([], $this->wp->meta);
     }
 
+    /**
+     * S2 (Phase 4.7): 0.x registered a `wp_ajax_nopriv_` fetch for every meta box. 1.0 registers no
+     * Ajax or REST endpoint at all — values reach quick edit inside the list table, for editors only.
+     */
+    public function test_anonymous_user_cannot_read_metabox_data(): void
+    {
+        $hooks = new \Codad5\WPToolkit\Foundation\HookRegistrar();
+        $box = $this->box('e', 'event', [$this->f->date('start_date')->quickEdit(), $this->f->text('venue')]);
+
+        $box->register($hooks);
+
+        $names = array_column($hooks->all(), 'hook');
+        self::assertSame([], array_values(array_filter($names, static fn (string $h): bool => str_starts_with($h, 'wp_ajax') || str_starts_with($h, 'rest_api'))));
+
+        $this->wp->meta[5] = ['e_event_start_date' => ['2026-10-07']];
+        Functions\when('current_user_can')->justReturn(false); // logged out
+        ob_start();
+        $box->printInlineData($this->post(5, 'event'));
+        self::assertSame('', ob_get_clean());
+    }
+
+    /**
+     * S2 (Phase 4.7): reads and writes both require edit_post on that post and the box's own post type.
+     */
+    public function test_metabox_data_requires_edit_post_and_matching_post_type(): void
+    {
+        $this->wp->meta[5] = ['e_event_start_date' => ['2026-10-07']];
+        $box = $this->box('e', 'event', [$this->f->date('start_date')->quickEdit()]);
+        $asked = [];
+        Functions\when('current_user_can')->alias(static function (string $cap, ...$args) use (&$asked): bool {
+            $asked[] = [$cap, ...$args];
+            return true;
+        });
+
+        ob_start();
+        $box->printInlineData($this->post(5, 'page'));   // wrong post type: nothing, not even a capability check
+        $box->printInlineData($this->post(5, 'event'));
+        $html = (string) ob_get_clean();
+
+        self::assertSame([['edit_post', 5]], $asked);
+        self::assertSame(1, substr_count($html, 'wptoolkit-quick-edit'));
+    }
+
     public function test_render_escapes_values_and_prints_a_nonce(): void
     {
         $this->wp->meta[5] = ['d_book_title' => ['"><script>x</script>']];

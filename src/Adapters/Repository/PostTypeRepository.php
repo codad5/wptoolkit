@@ -68,7 +68,7 @@ final class PostTypeRepository extends BaseRepository
 
     public function metaKey(string $field): string
     {
-        return $this->identity->metaKey($this->postType->box, $this->postType->name, $field, $this->postType->metaPrefix);
+        return $this->postType->metaKey($this->identity, $field);
     }
 
     public function find(int $id): ?Entity

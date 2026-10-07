@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Codad5\WPToolkit\Data\Attributes;
 
 use Attribute;
+use Codad5\WPToolkit\Foundation\Identity;
 
 /**
  * Store an entity as a custom post type. Fields named after post columns (`title`, `content`,
@@ -47,5 +48,18 @@ final class PostType
         public readonly ?string $metaPrefix = null,
         public readonly bool $register = true
     ) {
+    }
+
+    /**
+     * Where a non-column field is stored: the key a MetaBox with id `$box` on this post type uses.
+     */
+    public function metaKey(Identity $identity, string $field): string
+    {
+        return $identity->metaKey($this->box, $this->name, $field, $this->metaPrefix);
+    }
+
+    public static function isColumn(string $field): bool
+    {
+        return array_key_exists($field, self::COLUMNS);
     }
 }
