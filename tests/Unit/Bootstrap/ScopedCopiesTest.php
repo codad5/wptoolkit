@@ -89,10 +89,10 @@ final class ScopedCopiesTest extends TestCase
         self::assertSame(0, $code, $output);
         $result = json_decode($output, true);
 
-        self::assertSame(['1.0.0-dev', '1.4.0'], $result['versions']);
+        self::assertSame([\Codad5\WPToolkit\Foundation\Application::VERSION, '1.4.0'], $result['versions']);
         self::assertTrue($result['separateContainers']);
         self::assertSame(['alpha-api', 'beta-api'], $result['handles']);
-        self::assertEqualsCanonicalizing(['Alpha\\WPToolkit@1.0.0-dev', 'Beta\\WPToolkit@1.4.0'], $result['ledger']);
+        self::assertEqualsCanonicalizing(['Alpha\\WPToolkit@' . \Codad5\WPToolkit\Foundation\Application::VERSION, 'Beta\\WPToolkit@1.4.0'], $result['ledger']);
         self::assertTrue($result['loadersStable']);
         self::assertFalse($result['unscopedLoaded']);
     }
