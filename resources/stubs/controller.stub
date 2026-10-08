@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}}\Http;
+
+use Codad5\WPToolkit\Http\HttpError;
+use Codad5\WPToolkit\Http\Request;
+use Codad5\WPToolkit\Http\Response;
+
+/**
+ * Register its routes in a provider's boot(). Every route needs an access rule:
+ *
+ *     $router->get('{{route}}', [{{class}}Controller::class, 'index'])->can('read');
+ *     $router->get('{{route}}/{id}', [{{class}}Controller::class, 'show'])->can('read')
+ *         ->args(['id' => ['rules' => 'required|integer', 'type' => 'int']]);
+ */
+final class {{class}}Controller
+{
+    public function index(Request $request): Response
+    {
+        return Response::json(['items' => []]);
+    }
+
+    public function show(Request $request): Response
+    {
+        $id = (int) $request->input('id');
+        if ($id <= 0) {
+            throw HttpError::notFound();
+        }
+
+        return Response::json(['id' => $id]);
+    }
+}

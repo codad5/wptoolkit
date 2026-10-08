@@ -1,0 +1,268 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WPToolkit\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-08T01:18:20+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: wptoolkit\n"
+
+#. translators: 1: required PHP version, 2: current PHP version
+#: bootstrap/guard.php:166
+#, php-format
+msgid "PHP %1$s or newer is required; this site runs PHP %2$s."
+msgstr ""
+
+#. translators: 1: required WordPress version, 2: current WordPress version
+#: bootstrap/guard.php:169
+#, php-format
+msgid "WordPress %1$s or newer is required; this site runs %2$s."
+msgstr ""
+
+#. translators: %s: PHP extension name
+#: bootstrap/guard.php:172
+#, php-format
+msgid "The PHP extension \"%s\" is required but not installed."
+msgstr ""
+
+#. translators: %s: plugin basename
+#: bootstrap/guard.php:175
+#, php-format
+msgid "The plugin \"%s\" must be active."
+msgstr ""
+
+#. translators: 1: required WPToolkit version, 2: loaded version, 3: path of the loaded copy
+#: bootstrap/guard.php:179
+#, php-format
+msgid "WPToolkit %1$s is required, but WPToolkit %2$s was already loaded from %3$s by another plugin or theme."
+msgstr ""
+
+#. translators: %s: loaded WPToolkit version
+#: bootstrap/guard.php:181
+#, php-format
+msgid "Deactivate that one, or use a version of this plugin built for WPToolkit %s."
+msgstr ""
+
+#: bootstrap/guard.php:182
+msgid "Developers: ship a scoped copy of WPToolkit."
+msgstr ""
+
+#. translators: 1: required WPToolkit version, 2: bundled version
+#: bootstrap/guard.php:186
+#, php-format
+msgid "WPToolkit %1$s is required, but this plugin bundles %2$s."
+msgstr ""
+
+#: bootstrap/guard.php:188
+msgid "It failed while starting. The error has been written to the PHP error log."
+msgstr ""
+
+#. translators: %s: path of the missing autoloader file
+#: bootstrap/guard.php:191
+#, php-format
+msgid "Its class loader is missing (%s). Reinstall the plugin."
+msgstr ""
+
+#. translators: %s: plugin name
+#: bootstrap/guard.php:202
+#, php-format
+msgid "%s has been paused and is not running:"
+msgstr ""
+
+#: bootstrap/guard.php:219
+#: src/Foundation/Application.php:251
+msgid "Plugin not activated"
+msgstr ""
+
+#: src/Admin/Columns.php:193
+msgid "Yes"
+msgstr ""
+
+#: src/Admin/Columns.php:193
+msgid "No"
+msgstr ""
+
+#: src/Admin/Pages.php:104
+msgid "Sorry, you are not allowed to access this page."
+msgstr ""
+
+#: src/Admin/Settings/SettingsForm.php:154
+msgid "Clear the saved value"
+msgstr ""
+
+#: src/Admin/Settings/SettingsForm.php:160
+msgid "The saved value can no longer be decrypted (were the site's salts changed?). Enter it again."
+msgstr ""
+
+#: src/Data/EntityRegistrar.php:77
+msgid "Details"
+msgstr ""
+
+#: src/Data/Field/Types/InputType.php:66
+msgid "Saved — leave blank to keep"
+msgstr ""
+
+#: src/Data/Field/Types/OtherTypes.php:123
+msgid "Choose media"
+msgstr ""
+
+#: src/Data/MetaBox.php:394
+msgid "Some fields were not saved:"
+msgstr ""
+
+#: src/Data/Migrations/MigrationRunner.php:71
+msgid "A data update failed and was stopped. The site keeps working with the data as it was; the update retries on the next admin page load."
+msgstr ""
+
+#. translators: 1: plugin name, 2: required version, 3: loaded version, 4: path of the loaded copy
+#: src/Foundation/ToolkitCompatibility.php:48
+#, php-format
+msgid "%1$s needs WPToolkit %2$s, but WPToolkit %3$s was already loaded from %4$s."
+msgstr ""
+
+#. translators: 1: plugin name, 2: required version, 3: loaded version, 4: plugin type, 5: its name, 6: path
+#: src/Foundation/ToolkitCompatibility.php:58
+#, php-format
+msgid "%1$s needs WPToolkit %2$s, but WPToolkit %3$s was already loaded by the %4$s \"%5$s\" (%6$s)."
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:76
+msgid "the other plugin"
+msgstr ""
+
+#. translators: 1: the other plugin or theme, 2: this plugin
+#: src/Foundation/ToolkitCompatibility.php:82
+#, php-format
+msgid "Deactivate %1$s, then %2$s can start. The two cannot run together until one of them is updated."
+msgstr ""
+
+#. translators: 1: this plugin, 2: WPToolkit major version such as 1.x, 3: the other plugin or theme
+#: src/Foundation/ToolkitCompatibility.php:88
+#, php-format
+msgid "Install a version of %1$s built for WPToolkit %2$s, or update %3$s."
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:93
+msgid "Developers: ship a scoped copy of WPToolkit so each plugin uses its own and this conflict cannot happen."
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:107
+msgid "It has not been started."
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:108
+msgid "What you can do:"
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:139
+msgid "plugin"
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:140
+msgid "must-use plugin"
+msgstr ""
+
+#: src/Foundation/ToolkitCompatibility.php:141
+msgid "theme"
+msgstr ""
+
+#: src/Http/Dispatcher.php:122
+msgid "Your session has expired. Reload the page and try again."
+msgstr ""
+
+#: src/Http/HttpError.php:40
+msgid "The request is not valid."
+msgstr ""
+
+#: src/Http/HttpError.php:45
+msgid "You need to be logged in."
+msgstr ""
+
+#: src/Http/HttpError.php:50
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: src/Http/HttpError.php:55
+msgid "Not found."
+msgstr ""
+
+#: src/Http/HttpError.php:63
+msgid "Some fields are not valid."
+msgstr ""
+
+#: src/Http/HttpError.php:74
+msgid "Too many requests. Please try again later."
+msgstr ""
+
+#: src/Http/HttpError.php:82
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#: src/Http/Transport/AjaxTransport.php:87
+msgid "This request method is not allowed here."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:26
+#, php-format
+msgid "%s is required."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:36
+#, php-format
+msgid "%s must be a valid email address."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:46
+#, php-format
+msgid "%s must be a valid http(s) URL."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:55
+#, php-format
+msgid "%s must be a whole number."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:64
+#, php-format
+msgid "%s must be a number."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:73
+#, php-format
+msgid "%s must be true or false."
+msgstr ""
+
+#. translators: 1: field name, 2: minimum
+#: src/Support/Validation/Rules.php:85
+#, php-format
+msgid "%1$s must be at least %2$s."
+msgstr ""
+
+#. translators: 1: field name, 2: maximum
+#: src/Support/Validation/Rules.php:97
+#, php-format
+msgid "%1$s may not be more than %2$s."
+msgstr ""
+
+#. translators: 1: field name, 2: comma-separated allowed values
+#: src/Support/Validation/Rules.php:109
+#, php-format
+msgid "%1$s must be one of: %2$s."
+msgstr ""
+
+#. translators: %s: field name
+#: src/Support/Validation/Rules.php:122
+#, php-format
+msgid "%s has an invalid format."
+msgstr ""

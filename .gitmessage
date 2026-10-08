@@ -1,0 +1,15 @@
+# <type>(<scope>): <subject>          ← imperative, lowercase, no period, ≤72 chars
+#
+# <body>
+#   WHY this change. The diff already shows what changed.
+#   Wrap at 72 characters.
+#
+# <footer>
+#   BREAKING CHANGE: <what breaks and what to do>
+#   Refs: <doc path or issue>
+#
+# TYPES   feat fix refactor perf docs test build ci chore style revert
+# SCOPES  bootstrap foundation http data view admin assets i18n cache log
+#         cli coexistence frontend docs adr ci deps
+#
+# Full rules: .claude/rules/50-git-and-commits.md

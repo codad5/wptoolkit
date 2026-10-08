@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}}\Entities;
+
+use Codad5\WPToolkit\Data\Attributes\PostType;
+use Codad5\WPToolkit\Data\Entity;
+use Codad5\WPToolkit\Data\Field\FieldFactory;
+
+/**
+ * {{class}}, stored as the `{{post_type}}` post type. Fields not mapped to a post column are post
+ * meta under the "details" meta box's keys. Register it in a provider:
+ *
+ *     $registrar->entity({{class}}::class, __('{{label}} details', '{{text_domain}}'));
+ *
+ * and get its repository with `$repositories->for({{class}}::class)`.
+ */
+#[PostType('{{post_type}}', singular: '{{label}}', columns: ['title' => 'post_title'])]
+final class {{class}} extends Entity
+{
+    public static function fields(FieldFactory $f): array
+    {
+        return [
+            $f->text('title')->label(__('Title', '{{text_domain}}'))->required(),
+        ];
+    }
+}

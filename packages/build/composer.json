@@ -1,0 +1,17 @@
+{
+    "name": "codad5/wptoolkit-build",
+    "description": "Build reproducible, verified release zips for WordPress plugins and themes.",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\Build\\": "src/"
+        }
+    },
+    "bin": [
+        "bin/wptoolkit-build"
+    ]
+}

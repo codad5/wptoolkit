@@ -1,0 +1,16 @@
+{
+    "name": "codad5/wptoolkit-example-todo",
+    "description": "A todo list plugin on WPToolkit 1.0.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.1",
+        "codad5/wptoolkit": "^1.0"
+    },
+    "repositories": [
+        { "type": "vcs", "url": "https://github.com/codad5/wptoolkit" }
+    ],
+    "autoload": {
+        "psr-4": { "WptkTodo\\": "src/" }
+    }
+}
