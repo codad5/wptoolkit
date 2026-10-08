@@ -1,0 +1,28 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+
+# Not part of the distributed package
+/.claude export-ignore
+/.github export-ignore
+/docs export-ignore
+/tests export-ignore
+/examples export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.gitmessage export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
+/STATUS.md export-ignore
+/phpunit.xml.dist export-ignore
+/phpstan.neon.dist export-ignore
+/phpcs.xml.dist export-ignore
+/patchwork.json export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/playwright.config.ts export-ignore
+/.wp-env.json export-ignore
+/bin/phpstan-errors.php export-ignore
+/bin/lint.php export-ignore
+/phpunit.integration.xml.dist export-ignore

@@ -1,0 +1,45 @@
+# WPToolkit
+
+> A zero-dependency PHP 8.1+ library for WordPress 6.4+ plugins and themes: deny-by-default REST/Ajax
+> routes, entities and repositories over post types, custom tables and options, settings with secret
+> handling, admin pages, views, assets, migrations and WP-CLI tools. Two plugins can bundle two
+> versions of it on one site.
+
+Namespace: `Codad5\WPToolkit` (or your own, if you scope the library). Package: `codad5/wptoolkit`.
+
+## Rules for code that uses WPToolkit
+
+1. The plugin's main file stays PHP 5.6 syntax and boots through `vendor/codad5/wptoolkit/bootstrap/guard.php`; real code goes in classes under `src/`.
+2. One `Application::create(__FILE__, ['slug' => '…'])->providers([...])->boot()` per plugin. The slug prefixes every option, hook, handle and REST namespace — never change it after release.
+3. Put wiring in a `ServiceProvider`: bind services in `register()` (no WordPress calls, no translation), use them in `boot()` — its parameters are injected. Never use a global registry.
+4. Every route has an access rule: `->public()`, `->loggedIn()`, `->can('capability')` or `->authorize(fn (Request $r) => …)`. Public routes that write get `->rateLimit()`.
+5. Declare route input with `->args(['name' => ['rules' => '…', 'type' => '…']])` and read it with `$request->input('name')`. Types: text, textarea, email, url, int, float, bool, key, slug, html, array_text, raw.
+6. Return an array or a `Response`; throw `HttpError::notFound()` / `forbidden()` / `badRequest()` for errors. Never return exception messages.
+7. For a post or its meta, check `edit_post`/`read_post` on that post and that its post type is yours.
+8. Mark API keys, tokens and passwords `->sensitive()`. Read them with `$settings->get('name')`; `all()` leaves them out. Never pass them to `with()` or `forScript()`.
+9. Templates print through `$e` (`$e->html()`, `$e->attr()`, `$e->url()`); never `echo` a variable.
+10. Every user-facing string uses `__()`/`_e()`/`esc_html__()` with the plugin's own text domain, inside `boot()` or later.
+11. Declare assets with `AssetManager` (`->script()`, `->style()`); never call `wp_enqueue_*` yourself.
+12. Change stored data with a `Migration` registered via `->migrations([...])`, never with branches on a "data version".
+
+## Core API
+
+- Boot: `Foundation\Application`, `Foundation\ServiceProvider`, `Foundation\Identity` (prefixed names), `bootstrap/guard.php`
+- HTTP: `Http\Router` (`get/post/put/patch/delete`), `Http\Route`, `Http\Request`, `Http\Response`, `Http\HttpError`, `Http\Client\ApiClient`
+- Data: `Data\Field\FieldFactory`, `Data\MetaBox`, `Data\Entity` + `#[PostType]` `#[Taxonomy]` `#[Table]` `#[OptionStorage]`, `Data\EntityRegistrar`, `Adapters\Repository\RepositoryFactory` (`->for(Entity::class)`), `Data\Query\Query`, `Data\Search\Search`, `Data\Migrations\Migration`
+- Admin: `Admin\Settings\Settings` + `SettingsForm`, `Admin\Page` + `Pages`, `Admin\Notices`, `Admin\Column` + `Columns`
+- Front end: `View\PhpTemplateRenderer` (via `Contracts\View\Renderer`), `Assets\AssetManager`, `Frontend\PublicPages`
+- Services to inject: `Contracts\Log\Logger`, `Contracts\Cache\CacheStore`, `Contracts\Http\HttpClient`, `Contracts\Clock\Clock`
+- CLI: `wp {slug} toolkit:info | routes:list | hooks:list | migrate | migrate:status | migrate:rollback | make:entity | make:controller | make:provider | make:field | make:migration`
+
+## Docs
+
+- [README](README.md): what it is, install, quick start
+- [Getting started](docs/guides/getting-started.md)
+- [Routes and security](docs/guides/routes-and-security.md)
+- [Data](docs/guides/data.md)
+- [Admin and front end](docs/guides/admin-and-front-end.md)
+- [Scoping and coexistence](docs/guides/scoping-and-coexistence.md)
+- [Migrating from 0.x](docs/guides/migrating-from-0x.md)
+- [Todo example](examples/todo/): a complete plugin
+- [ADRs](docs/adr/README.md): why things are the way they are

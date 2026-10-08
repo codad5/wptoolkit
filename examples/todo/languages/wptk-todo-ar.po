@@ -1,0 +1,77 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WPToolkit Todo example\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+msgid "Title"
+msgstr "العنوان"
+
+msgid "Notes"
+msgstr "ملاحظات"
+
+msgid "Low"
+msgstr "منخفضة"
+
+msgid "Medium"
+msgstr "متوسطة"
+
+msgid "High"
+msgstr "عالية"
+
+msgid "Urgent"
+msgstr "عاجلة"
+
+msgid "Priority"
+msgstr "الأولوية"
+
+msgid "Pending"
+msgstr "قيد الانتظار"
+
+msgid "In progress"
+msgstr "قيد التنفيذ"
+
+msgid "Completed"
+msgstr "مكتملة"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Due date"
+msgstr "تاريخ الاستحقاق"
+
+msgid "Estimated hours"
+msgstr "الساعات المقدرة"
+
+msgid "Default priority"
+msgstr "الأولوية الافتراضية"
+
+msgid "Notification email"
+msgstr "بريد الإشعارات"
+
+msgid "Who hears about overdue todos."
+msgstr "من يُبلَّغ بالمهام المتأخرة."
+
+msgid "Sync API token"
+msgstr "رمز واجهة المزامنة"
+
+msgid "Todo details"
+msgstr "تفاصيل المهمة"
+
+msgid "General"
+msgstr "عام"
+
+msgid "Todo settings"
+msgstr "إعدادات المهام"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Todo board"
+msgstr "لوحة المهام"
+
+msgid "Nothing to do."
+msgstr "لا شيء للقيام به."

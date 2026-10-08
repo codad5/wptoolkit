@@ -1,0 +1,23 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/wp-env.json",
+    "phpVersion": "8.1",
+    "plugins": [],
+    "config": {
+        "WP_DEBUG": true,
+        "WP_DEBUG_LOG": true,
+        "WP_DEBUG_DISPLAY": false
+    },
+    "mappings": {
+        "wp-content/plugins/wptoolkit": ".",
+        "wp-content/e2e-bin": "./tests/E2E/bin",
+        "wp-content/plugins/safe-ok": "./tests/E2E/.build/plugins/safe-ok",
+        "wp-content/plugins/safe-php99": "./tests/E2E/.build/plugins/safe-php99",
+        "wp-content/plugins/safe-parse-error": "./tests/E2E/.build/plugins/safe-parse-error",
+        "wp-content/plugins/safe-boot-throws": "./tests/E2E/.build/plugins/safe-boot-throws",
+        "wp-content/plugins/coexist-alpha": "./tests/E2E/.build/plugins/coexist-alpha",
+        "wp-content/plugins/coexist-beta": "./tests/E2E/.build/plugins/coexist-beta",
+        "wp-content/plugins/unscoped-first": "./tests/E2E/.build/plugins/unscoped-first",
+        "wp-content/plugins/unscoped-second": "./tests/E2E/.build/plugins/unscoped-second",
+        "wp-content/plugins/wptk-todo": "./tests/E2E/.build/plugins/wptk-todo"
+    }
+}

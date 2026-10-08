@@ -1,0 +1,16 @@
+{
+    "name": "wptoolkit-dev",
+    "private": true,
+    "description": "Development tooling for WPToolkit (end-to-end tests). Not shipped.",
+    "license": "GPL-2.0-or-later",
+    "scripts": {
+        "e2e:build": "php tests/E2E/build-fixtures.php",
+        "e2e:start": "npm run e2e:build && wp-env start",
+        "e2e:stop": "wp-env stop",
+        "e2e": "playwright test"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.63.0",
+        "@wordpress/env": "^11.17.0"
+    }
+}

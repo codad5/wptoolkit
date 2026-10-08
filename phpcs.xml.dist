@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<ruleset name="WPToolkit">
+    <description>PSR-12 style plus WordPress safety sniffs (ADR-0017).</description>
+
+    <file>src</file>
+    <file>bin</file>
+    <file>bootstrap</file>
+    <file>packages/build/src</file>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg name="parallel" value="8"/>
+    <arg value="sp"/>
+
+    <config name="testVersion" value="8.1-"/>
+    <config name="minimum_wp_version" value="6.4"/>
+
+    <rule ref="PSR12"/>
+
+    <!--
+        Translatable text must be one string literal (WordPress.WP.I18n), so a long sentence can't
+        be wrapped with concatenation. 160 leaves room for those; it is still a warning, not a hard limit.
+    -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="160"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
+    <rule ref="PHPCompatibilityWP">
+        <!--
+            PHPCompatibility 9 predates PHP 8.1 enums: it reads $this and self inside an enum as
+            "outside a class". PHPStan (level 8) checks those correctly, so these two are off.
+        -->
+        <exclude name="PHPCompatibility.Variables.ForbiddenThisUseContexts.OutsideObjectContext"/>
+        <exclude name="PHPCompatibility.FunctionDeclarations.NewParamTypeDeclarations.SelfOutsideClassScopeFound"/>
+    </rule>
+
+    <!-- The parts of WPCS that catch real bugs: escaping, nonces, input, SQL, i18n. -->
+    <rule ref="WordPress.Security"/>
+    <rule ref="WordPress.DB.PreparedSQL"/>
+    <rule ref="WordPress.DB.PreparedSQLPlaceholders"/>
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="wptoolkit"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!--
+        Exception messages are for logs and developers, not HTML output. The library never prints
+        one raw: clients get a generic, translated message (ADR-0008). Escaping them with
+        esc_html() would corrupt what ends up in the log.
+    -->
+    <rule ref="WordPress.Security.EscapeOutput">
+        <exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
+    </rule>
+
+    <!-- CLI scripts and the build tool print to a terminal, not a page. -->
+    <rule ref="WordPress.Security.EscapeOutput">
+        <exclude-pattern>bin/*</exclude-pattern>
+        <exclude-pattern>packages/build/*</exclude-pattern>
+    </rule>
+    <!-- bin/ scripts are executables with side effects, not class files. -->
+    <rule ref="PSR1.Files.SideEffects.FoundWithSymbols">
+        <exclude-pattern>bin/*</exclude-pattern>
+    </rule>
+</ruleset>

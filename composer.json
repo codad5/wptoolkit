@@ -1,18 +1,86 @@
 {
     "name": "codad5/wptoolkit",
-    "description": "Your go to WP lib",
+    "description": "A typed, secure-by-default toolkit for building WordPress plugins and themes.",
     "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Codad5\\WPToolkit\\": "src/"
-        }
-    },
+    "license": "GPL-2.0-or-later",
+    "keywords": [
+        "wordpress",
+        "plugin",
+        "theme",
+        "framework",
+        "toolkit"
+    ],
     "authors": [
         {
             "name": "codad5",
             "email": "aniezeoformic@gmail.com"
         }
     ],
-    "require": {}
+    "support": {
+        "issues": "https://github.com/codad5/wptoolkit/issues",
+        "source": "https://github.com/codad5/wptoolkit"
+    },
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "brain/monkey": "^2.6",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^10.5",
+        "psr/container": "^2.0",
+        "psr/log": "^3.0",
+        "psr/simple-cache": "^3.0",
+        "squizlabs/php_codesniffer": "^3.10",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "wp-cli/i18n-command": "^2.6",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\": "src/",
+            "Codad5\\WPToolkit\\Build\\": "packages/build/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Codad5\\WPToolkit\\Tests\\": "tests/",
+            "WptkTodo\\": "examples/todo/src/"
+        }
+    },
+    "bin": [
+        "packages/build/bin/wptoolkit-build"
+    ],
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.1.30"
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "lint": "@php bin/lint.php src tests bin bootstrap examples",
+        "cs": "phpcs",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "test": "phpunit",
+        "verify": [
+            "@php bin/check-workflows.php",
+            "@lint",
+            "@cs",
+            "@analyse",
+            "@test",
+            "@i18n"
+        ],
+        "i18n": "wp i18n make-pot . languages/wptoolkit.pot --slug=wptoolkit --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap",
+        "test:integration": "npx wp-env run tests-cli --env-cwd=wp-content/plugins/wptoolkit vendor/bin/phpunit -c phpunit.integration.xml.dist"
+    },
+    "suggest": {
+        "ext-sodium": "To encrypt sensitive settings at rest without WordPress's slower sodium_compat fallback",
+        "psr/log": "To use Psr3Bridge / PsrLoggerAdapter with PSR-3 loggers such as Monolog",
+        "psr/simple-cache": "To expose a CacheStore as PSR-16 (Psr16Bridge)",
+        "psr/container": "To expose the container as PSR-11 (Psr11Bridge)"
+    }
 }
