@@ -2,10 +2,11 @@
 #   1. every CI gate (unit, integration on real WordPress, E2E) passes on the tagged commit;
 #   2. the tag matches Application::VERSION and the JS client's VERSION;
 #   3. WPToolkit's own build tool builds the standalone zip (+ .sha256) and verifies it;
-#   4. a GitHub Release is created with the zip, its checksum and notes from Conventional Commits.
+#   4. a GitHub Release is created with the zip, its checksum and notes: docs/releases/<tag>.md if it
+#      exists, otherwise generated from Conventional Commits.
 #
 # No Packagist step: Composer installs from this repository (`"type": "vcs"`).
-# Cut a release:  php bin/set-version.php 1.0.0 → commit → git tag v1.0.0 → git push origin v1.0.0
+# Cut a release:  write docs/releases/v1.0.0.md → php bin/set-version.php 1.0.0 → commit → git tag v1.0.0 → git push origin v1.0.0
 name: Release
 
 on:
@@ -54,8 +55,16 @@ jobs:
       - name: Verify the zip
         run: php packages/build/bin/wptoolkit-build verify "dist/wptoolkit-${GITHUB_REF_NAME#v}.zip"
 
+      # Written notes win: docs/releases/<tag>.md. A squashed release is one commit, so the generated
+      # list is only a fallback (and a useful appendix for point releases).
       - name: Release notes
-        run: php bin/changelog.php "" "${GITHUB_REF_NAME}" > release-notes.md && cat release-notes.md
+        run: |
+          if [ -f "docs/releases/${GITHUB_REF_NAME}.md" ]; then
+            cp "docs/releases/${GITHUB_REF_NAME}.md" release-notes.md
+          else
+            php bin/changelog.php "" "${GITHUB_REF_NAME}" > release-notes.md
+          fi
+          cat release-notes.md
 
       - name: Publish the GitHub Release
         env:
