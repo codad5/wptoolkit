@@ -22,6 +22,21 @@ use Throwable;
  */
 final class ToolkitCommand
 {
+    /** Subcommand name => method. Registered one by one: WP-CLI's `@subcommand` tag can't hold a colon. */
+    public const SUBCOMMANDS = [
+        'toolkit:info' => 'info',
+        'routes:list' => 'routes',
+        'hooks:list' => 'hooks',
+        'migrate' => 'migrate',
+        'migrate:status' => 'migrateStatus',
+        'migrate:rollback' => 'migrateRollback',
+        'make:entity' => 'makeEntity',
+        'make:controller' => 'makeController',
+        'make:provider' => 'makeProvider',
+        'make:field' => 'makeField',
+        'make:migration' => 'makeMigration',
+    ];
+
     public function __construct(
         private readonly Console $console,
         private readonly string $version,
@@ -43,8 +58,6 @@ final class ToolkitCommand
      * ---
      * default: table
      * ---
-     *
-     * @subcommand toolkit:info
      *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
@@ -82,8 +95,6 @@ final class ToolkitCommand
      * default: table
      * ---
      *
-     * @subcommand routes:list
-     *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
      */
@@ -110,8 +121,6 @@ final class ToolkitCommand
      * ---
      * default: table
      * ---
-     *
-     * @subcommand hooks:list
      *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
@@ -170,8 +179,6 @@ final class ToolkitCommand
      * default: table
      * ---
      *
-     * @subcommand migrate:status
-     *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
      */
@@ -206,8 +213,6 @@ final class ToolkitCommand
      * [--dry-run]
      * : List what would be undone without undoing it.
      *
-     * @subcommand migrate:rollback
-     *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
      */
@@ -238,8 +243,6 @@ final class ToolkitCommand
      * [--force]
      * : Replace an existing file.
      *
-     * @subcommand make:entity
-     *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
      */
@@ -258,8 +261,6 @@ final class ToolkitCommand
      *
      * [--force]
      * : Replace an existing file.
-     *
-     * @subcommand make:controller
      *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
@@ -280,8 +281,6 @@ final class ToolkitCommand
      * [--force]
      * : Replace an existing file.
      *
-     * @subcommand make:provider
-     *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
      */
@@ -301,8 +300,6 @@ final class ToolkitCommand
      * [--force]
      * : Replace an existing file.
      *
-     * @subcommand make:field
-     *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc
      */
@@ -321,8 +318,6 @@ final class ToolkitCommand
      *
      * [--force]
      * : Replace an existing file.
-     *
-     * @subcommand make:migration
      *
      * @param list<string> $args
      * @param array<string, string|bool> $assoc

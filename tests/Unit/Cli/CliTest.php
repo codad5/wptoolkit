@@ -111,6 +111,21 @@ final class CliTest extends TestCase
         self::assertNull(Scaffolder::namespaceFromComposer($this->dir . '/missing'));
     }
 
+    /**
+     * Regression: names with a colon were given through `@subcommand`, which WP-CLI's parser cuts at
+     * the colon, so `toolkit:info` and the rest never registered. They are now added by full name.
+     */
+    public function test_every_subcommand_maps_to_a_documented_public_method(): void
+    {
+        foreach (ToolkitCommand::SUBCOMMANDS as $name => $method) {
+            $reflection = new \ReflectionMethod(ToolkitCommand::class, $method);
+            self::assertTrue($reflection->isPublic(), $name);
+            self::assertStringNotContainsString('@subcommand', (string) $reflection->getDocComment(), $name);
+            self::assertNotSame('', (new \WP_CLI\DocParser((string) $reflection->getDocComment()))->get_shortdesc(), $name . ' needs a description for `wp help`');
+        }
+        self::assertSame(11, count(ToolkitCommand::SUBCOMMANDS));
+    }
+
     // --- Inspection ----------------------------------------------------------------------------
 
     public function test_routes_list_shows_who_may_call_each_route_and_page(): void

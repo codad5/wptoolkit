@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Codad5\WPToolkit\Foundation;
 
 use Codad5\WPToolkit\Cli\ToolkitCommand;
+use Codad5\WPToolkit\Cli\ToolkitNamespace;
 use Codad5\WPToolkit\Contracts\Container\Container as ContainerContract;
 use Codad5\WPToolkit\Data\Migrations\Migration;
 use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
@@ -191,7 +192,11 @@ final class Application
         }
 
         if (defined('WP_CLI') && constant('WP_CLI') === true && class_exists(\WP_CLI::class)) {
-            \WP_CLI::add_command($this->config->slug, $this->container->get(ToolkitCommand::class));
+            $command = $this->container->get(ToolkitCommand::class);
+            \WP_CLI::add_command($this->config->slug, ToolkitNamespace::class);
+            foreach (ToolkitCommand::SUBCOMMANDS as $name => $method) {
+                \WP_CLI::add_command($this->config->slug . ' ' . $name, [$command, $method]);
+            }
         }
 
         if ($this->config->get('type', 'plugin') === 'plugin') {
