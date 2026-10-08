@@ -62,7 +62,7 @@ jobs:
           tools: composer:v2
           coverage: none
       - if: inputs.node-build != ''
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node-version }}
       - if: inputs.node-build != ''
