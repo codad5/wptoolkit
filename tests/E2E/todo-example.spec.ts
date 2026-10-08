@@ -115,26 +115,28 @@ test.describe.serial('the todo example (Phase 5 DoD)', () => {
             const count = await controls.count();
             expect(count).toBeGreaterThan(1);
 
-            const names: string[] = [];
+            // Tag every control so focus can be matched even when it has no name or id (WordPress's
+            // own meta box buttons don't).
+            const labels: string[] = [];
             for (let i = 0; i < count; i++) {
-                await expect(controls.nth(i)).toHaveAccessibleName(/\S/);
-                names.push((await controls.nth(i).getAttribute('name')) ?? (await controls.nth(i).getAttribute('id')) ?? `#${i}`);
+                const control = controls.nth(i);
+                await expect(control).toHaveAccessibleName(/\S/);
+                await control.evaluate((el, n) => el.setAttribute('data-kbd', String(n)), i);
+                labels.push(`${i}:${(await control.getAttribute('name')) ?? (await control.getAttribute('class')) ?? ''}`);
             }
 
             // Start on the first control, then reach every other one with Tab alone.
             await controls.first().focus();
-            const reached = new Set<string>([names[0]]);
-            for (let presses = 0; presses < 60 && reached.size < names.length; presses++) {
+            const reached = new Set<number>([0]);
+            for (let presses = 0; presses < 60 && reached.size < count; presses++) {
                 await page.keyboard.press('Tab');
-                const active = await page.evaluate(() => {
-                    const el = document.activeElement as HTMLElement | null;
-                    return el ? el.getAttribute('name') ?? el.id : '';
-                });
-                if (names.includes(active)) {
-                    reached.add(active);
+                const tag = await page.evaluate(() => document.activeElement?.getAttribute('data-kbd') ?? null);
+                if (tag !== null) {
+                    reached.add(Number(tag));
                 }
             }
-            expect([...reached].sort()).toEqual([...names].sort());
+            const missed = labels.filter((_, i) => !reached.has(i));
+            expect(missed, 'controls Tab never reached').toEqual([]);
         });
     }
 });
