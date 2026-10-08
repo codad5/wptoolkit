@@ -80,7 +80,7 @@ jobs:
           vendor/bin/wptoolkit-build verify "$zip"
           echo "zip=${{ inputs.directory }}/$zip" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: package
           path: |
