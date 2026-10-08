@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../../resources/js/client.js', import.meta.url), 'utf8');
+// The factory is registered under the client's own VERSION; read it so a release bump can't break the tests.
+const VERSION = source.match(/var VERSION = '([^']+)';/)[1];
 
 function load(existing = {}) {
     const window = { ...existing };
@@ -39,7 +41,7 @@ const config = {
 
 test('the namespace is locked and the factory is registered under its version', () => {
     const window = load();
-    assert.equal(typeof window.wptoolkit.__clients['1.0.0-dev'], 'function');
+    assert.equal(typeof window.wptoolkit.__clients[VERSION], 'function');
     // Strict-mode code gets a TypeError; sloppy-mode page scripts fail silently. Either way it stays.
     assert.throws(() => {
         window.wptoolkit = 'replaced';
@@ -56,7 +58,7 @@ test('loading twice keeps one factory per version and other entries intact', () 
 
 test('REST GET fills path parameters and sends the REST nonce', async () => {
     const { fetch, calls } = fakeFetch([{ status: 200, body: { id: 7 } }]);
-    const api = load().wptoolkit.__clients['1.0.0-dev'](config, fetch);
+    const api = load().wptoolkit.__clients[VERSION](config, fetch);
 
     const data = await api.call('books_id', { id: 7, expand: 1 });
 
@@ -67,7 +69,7 @@ test('REST GET fills path parameters and sends the REST nonce', async () => {
 
 test('REST POST sends JSON', async () => {
     const { fetch, calls } = fakeFetch([{ status: 201, body: { id: 1 } }]);
-    const api = load().wptoolkit.__clients['1.0.0-dev'](config, fetch);
+    const api = load().wptoolkit.__clients[VERSION](config, fetch);
 
     await api.call('books', { title: 'Dune' });
 
@@ -77,7 +79,7 @@ test('REST POST sends JSON', async () => {
 
 test('Ajax posts the action and the route nonce as form data', async () => {
     const { fetch, calls } = fakeFetch([{ status: 200, body: 'sent' }]);
-    const api = load().wptoolkit.__clients['1.0.0-dev'](config, fetch);
+    const api = load().wptoolkit.__clients[VERSION](config, fetch);
 
     await api.call('contact', { message: 'hi there' });
 
@@ -87,7 +89,7 @@ test('Ajax posts the action and the route nonce as form data', async () => {
 
 test('errors carry the server status, code, message and field details', async () => {
     const { fetch } = fakeFetch([{ status: 422, body: { code: 'validation_failed', message: 'Some fields are not valid.', details: { fields: { title: ['Title is required.'] } } } }]);
-    const api = load().wptoolkit.__clients['1.0.0-dev'](config, fetch);
+    const api = load().wptoolkit.__clients[VERSION](config, fetch);
 
     await assert.rejects(api.call('books', {}), (error) => {
         assert.equal(error.name, 'ToolkitError');
@@ -100,7 +102,7 @@ test('errors carry the server status, code, message and field details', async ()
 
 test('204 resolves with null and unknown routes reject', async () => {
     const { fetch } = fakeFetch([{ status: 204 }]);
-    const api = load().wptoolkit.__clients['1.0.0-dev'](config, fetch);
+    const api = load().wptoolkit.__clients[VERSION](config, fetch);
 
     assert.equal(await api.call('books', {}), null);
     await assert.rejects(api.call('nope'), (error) => error.code === 'unknown_route');
