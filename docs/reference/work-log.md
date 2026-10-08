@@ -19,3 +19,19 @@ One dated entry per working session: what landed, what was learned, what's next.
 - **Decided:** ADR-0016 — 1.0 keeps 0.x's stored data formats; security scenarios become named
   acceptance tests in Phases 3–4; migration guide built from the real consumers.
 - **Next:** maintainer runs `composer install` on `next`; Phase 0 tooling + CI; Phase 1.
+
+## 2026-10-08
+
+- **Landed:** Phase 4 finished (search, columns, 0.x data shapes pinned, todo example, 0.x `Model`/`MetaBox`
+  deleted); Phase 5 (views, assets, settings, admin pages, notices, public pages, `legacy/` deleted, E2E in
+  English/Arabic/keyboard); Phase 6 (`wp {slug}` commands, README, guides, migration guide, `llms.txt`);
+  Phase 7 automation (`release.yml`, `bin/build-release.php`, `package-wordpress.yml`).
+- **Learned (bugs the tests caught):** 0.x stored non-media multiple values as one serialized row and
+  sanitized custom prefixes — 1.0 had both wrong; entity fields named like post columns would have
+  moved pau's `title` meta into `wp_posts` (columns are now opt-in); GET and POST on one Ajax path made
+  the POST unreachable; an unknown arg type was a 500 at request time; block themes gave public pages
+  no `<title>`; WP-CLI's `@subcommand` can't hold a colon; the meta API unslashes, so values need
+  `wp_slash()`. Azure's apt mirror stalls Playwright installs — CI uses the runner's Chrome.
+- **Next (maintainer):** tag the last 0.x and pin pau; review and merge the `next` → `main` PR; then
+  `php bin/set-version.php 1.0.0-rc.1` → tag → staging soak with pau → `1.0.0`.
+

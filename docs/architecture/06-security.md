@@ -24,10 +24,16 @@
 
 ## Pre-release checklist (Phase 7)
 
-- [ ] Every route has an explicit access rule; `routes:list` shows none open by accident
-- [ ] Every mutation verifies a nonce (cookie auth) or uses application passwords / OAuth (REST)
-- [ ] No `$wpdb` outside repositories; every query prepared
-- [ ] Every template output goes through `Escaper`; PHPCS escaping sniffs clean
-- [ ] Psalm taint analysis clean
-- [ ] No secrets in logs (redaction tested)
-- [ ] S1–S4 regression tests green
+- [x] Every route has an explicit access rule; `routes:list` shows none open by accident — refused at
+      registration in development, 403 in production (`DispatcherTest::test_route_without_access_rule_is_denied`),
+      public pages included
+- [x] Every mutation verifies a nonce (cookie auth) or uses application passwords / OAuth (REST): the
+      Dispatcher for Ajax, WordPress core for REST, `MetaBox` saves, the Settings API, notice dismissal
+- [x] No `$wpdb` outside repositories; every query prepared — the one exception is `TableSchema::drop()`'s
+      `DROP TABLE`, DDL on a name built from the plugin's identity (DDL can't be prepared)
+- [x] Every template output goes through `Escaper`; PHPCS escaping sniffs clean (`TemplateEscapingSniffTest`)
+- [ ] Psalm taint analysis clean — **deferred to 1.1**: Psalm is not in the toolchain yet (a new dev
+      dependency plus WordPress stubs). 1.0 relies on PHPStan level 8, the WPCS security sniffs and the
+      attacker-side regression tests
+- [x] No secrets in logs (redaction tested: `LoggingTest`, `SettingsTest`)
+- [x] S1–S4 regression tests green (`SearchOnWordPressTest`, `MetaBoxTest`, `DispatcherTest`)

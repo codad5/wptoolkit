@@ -34,7 +34,7 @@
 
 ### 7.2 Hardening
 
-- [ ] Security checklist ([06-security.md](../architecture/06-security.md)) walked end to end
+- [x] Security checklist ([06-security.md](../architecture/06-security.md)) walked end to end (Psalm deferred, see there)
 - [ ] Psalm taint analysis clean on `src/`
 - [ ] Performance: boot time with 10 providers, and route dispatch, measured on wp-env; numbers in
       the work log (budget: < 5 ms added to a request that touches no toolkit route)

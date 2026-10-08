@@ -3,21 +3,23 @@
 > **Live progress.** Updated as work lands. The plan of record is [docs/phases/](docs/phases/README.md);
 > this file is only "where are we right now". Step numbers match the phase docs.
 >
-> Last updated: **2026-10-07**
+> Last updated: **2026-10-08**
 
 ---
 
-## Now: Phase 5 — Presentation and admin
+## Now: Phase 7 — Release (the steps left need the maintainer)
 
 | Phase | State |
 | ----- | ----- |
 | 0 — Gates | ✅ CI green on PHP 8.1–8.4 |
 | 1 — Foundation & coexistence | ✅ DoD demonstrated: 9/9 E2E on real WordPress (run 37643432573), 118 unit tests |
 | 2 — Infrastructure adapters | ✅ cache, log, HTTP client, rate limit, filesystem, clock, PSR bridges; integration on WP 6.4/latest |
-| P — Build tool (`Build::plugin()->…`) | ✅ library + `wptoolkit-build`; ☐ doctor, CI workflow, migrating the 3 projects |
+| P — Build tool (`Build::plugin()->…`) | ✅ library + `wptoolkit-build` (package, verify, doctor, init), `Build::library()`, reusable `package-wordpress.yml`; ☐ migrating the 3 projects (maintainer's go-ahead) |
 | 3 — HTTP layer | ✅ router + one pipeline for REST/Ajax, deny-by-default, validation, 429s, JS client |
 | 4 — Data layer | ✅ fields, MetaBox (quick edit without a public endpoint), entities + 4 repository adapters on one contract, Query, migrations (batched, locked, reversible), Search (C1/S1 fixed), admin columns, 0.x data shapes pinned; 0.x `Model`/`MetaBox` deleted |
-| 5–7 | ☐ |
+| 5 — Presentation and admin | ✅ views (theme overrides, escaper), assets (locked `window.wptoolkit`, RTL), settings (sensitive by name, encryption), admin pages, notices, public front-end pages; `legacy/` deleted. DoD on real WordPress: the todo example in English and Arabic, by keyboard, zero notices |
+| 6 — DX, docs, AI | ✅ `wp {slug}` commands, README, guides, migration guide from pau/silverbird, `llms.txt`; ☐ timed getting-started run and two-agent trial (maintainer); 1.1: phpDocumentor, AGENTS.md template, Abilities |
+| 7 — Release | ✅ `release.yml` (gates → version check → standalone zip by `wptoolkit-build` → notes → GitHub Release), security checklist; ☐ tag last 0.x, pin pau, RC + pau on staging + soak, PR → `main`, `v1.0.0` (maintainer) |
 
 Phase 1 delivered: kernel (container, providers, lifecycle, hook containment), `Identity`,
 library translations, coexistence ledger, `requires_toolkit` with activation refusal naming the
