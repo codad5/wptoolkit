@@ -33,7 +33,7 @@ ruinous to retrofit once every module has invented its own hook names and option
 
 ### 1.1b Usage inventory of the real consumers
 
-- [x] Catalogue every 0.x API used by `pau`, `silverbird-fusionintel` and `nile-distribution`
+- [x] Catalogue every 0.x API used by `member-directory`, `example-theme` and `another-theme`
       (class, method, options passed, data written) into
       [docs/reference/0x-usage-inventory.md](../reference/0x-usage-inventory.md) — this decides
       what 1.0 must cover and feeds the migration guide
@@ -55,7 +55,7 @@ ruinous to retrofit once every module has invented its own hook names and option
       **consumer's** text domain (from `Text Domain` / `Domain Path`) and then runs every
       provider's `boot()` on `init` — so consumer code that calls `__()` while building pages or
       routes can't trigger WordPress 6.7's "translation loading triggered too early" notice
-      (the pau bug in the old `BUGFIX_INSTRUCTIONS.md`)
+      (the member-directory bug in the old `BUGFIX_INSTRUCTIONS.md`)
 
 ### 1.3 Identity — the consumer's names ([ADR-0006](../adr/0006-library-text-domain-and-consumer-prefixes.md))
 

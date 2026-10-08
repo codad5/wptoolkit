@@ -82,7 +82,7 @@ final class Identity
     }
 
     /**
-     * An option name, in 0.x's shape: `{slug}_{sanitize_key(key)}` — e.g. `pau-alumni-manager_api_key`.
+     * An option name, in 0.x's shape: `{slug}_{sanitize_key(key)}` — e.g. `member-directory_api_key`.
      *
      * @throws InvalidConfigException When the result is longer than the options table allows.
      *
@@ -126,7 +126,7 @@ final class Identity
      *
      * Pass `$prefix` when the box was given a custom prefix (0.x `set_prefix()`); it then replaces
      * `{box_id}_{post_type}_` entirely, exactly as 0.x did — including 0.x's sanitize_key() of it, so
-     * `'Silverbird_'` still means `silverbird_`. An empty prefix means the bare field name.
+     * `'Acme_'` still means `acme_`. An empty prefix means the bare field name.
      *
      * @return non-empty-string
      */

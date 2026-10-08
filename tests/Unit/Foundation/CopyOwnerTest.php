@@ -39,14 +39,14 @@ final class CopyOwnerTest extends TestCase
         $theme = new class {
             public function get(string $header): string
             {
-                return $header === 'Name' ? 'SilverBird' : '';
+                return $header === 'Name' ? 'Acme Theme' : '';
             }
         };
-        Functions\expect('wp_get_theme')->once()->with('silverbird-fusionintel')->andReturn($theme);
+        Functions\expect('wp_get_theme')->once()->with('example-theme')->andReturn($theme);
 
         self::assertSame(
-            ['type' => 'theme', 'name' => 'SilverBird', 'directory' => 'silverbird-fusionintel'],
-            CopyOwner::of('/srv/wordpress/wp-content/themes/silverbird-fusionintel/wptoolkit')
+            ['type' => 'theme', 'name' => 'Acme Theme', 'directory' => 'example-theme'],
+            CopyOwner::of('/srv/wordpress/wp-content/themes/example-theme/wptoolkit')
         );
     }
 

@@ -22,7 +22,7 @@ What 0.x stores (verified in the source, 2026-10-07):
 | Cache, notifications, rate limits | transients | ephemeral — safe to drop                                                         |
 
 Note the slug in option keys is the raw app slug, which can contain hyphens
-(`pau-alumni-manager_api_key`).
+(`member-directory_api_key`).
 
 ## Decision
 
@@ -64,7 +64,7 @@ checks 1.0 reads and rewrites them unchanged:
 
 **We accept:** slightly inconsistent key shapes in 1.0, documented here.
 
-**We gain:** zero-migration upgrades for `pau`, `silverbird-fusionintel` and `nile-distribution`.
+**We gain:** zero-migration upgrades for `member-directory`, `example-theme` and `another-theme`.
 
 **This constrains:** Phase 4 (MetaBox, fields, repositories) and Phase 5 (Settings) must pass the
 data-compatibility suite. Changing a stored key or format needs a superseding ADR.

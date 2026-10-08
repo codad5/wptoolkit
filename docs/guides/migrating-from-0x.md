@@ -5,8 +5,8 @@ and value formats are exactly 0.x's ([ADR-0016](../adr/0016-1-0-reads-0x-data-un
 there is **no data migration** — upgrade the code, deploy, and existing posts, meta and settings read
 the same. You can roll back to 0.x afterwards: 1.0 writes the formats 0.x reads.
 
-The before/after code below is from the real 0.x consumers — `pau-alumni-manager` (a plugin) and
-the `silverbird`/`nile` themes. Where a class went is listed in the
+The before/after code below comes from real 0.x projects, renamed here: a member-directory plugin
+(`member-directory`) and two themes (`acme-theme`, `beta-theme`). Where a class went is listed in the
 [migration map](../architecture/07-migration-from-0x.md).
 
 ---
@@ -21,14 +21,14 @@ the `silverbird`/`nile` themes. Where a class went is listed in the
 
 ## 1. Install and boot
 
-**0.x** (pau): the library's autoloader, a `Config`, a `Requirements` check, `Registry`.
+**0.x** (member-directory): the library's autoloader, a `Config`, a `Requirements` check, `Registry`.
 
 ```php
 require_once __DIR__ . '/vendor/codad5/wptoolkit/autoloader.php';
 use Codad5\WPToolkit\Utils\{Config, Autoloader, Requirements, Registry};
 
-Autoloader::init(['PAU\\' => __DIR__ . '/src/']);
-$config = Config::plugin('pau-alumni-manager', __FILE__, ['text_domain' => 'pau-alumni-manager']);
+Autoloader::init(['MemberDirectory\\' => __DIR__ . '/src/']);
+$config = Config::plugin('member-directory', __FILE__, ['text_domain' => 'member-directory']);
 Registry::registerApp($config);
 ```
 
@@ -38,7 +38,7 @@ instead of crashing), then builds one `Application` with service providers.
 ```php
 <?php
 /**
- * Plugin Name: PAU Alumni Manager
+ * Plugin Name: Member Directory
  * Requires PHP: 8.1
  */
 
@@ -50,13 +50,13 @@ call_user_func(require __DIR__ . '/vendor/codad5/wptoolkit/bootstrap/guard.php',
     'php' => '8.1',
     'wp' => '6.4',
     'toolkit' => '^1.0',
-    'name' => 'PAU Alumni Manager',
+    'name' => 'Member Directory',
 ), function () {
     \Codad5\WPToolkit\Foundation\Application::create(__FILE__, [
-        'slug' => 'pau-alumni-manager',          // keep the 0.x slug: option keys are built from it
-        'text_domain' => 'pau-alumni-manager',
+        'slug' => 'member-directory',          // keep the 0.x slug: option keys are built from it
+        'text_domain' => 'member-directory',
     ])
-        ->providers([\PAU\AppServiceProvider::class, \PAU\AdminServiceProvider::class])
+        ->providers([\MemberDirectory\AppServiceProvider::class, \MemberDirectory\AdminServiceProvider::class])
         ->boot();
 });
 ```
@@ -70,12 +70,12 @@ call_user_func(require __DIR__ . '/vendor/codad5/wptoolkit/bootstrap/guard.php',
 
 ## 2. `Registry::get()` → constructor injection
 
-pau calls `Registry::get()` 18 times. In 1.0 there is no global registry: a provider's `boot()` asks
+member-directory calls `Registry::get()` 18 times. In 1.0 there is no global registry: a provider's `boot()` asks
 for what it needs, and the container builds it.
 
 ```php
 // 0.x
-$settings = Registry::get('pau-alumni-manager', 'settings');
+$settings = Registry::get('member-directory', 'settings');
 $settings->get('api_key');
 
 // 1.0
@@ -92,11 +92,11 @@ any class with typed constructor parameters is built automatically.
 
 ```php
 // 0.x
-Debugger::info('Fetched alumni', ['count' => $count]);
+Debugger::info('Fetched member', ['count' => $count]);
 Debugger::error('API call failed', ['error' => $e->getMessage()]);
 
 // 1.0 — inject Contracts\Log\Logger
-$this->logger->info('Fetched {count} alumni', ['count' => $count]);
+$this->logger->info('Fetched {count} member', ['count' => $count]);
 $this->logger->error('API call failed: {exception}', ['exception' => $e]);
 ```
 
@@ -107,7 +107,7 @@ settings are redacted by name. `varDump()` has no replacement — use the Query 
 ## 4. `Cache` → `CacheStore`
 
 ```php
-// 0.x (silverbird, 6 calls)
+// 0.x (acme-theme, 6 calls)
 Cache::delete('movies_now_showing');
 
 // 1.0 — inject Contracts\Cache\CacheStore (keys are prefixed with your slug for you)
@@ -120,16 +120,16 @@ $movies = $this->cache->remember('movies_now_showing', 600, fn () => $this->load
 **Every route must say who may call it** — there is no open default
 ([ADR-0008](../adr/0008-deny-by-default-one-http-pipeline.md)). A route without a rule fails to
 register in development and answers 403 in production. This is the change that matters most:
-pau's `/users` and `/settings` routes leaked data through 0.x's open default.
+member-directory's `/users` and `/settings` routes leaked data through 0.x's open default.
 
-**REST (pau's gallery endpoint):**
+**REST (member-directory's gallery endpoint):**
 
 ```php
 // 0.x
 $api = RestRoute::create($this->config, ['v1', 'v2'], 'v1');
 $api->get('v1', '/gallery', function () { … return new \WP_Error('no_gallery_page', '…', ['status' => 404]); });
 
-// 1.0 — same URL: /wp-json/pau-alumni-manager/v1/gallery
+// 1.0 — same URL: /wp-json/member-directory/v1/gallery
 $router->get('gallery', [GalleryController::class, 'show'])->public();
 
 final class GalleryController
@@ -138,14 +138,14 @@ final class GalleryController
     {
         $pageId = (int) $settings->get('gallery_page_id');
         if ($pageId === 0) {
-            throw HttpError::notFound(__('No gallery page has been configured.', 'pau-alumni-manager'));
+            throw HttpError::notFound(__('No gallery page has been configured.', 'member-directory'));
         }
         return ['content' => apply_filters('the_content', get_post_field('post_content', $pageId))];
     }
 }
 ```
 
-**Ajax (silverbird's movie search):**
+**Ajax (acme-theme's movie search):**
 
 ```php
 // 0.x — 'public' => true, hand-written sanitize callbacks
@@ -175,7 +175,7 @@ $router->get('movies/search', [MovieController::class, 'search'])
   `200 {success: false}`.
 - **Front end:** replace `Ajax::getAjaxHelperScriptHandle()` and its `wptoolkitAjax` global with the
   JS client: `$assets->client($router)`, then in JavaScript
-  `window.wptoolkit['silverbird-theme'].api.call('movies_search', { search_term: 'dune' })`.
+  `window.wptoolkit['acme-theme'].api.call('movies_search', { search_term: 'dune' })`.
 - **Public form submissions** (contact forms) should get a rate limit and a stricter validation rule
   set — 0.x exposed all of them without either.
 
@@ -183,11 +183,11 @@ $router->get('movies/search', [MovieController::class, 'search'])
 
 ```php
 // 0.x
-class PAUAlumniAPIHelper extends APIHelper { … }
+class DirectoryApiHelper extends APIHelper { … }
 
 // 1.0 — compose instead of extend; retries, caching and logging are built in
 $api = new ApiClient($http, $settings->get('api_base_url'), Auth::bearer((string) $settings->get('api_key')), cache: $cache, logger: $logger);
-$alumni = $api->getJson('alumni', ['page' => 1], cacheTtl: 300);
+$member = $api->getJson('member', ['page' => 1], cacheTtl: 300);
 ```
 
 ## 7. `Model` and `MetaBox` → entities, repositories and meta boxes
@@ -195,11 +195,11 @@ $alumni = $api->getJson('alumni', ['page' => 1], cacheTtl: 300);
 0.x `Model` did everything in one class; 1.0 splits it. **Stored keys stay the same**, as long as you
 keep the meta box id (or the custom prefix).
 
-**silverbird's movies** (custom prefix `_silverbird_movies_`, a gallery of attachment IDs):
+**acme-theme's movies** (custom prefix `_acme_movies_`, a gallery of attachment IDs):
 
 ```php
 // 1.0
-#[PostType('silverbird_movies', box: 'movie_details', metaPrefix: '_silverbird_movies_',
+#[PostType('acme_movies', box: 'movie_details', metaPrefix: '_acme_movies_',
     columns: ['title' => 'post_title'], public: true)]
 final class Movie extends Entity
 {
@@ -207,14 +207,14 @@ final class Movie extends Entity
     {
         return [
             $f->text('title')->required(),
-            $f->select('availability', ['now_showing' => __('Now showing', 'silverbird'), 'coming_soon' => __('Coming soon', 'silverbird')]),
+            $f->select('availability', ['now_showing' => __('Now showing', 'acme-theme'), 'coming_soon' => __('Coming soon', 'acme-theme')]),
             $f->media('gallery')->multiple(),          // still one meta row per attachment ID
         ];
     }
 }
 
 // In a provider: post type + edit-screen box (same keys) + list columns
-$box = $registrar->entity(Movie::class, __('Movie details', 'silverbird'));
+$box = $registrar->entity(Movie::class, __('Movie details', 'acme-theme'));
 (new Columns($box, [Column::field('availability')->sortable()]))->register($hooks);
 
 // Reading and writing
@@ -223,7 +223,7 @@ $showing = $movies->query(Query::create()->where('availability', 'now_showing')-
 ```
 
 - **Post columns are opt-in.** `title`, `content`, `status`… are post meta unless `columns:` maps
-  them. pau's executives have a meta field called `title`: leave it unmapped and it stays where 0.x
+  them. member-directory's executives have a meta field called `title`: leave it unmapped and it stays where 0.x
   put it.
 - **`'wp_media'` still works** as a type name. Single media values now read as an attachment ID, not
   a URL — call `wp_get_attachment_url($id)` where you printed it.
@@ -239,17 +239,17 @@ $showing = $movies->query(Query::create()->where('availability', 'now_showing')-
 ## 8. `Settings` → `Admin\Settings`
 
 ```php
-// 0.x (pau)
+// 0.x (member-directory)
 $settings = Settings::create([
-    'api_base_url' => ['type' => 'url', 'label' => __('API Base URL', 'pau-alumni-manager'), 'group' => 'api'],
-    'api_key' => ['type' => 'password', 'label' => __('API Key', 'pau-alumni-manager'), 'group' => 'api'],
+    'api_base_url' => ['type' => 'url', 'label' => __('API Base URL', 'member-directory'), 'group' => 'api'],
+    'api_key' => ['type' => 'password', 'label' => __('API Key', 'member-directory'), 'group' => 'api'],
     'items_per_page' => ['type' => 'number', 'default' => 20],
 ], $this->config);
 
-// 1.0 — same option keys (pau-alumni-manager_api_key …), so saved values carry over
+// 1.0 — same option keys (member-directory_api_key …), so saved values carry over
 $settings = new Settings([
-    $f->url('api_base_url')->label(__('API Base URL', 'pau-alumni-manager'))->required()->with('group', 'api'),
-    $f->password('api_key')->label(__('API Key', 'pau-alumni-manager'))->sensitive()->with('group', 'api'),
+    $f->url('api_base_url')->label(__('API Base URL', 'member-directory'))->required()->with('group', 'api'),
+    $f->password('api_key')->label(__('API Key', 'member-directory'))->sensitive()->with('group', 'api'),
     $f->number('items_per_page')->default(20)->rules('min:5|max:100'),
 ], $types, $identity, logger: $logger);
 ```
@@ -261,18 +261,18 @@ $settings = new Settings([
 ## 9. `Page`, `Notification` and views
 
 ```php
-// 0.x (pau)
-$page->addMenuPage('pau-alumni-manager', ['page_title' => …, 'capability' => 'manage_options', 'callback' => [$this, 'renderAlumniList'], 'icon' => 'dashicons-groups', 'position' => 30]);
-$page->addSubmenuPage(ExecutiveModel::get_instance(), ['parent_slug' => 'pau-alumni-manager', …]);
+// 0.x (member-directory)
+$page->addMenuPage('member-directory', ['page_title' => …, 'capability' => 'manage_options', 'callback' => [$this, 'renderAlumniList'], 'icon' => 'dashicons-groups', 'position' => 30]);
+$page->addSubmenuPage(ExecutiveModel::get_instance(), ['parent_slug' => 'member-directory', …]);
 
 // 1.0 — same slugs, so admin URLs don't change
-$pages->add(Page::top('pau-alumni-manager', __('PAU Alumni Manager', 'pau-alumni-manager'), 'manage_options')
+$pages->add(Page::top('member-directory', __('Member Directory', 'member-directory'), 'manage_options')
     ->icon('dashicons-groups')->position(30)->render(fn () => AlumniListPage::render()));
-$pages->add(Page::postTypeList('pau-alumni-manager', 'pau-executive', __('Executives', 'pau-alumni-manager'), 'manage_options'));
-$pages->url('pau-alumni-settings');            // was $page->getAdminUrl(…)
+$pages->add(Page::postTypeList('member-directory', 'acme-executive', __('Executives', 'member-directory'), 'manage_options'));
+$pages->url('member-directory-member-settings');            // was $page->getAdminUrl(…)
 
 // Notices
-$notices->flash(__('Settings saved.', 'pau-alumni-manager'));
+$notices->flash(__('Settings saved.', 'member-directory'));
 ```
 
 Templates move to `views/` and print through `$e`: `<?php $e->html($title); ?>`. Themes override them

@@ -37,14 +37,14 @@ final class ColumnsTest extends TestCase
         ]);
 
         $f = new FieldFactory();
-        $this->box = new MetaBox('event_details', 'Event details', 'pau-event', [
+        $this->box = new MetaBox('event_details', 'Event details', 'acme-event', [
             $f->date('start_date')->label('Start Date')->quickEdit(),
             $f->number('max_attendees'),
             $f->number('ticket_price'),
             $f->text('venue_name'),
             $f->select('format', ['online' => 'Online', 'hall' => 'In the hall']),
             $f->checkbox('featured'),
-        ], new FieldTypes(), new Identity('pau'), new ArrayStore(new FrozenClock()));
+        ], new FieldTypes(), new Identity('member-directory'), new ArrayStore(new FrozenClock()));
     }
 
     public function test_columns_are_placed_like_0x_and_named_by_meta_key(): void
@@ -58,22 +58,22 @@ final class ColumnsTest extends TestCase
         $result = $columns->addColumns(['cb' => '', 'title' => 'Title', 'date' => 'Date']);
 
         self::assertSame(
-            ['cb', 'title', 'event_details_pau-event_start_date', 'date', 'event_details_pau-event_venue_name', 'event_details_pau-event_max_attendees'],
+            ['cb', 'title', 'event_details_acme-event_start_date', 'date', 'event_details_acme-event_venue_name', 'event_details_acme-event_max_attendees'],
             array_keys($result)
         );
-        self::assertSame('Start Date', $result['event_details_pau-event_start_date']);
-        self::assertSame('Venue', $result['event_details_pau-event_venue_name']);
+        self::assertSame('Start Date', $result['event_details_acme-event_start_date']);
+        self::assertSame('Venue', $result['event_details_acme-event_venue_name']);
     }
 
     public function test_cells_are_formatted_and_escaped(): void
     {
         $this->wp->meta[3] = [
-            'event_details_pau-event_start_date' => ['2026-10-07'],
-            'event_details_pau-event_max_attendees' => ['1500'],
-            'event_details_pau-event_ticket_price' => ['25'],
-            'event_details_pau-event_venue_name' => ['<script>x</script> Hall'],
-            'event_details_pau-event_format' => ['hall'],
-            'event_details_pau-event_featured' => ['on'],
+            'event_details_acme-event_start_date' => ['2026-10-07'],
+            'event_details_acme-event_max_attendees' => ['1500'],
+            'event_details_acme-event_ticket_price' => ['25'],
+            'event_details_acme-event_venue_name' => ['<script>x</script> Hall'],
+            'event_details_acme-event_format' => ['hall'],
+            'event_details_acme-event_featured' => ['on'],
         ];
         $columns = $this->columns([
             Column::field('start_date'),
@@ -98,14 +98,14 @@ final class ColumnsTest extends TestCase
         $columns = $this->columns([Column::field('max_attendees')->sortable(), Column::field('venue_name')]);
         Functions\when('is_admin')->justReturn(true);
 
-        self::assertSame(['event_details_pau-event_max_attendees' => 'event_details_pau-event_max_attendees'], $columns->sortableColumns([]));
+        self::assertSame(['event_details_acme-event_max_attendees' => 'event_details_acme-event_max_attendees'], $columns->sortableColumns([]));
 
-        $query = new WP_Query(['post_type' => 'pau-event', 'orderby' => 'event_details_pau-event_max_attendees']);
+        $query = new WP_Query(['post_type' => 'acme-event', 'orderby' => 'event_details_acme-event_max_attendees']);
         $columns->applySort($query);
         self::assertSame('meta_value_num', $query->get('orderby'));
-        self::assertSame('event_details_pau-event_max_attendees', $query->get('meta_key'));
+        self::assertSame('event_details_acme-event_max_attendees', $query->get('meta_key'));
 
-        $other = new WP_Query(['post_type' => 'post', 'orderby' => 'event_details_pau-event_max_attendees']);
+        $other = new WP_Query(['post_type' => 'post', 'orderby' => 'event_details_acme-event_max_attendees']);
         $columns->applySort($other);
         self::assertNull($other->get('meta_key'), 'other post types are untouched');
     }

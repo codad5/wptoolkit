@@ -11,7 +11,7 @@
 way locally and in CI — replacing the three forked `build-tools/prepare-*.js` scripts.**
 
 It doesn't depend on the 1.0 core, so it can start right after Phase 0 and ship before 1.0. It
-fixes live problems in `pau`, `silverbird-fusionintel` and `nile-distribution` today.
+fixes live problems in `member-directory`, `example-theme` and `another-theme` today.
 
 ---
 
@@ -72,15 +72,15 @@ without dependencies, and it has a JSON Schema so editors autocomplete it:
 {
   "$schema": "https://raw.githubusercontent.com/codad5/wptoolkit/main/schema/wptoolkit.schema.json",
   "type": "plugin",
-  "main": "pau.php",
-  "slug": "pau-alumni-manager",
+  "main": "member-directory.php",
+  "slug": "member-directory",
   "requires": { "php": "8.1", "wp": "6.4", "extensions": ["mbstring"] },
   "package": {
     "out": "dist",
     "zipName": "{slug}-{version}.zip",
     "build": ["npm ci", "npm run build"],
     "composer": "no-dev",
-    "scope": { "prefix": "FIT\\PAUAlumniManager\\Vendor" },
+    "scope": { "prefix": "FIT\\MemberDirectory\\Vendor" },
     "pot": true,
     "exclude": ["docs/", "*.map"],
     "include": ["vendor/codad5/wptoolkit/languages/"],
@@ -166,8 +166,8 @@ jobs:
 
 ### P.5 Migrate the three projects
 
-- [ ] `pau`: replace `prepare-plugin.js`; confirm the zip drops from ~8.9 MB and has no dev tooling
-- [ ] `silverbird-fusionintel`, `nile-distribution`: replace `prepare-theme.js` and `release.yml`;
+- [ ] `member-directory`: replace `prepare-plugin.js`; confirm the zip drops from ~8.9 MB and has no dev tooling
+- [ ] `example-theme`, `another-theme`: replace `prepare-theme.js` and `release.yml`;
       confirm `.claude/` and `sample-plugins/` are gone
 - [ ] Remove `archiver` from each `package.json`
 
@@ -176,7 +176,7 @@ jobs:
 ## Definition of Done
 
 > **Progress 2026-10-07:** library + `wptoolkit-build package|init` built and tested (reproducible zips,
-> verification). Run against a copy of `pau`, it refuses the 2,623 dev-tool files the old script shipped.
+> verification). Run against a copy of `member-directory`, it refuses the 2,623 dev-tool files the old script shipped.
 > Still open: `doctor`, `verify <zip>`, `--dry-run`, size report details, the reusable CI workflow, and
 > migrating the three projects (needs the maintainer's go-ahead — they are separate repositories).
 

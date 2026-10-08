@@ -14,7 +14,7 @@ use Codad5\WPToolkit\Exceptions\LifecycleException;
  * Rename an option, keeping its value and autoload flag. Does nothing if the old option is gone and
  * refuses to overwrite a new option that already holds a different value. Reversible.
  *
- *     new RenameOption('2026_10_07_120000_rename_settings', 'pau-alumni-manager_settings', 'pau_alumni_settings')
+ *     new RenameOption('2026_10_07_120000_rename_settings', 'member-directory_settings', 'directory_settings')
  */
 final class RenameOption extends Migration
 {

@@ -15,7 +15,7 @@ The 0.x review (2026-10-07) found:
   and `Ajax` + `RestRoute` re-implementing the same security checks with different defaults (the
   root cause of S3).
 - There are **zero tests**, so nothing proves behaviour is preserved by a change.
-- There is **one known consumer** (`pau-alumni-manager`) and no tagged release, so breaking changes
+- There is **one known consumer** (`member-directory`) and no tagged release, so breaking changes
   are cheap now and expensive later.
 
 ## Decision

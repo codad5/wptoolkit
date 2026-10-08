@@ -15,11 +15,11 @@ use Codad5\WPToolkit\Exceptions\InvalidConfigException;
  * One admin screen (ports the admin half of 0.x `Page`). Every page names the capability it
  * requires — there is no default — and the page re-checks it before rendering.
  *
- *     Page::top('pau-alumni-manager', __('PAU Alumni Manager', 'pau'), 'manage_options')
- *         ->menuTitle(__('Alumni', 'pau'))->icon('dashicons-groups')->position(30)->view('admin/list');
- *     Page::under('pau-alumni-manager', 'pau-alumni-settings', __('Settings', 'pau'), 'manage_options')->render($fn);
- *     Page::postTypeList('pau-alumni-manager', 'pau-executive', __('Executives', 'pau'), 'edit_posts');
- *     Page::hidden('pau-alumni-view', __('View alumnus', 'pau'), 'manage_options')->view('admin/view');
+ *     Page::top('member-directory', __('Member Directory', 'member-directory'), 'manage_options')
+ *         ->menuTitle(__('Members', 'member-directory'))->icon('dashicons-groups')->position(30)->view('admin/list');
+ *     Page::under('member-directory', 'member-directory-settings', __('Settings', 'member-directory'), 'manage_options')->render($fn);
+ *     Page::postTypeList('member-directory', 'acme-executive', __('Executives', 'member-directory'), 'edit_posts');
+ *     Page::hidden('member-directory-view', __('View member', 'member-directory'), 'manage_options')->view('admin/view');
  *
  * Slugs are used as given, so 0.x admin URLs (`admin.php?page=…`) keep working; start new ones with
  * your plugin's slug.

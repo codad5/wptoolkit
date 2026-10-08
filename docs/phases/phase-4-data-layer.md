@@ -99,7 +99,7 @@ This is the critical path and the biggest phase. It's where most consumer code l
 ### 4.8 Data compatibility ([ADR-0016](../adr/0016-1-0-reads-0x-data-unchanged.md))
 
 - [x] Fixture database with 0.x-written meta (single, serialized array, multiple media rows,
-      custom prefix) — `DataCompatibilityTest`, shaped like pau and silverbird. Options (hyphenated
+      custom prefix) — `DataCompatibilityTest`, shaped like member-directory and acme-theme. Options (hyphenated
       slug) move to Phase 5 with `Settings`, which owns them
 - [x] 1.0 `MetaBox`/`PostTypeRepository` read every fixture value identically, and writes produce
       the same keys and formats (`Settings`: Phase 5)
@@ -108,8 +108,8 @@ This is the critical path and the biggest phase. It's where most consumer code l
 
 ### 4.9 Port and delete
 
-- [x] Todo example on entities + repositories (`examples/todo`, booted by `TodoExampleTest`); pau's and
-      silverbird's model shapes are fixtures (`PauExecutive`, `SilverbirdMovie`, `DataCompatibilityTest`)
+- [x] Todo example on entities + repositories (`examples/todo`, booted by `TodoExampleTest`); member-directory's and
+      acme-theme's model shapes are fixtures (`ExecutiveFixture`, `MovieFixture`, `DataCompatibilityTest`)
 - [x] Delete `legacy/DB/Model.php` and `legacy/DB/MetaBox.php`; fill in the migration map. The 0.x
       `sample-plugins/Todo` and the root `codad5-wptoolkit.php` that loaded it went with them
       (`legacy/Utils/Page.php` still names `Model` in a type hint; it goes in Phase 5)

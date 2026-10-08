@@ -9,11 +9,11 @@ use Codad5\WPToolkit\Data\Entity;
 use Codad5\WPToolkit\Data\Field\FieldFactory;
 
 /**
- * Shaped like pau's executive model: its "title" is a meta field of the executive_role box, not the
+ * Shaped like a 0.x plugin's executive model: its "title" is a meta field of the executive_role box, not the
  * post title — so it must stay in meta (no column mapping).
  */
-#[PostType('pau-executive', box: 'executive_role')]
-final class PauExecutive extends Entity
+#[PostType('acme-executive', box: 'executive_role')]
+final class ExecutiveFixture extends Entity
 {
     public static function fields(FieldFactory $f): array
     {

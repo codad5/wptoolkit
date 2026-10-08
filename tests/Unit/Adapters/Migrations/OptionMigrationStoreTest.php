@@ -62,17 +62,17 @@ final class OptionMigrationStoreTest extends TestCase
 
     public function test_rename_option_moves_value_and_autoload_and_reverses(): void
     {
-        $this->wp->options['pau-alumni-manager_settings'] = ['value' => ['a' => 1], 'autoload' => true];
-        $rename = new RenameOption('2026_10_07_000000_rename', 'pau-alumni-manager_settings', 'pau_settings');
+        $this->wp->options['member-directory_settings'] = ['value' => ['a' => 1], 'autoload' => true];
+        $rename = new RenameOption('2026_10_07_000000_rename', 'member-directory_settings', 'directory_settings');
 
         $rename->up();
         $rename->up(); // idempotent
 
-        self::assertArrayNotHasKey('pau-alumni-manager_settings', $this->wp->options);
-        self::assertSame(['value' => ['a' => 1], 'autoload' => true], $this->wp->options['pau_settings']);
+        self::assertArrayNotHasKey('member-directory_settings', $this->wp->options);
+        self::assertSame(['value' => ['a' => 1], 'autoload' => true], $this->wp->options['directory_settings']);
 
         $rename->down();
-        self::assertSame(['a' => 1], $this->wp->value('pau-alumni-manager_settings'));
+        self::assertSame(['a' => 1], $this->wp->value('member-directory_settings'));
     }
 
     public function test_rename_option_never_overwrites_different_data(): void

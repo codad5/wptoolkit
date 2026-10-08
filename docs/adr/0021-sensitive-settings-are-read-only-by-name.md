@@ -7,8 +7,7 @@
 
 ## Context
 
-A real incident in `pau` (fixed in its commit `a2d31c3`, "disable public /users and /settings REST
-routes"): a public REST route returned `$settings->getAll()`, which included `api_key` — the
+A real incident in `member-directory` (since fixed there): a public REST route returned `$settings->getAll()`, which included `api_key` — the
 Next.js admin API key. Nothing about the call looked dangerous. The bug was that "everything"
 silently included secrets.
 
@@ -57,10 +56,10 @@ reviews can grep for. **Cons:** code that genuinely needs several secrets names 
 
 **We accept:** `all()` is no longer "all"; the method's docblock and the guide say so plainly.
 
-**We gain:** the pau-style leak can't happen through settings again.
+**We gain:** the member-directory-style leak can't happen through settings again.
 
 **This constrains:** Phase 4's field system carries a `sensitive` flag; Phase 5's Settings, asset
-localization and serialization honour it; a regression test reproduces the pau route and asserts
+localization and serialization honour it; a regression test reproduces the member-directory route and asserts
 the key is absent.
 
 ## Revisit when

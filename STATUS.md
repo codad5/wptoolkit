@@ -18,8 +18,8 @@
 | 3 — HTTP layer | ✅ router + one pipeline for REST/Ajax, deny-by-default, validation, 429s, JS client |
 | 4 — Data layer | ✅ fields, MetaBox (quick edit without a public endpoint), entities + 4 repository adapters on one contract, Query, migrations (batched, locked, reversible), Search (C1/S1 fixed), admin columns, 0.x data shapes pinned; 0.x `Model`/`MetaBox` deleted |
 | 5 — Presentation and admin | ✅ views (theme overrides, escaper), assets (locked `window.wptoolkit`, RTL), settings (sensitive by name, encryption), admin pages, notices, public front-end pages; `legacy/` deleted. DoD on real WordPress: the todo example in English and Arabic, by keyboard, zero notices |
-| 6 — DX, docs, AI | ✅ `wp {slug}` commands, README, guides, migration guide from pau/silverbird, `llms.txt`; ☐ timed getting-started run and two-agent trial (maintainer); 1.1: phpDocumentor, AGENTS.md template, Abilities |
-| 7 — Release | ✅ `release.yml` (gates → version check → standalone zip by `wptoolkit-build` → notes → GitHub Release), security checklist; ☐ tag last 0.x, pin pau, RC + pau on staging + soak, PR → `main`, `v1.0.0` (maintainer) |
+| 6 — DX, docs, AI | ✅ `wp {slug}` commands, README, guides, migration guide from member-directory/acme-theme, `llms.txt`; ☐ timed getting-started run and two-agent trial (maintainer); 1.1: phpDocumentor, AGENTS.md template, Abilities |
+| 7 — Release | ✅ `release.yml` (gates → version check → standalone zip by `wptoolkit-build` → notes → GitHub Release), security checklist; ☐ tag last 0.x, pin member-directory, RC + member-directory on staging + soak, PR → `main`, `v1.0.0` (maintainer) |
 
 Phase 1 delivered: kernel (container, providers, lifecycle, hook containment), `Identity`,
 library translations, coexistence ledger, `requires_toolkit` with activation refusal naming the

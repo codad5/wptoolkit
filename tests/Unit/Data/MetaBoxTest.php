@@ -46,12 +46,12 @@ final class MetaBoxTest extends TestCase
 
     public function test_reads_what_0x_stored_with_its_default_keys(): void
     {
-        // Shaped like pau: box "executive_role" on post type "pau-executive", no custom prefix.
+        // Shaped like a 0.x plugin: box "executive_role" on post type "acme-executive", no custom prefix.
         $this->wp->meta[10] = [
-            'executive_role_pau-executive_title' => ['President'],
-            'executive_role_pau-executive_active' => ['on'],
+            'executive_role_acme-executive_title' => ['President'],
+            'executive_role_acme-executive_active' => ['on'],
         ];
-        $box = $this->box('executive_role', 'pau-executive', [$this->f->text('title'), $this->f->checkbox('active')]);
+        $box = $this->box('executive_role', 'acme-executive', [$this->f->text('title'), $this->f->checkbox('active')]);
 
         self::assertSame('President', $box->value(10, 'title'));
         self::assertTrue($box->value(10, 'active'));
@@ -59,15 +59,15 @@ final class MetaBoxTest extends TestCase
 
     public function test_reads_what_0x_stored_under_a_custom_prefix_including_multiple_media(): void
     {
-        // Shaped like silverbird: set_prefix('_silverbird_movies_'), wp_media multiple = one row per ID.
+        // Shaped like a 0.x theme: set_prefix('_acme_movies_'), wp_media multiple = one row per ID.
         $this->wp->meta[20] = [
-            '_silverbird_movies_availability' => ['now_showing'],
-            '_silverbird_movies_gallery' => ['11', '12', '13'],
+            '_acme_movies_availability' => ['now_showing'],
+            '_acme_movies_gallery' => ['11', '12', '13'],
         ];
-        $box = $this->box('movie_details', 'silverbird_movies', [
+        $box = $this->box('movie_details', 'acme_movies', [
             $this->f->select('availability', ['now_showing' => 'Now showing', 'coming_soon' => 'Coming soon']),
             $this->f->of('gallery', 'wp_media')->multiple(),
-        ])->prefix('_silverbird_movies_');
+        ])->prefix('_acme_movies_');
 
         self::assertSame('now_showing', $box->value(20, 'availability'));
         self::assertSame([11, 12, 13], $box->value(20, 'gallery'));
@@ -75,16 +75,16 @@ final class MetaBoxTest extends TestCase
 
     public function test_writes_in_the_same_formats_so_0x_can_still_read_them(): void
     {
-        $box = $this->box('movie_details', 'silverbird_movies', [
+        $box = $this->box('movie_details', 'acme_movies', [
             $this->f->media('gallery')->multiple(),
             $this->f->text('title'),
-        ])->prefix('_silverbird_movies_');
+        ])->prefix('_acme_movies_');
 
         $box->save(30, 'gallery', ['5', '6']);
         $box->save(30, 'title', 'Dune');
 
-        self::assertSame([5, 6], $this->wp->meta[30]['_silverbird_movies_gallery'], 'one row per ID');
-        self::assertSame(['Dune'], $this->wp->meta[30]['_silverbird_movies_title']);
+        self::assertSame([5, 6], $this->wp->meta[30]['_acme_movies_gallery'], 'one row per ID');
+        self::assertSame(['Dune'], $this->wp->meta[30]['_acme_movies_title']);
     }
 
     public function test_backslashes_survive_a_save(): void

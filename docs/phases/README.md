@@ -43,9 +43,9 @@ Phases 3 and 4 can overlap once Phase 2's cache and logger contracts exist.
 ## Timeline — measured, not guessed
 
 The estimate is calibrated against a real project with the same author and the same AI-assisted
-workflow: **bolblar** (`C:\workspace\work\bolblar`), measured from its git history on 2026-10-07.
+workflow: an earlier **reference project**, measured from its git history on 2026-10-07.
 
-| Bolblar, first commit → last commit                | Value                                    |
+| Reference project, first commit → last commit      | Value                                    |
 | -------------------------------------------------- | ---------------------------------------- |
 | Calendar span                                      | 2026-09-23 → 2026-10-03 = **11 days**    |
 | Active days (days with commits)                    | **7** (64% of calendar days)             |
@@ -56,9 +56,9 @@ workflow: **bolblar** (`C:\workspace\work\bolblar`), measured from its git histo
 
 **WPToolkit 1.0's projected size:** source ~11–13k (smaller than 0.x's 17k: the autoloader,
 registry and debugger go away and Ajax/REST stop duplicating), tests ~9–11k, docs ~8k, CI and config
-~1k → **~30k lines, about a quarter of bolblar.**
+~1k → **~30k lines, about a quarter of the reference project.**
 
-Raw scaling says ~2 active days. That is wrong, because this work has costs bolblar did not:
+Raw scaling says ~2 active days. That is wrong, because this work has costs the reference project did not:
 
 | Adjustment                                                                     | Cost                |
 | ------------------------------------------------------------------------------ | ------------------- |
@@ -66,9 +66,9 @@ Raw scaling says ~2 active days. That is wrong, because this work has costs bolb
 | WordPress test infrastructure (wp-env, wp-phpunit, MySQL) and a PHP × WP CI matrix with slow feedback | +1–1.5 days |
 | Coexistence harness: a scoping build and a two-plugin end-to-end site          | +1 day              |
 | RTL locale + translation end-to-end                                            | +0.5 day            |
-| Your review and decision time (bolblar's bottleneck too)                       | included in the 64% active ratio |
+| Your review and decision time (the reference project's bottleneck too)                       | included in the 64% active ratio |
 
-| Phase | Active days (bolblar pace) |
+| Phase | Active days (the reference project pace) |
 | ----- | -------------------------- |
 | 0     | 0.5                        |
 | 1     | 1.5                        |
@@ -78,7 +78,7 @@ Raw scaling says ~2 active days. That is wrong, because this work has costs bolb
 | 5     | 1                          |
 | 6     | 0.75                       |
 | 7     | 0.5 + dogfood wait         |
-| **Total** | **~7.5–8 active days → ~2–3 calendar weeks** at bolblar's 64% active ratio |
+| **Total** | **~7.5–8 active days → ~2–3 calendar weeks** at the reference project's 64% active ratio |
 
 ### Measured against reality (2026-10-07, after Phases 0–3 and most of Track P)
 
@@ -91,10 +91,10 @@ later phases fast; coexistence work cost far more thought per line than adapters
 was undefined. What actually paced the work: CI round-trips (~10 min per push) and design decisions.
 **Revised remaining estimate: ~6–8 hours of build work** (Phase 4 ~2–3 h, Phase 5 ~1.5–2 h,
 Phase 6 ~1–1.5 h, Phase 7 + Track P ~1 h), **plus the human-paced steps** that don't compress:
-review and merge, pinning pau, migrating pau on staging and its soak period.
+review and merge, pinning member-directory, migrating member-directory on staging and its soak period.
 
-**Caveats, stated plainly.** Bolblar's rate measures output, not quality, and it was greenfield;
-porting is slower per line. Phase 7 includes migrating `pau-alumni-manager`, which runs at the speed
+**Caveats, stated plainly.** The reference project's rate measures output, not quality, and it was greenfield;
+porting is slower per line. Phase 7 includes migrating `member-directory`, which runs at the speed
 of whoever owns that site. Without AI assistance, the same plan is ~12–15 weeks part-time — the order
 does not change, only the calendar.
 

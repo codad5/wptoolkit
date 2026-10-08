@@ -11,21 +11,21 @@ use Codad5\WPToolkit\Data\Field\FieldFactory;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
 use Codad5\WPToolkit\Data\MetaBox;
 use Codad5\WPToolkit\Foundation\Identity;
-use Codad5\WPToolkit\Tests\Support\Entities\PauExecutive;
-use Codad5\WPToolkit\Tests\Support\Entities\SilverbirdMovie;
+use Codad5\WPToolkit\Tests\Support\Entities\ExecutiveFixture;
+use Codad5\WPToolkit\Tests\Support\Entities\MovieFixture;
 use PHPUnit\Framework\TestCase;
 
 /**
  * ADR-0016 on a real database: rows exactly as 0.x MetaBox::save_field() stored them (shapes taken
- * from pau-alumni-manager and silverbird) read identically through 1.0, and 1.0 writes the same
+ * from a 0.x plugin and a 0.x theme) read identically through 1.0, and 1.0 writes the same
  * rows back — so 0.x, which reads with get_post_meta($id, $key, $single), still reads them after a
  * downgrade.
  */
 final class DataCompatibilityTest extends TestCase
 {
-    private const PAU = 'pau-executive';
+    private const EXECUTIVES = 'acme-executive';
 
-    private const SILVERBIRD = 'silverbird_movies';
+    private const MOVIES = 'acme_movies';
 
     private FieldFactory $f;
 
@@ -34,8 +34,8 @@ final class DataCompatibilityTest extends TestCase
 
     protected function setUp(): void
     {
-        register_post_type(self::PAU);
-        register_post_type(self::SILVERBIRD);
+        register_post_type(self::EXECUTIVES);
+        register_post_type(self::MOVIES);
         $this->f = new FieldFactory();
     }
 
@@ -46,17 +46,17 @@ final class DataCompatibilityTest extends TestCase
         }
     }
 
-    public function test_pau_shaped_rows_read_and_write_identically(): void
+    public function test_plugin_shaped_rows_read_and_write_identically(): void
     {
-        $id = $this->post(self::PAU);
+        $id = $this->post(self::EXECUTIVES);
         // 0.x: key {box}_{post_type}_{field}; text through sanitize_text_field; number through absint;
         // an unticked-then-ticked checkbox as the submitted "on".
-        add_post_meta($id, 'executive_role_pau-executive_title', 'President', true);
-        add_post_meta($id, 'executive_role_pau-executive_year', '2024', true);
-        add_post_meta($id, 'executive_role_pau-executive_active', 'on', true);
-        add_post_meta($id, 'executive_role_pau-executive_photo', 77);
+        add_post_meta($id, 'executive_role_acme-executive_title', 'President', true);
+        add_post_meta($id, 'executive_role_acme-executive_year', '2024', true);
+        add_post_meta($id, 'executive_role_acme-executive_active', 'on', true);
+        add_post_meta($id, 'executive_role_acme-executive_photo', 77);
 
-        $box = $this->box('executive_role', self::PAU, [
+        $box = $this->box('executive_role', self::EXECUTIVES, [
             $this->f->text('title'),
             $this->f->number('year'),
             $this->f->checkbox('active'),
@@ -67,37 +67,37 @@ final class DataCompatibilityTest extends TestCase
 
         $box->save($id, 'title', 'Vice President');
         $box->save($id, 'photo', '78');
-        self::assertSame('Vice President', get_post_meta($id, 'executive_role_pau-executive_title', true));
-        self::assertSame(['78'], get_post_meta($id, 'executive_role_pau-executive_photo', false));
+        self::assertSame('Vice President', get_post_meta($id, 'executive_role_acme-executive_title', true));
+        self::assertSame(['78'], get_post_meta($id, 'executive_role_acme-executive_photo', false));
     }
 
     public function test_a_meta_field_named_title_stays_meta_in_the_repository(): void
     {
-        $id = $this->post(self::PAU);
-        add_post_meta($id, 'executive_role_pau-executive_title', 'Treasurer', true);
-        $repository = new PostTypeRepository(PauExecutive::class, new FieldTypes(), new Identity('pau'));
+        $id = $this->post(self::EXECUTIVES);
+        add_post_meta($id, 'executive_role_acme-executive_title', 'Treasurer', true);
+        $repository = new PostTypeRepository(ExecutiveFixture::class, new FieldTypes(), new Identity('member-directory'));
 
         $executive = $repository->find($id);
         self::assertSame('Treasurer', $executive?->get('title'), 'not the post title "Fixture"');
 
         $executive?->set('title', 'Secretary');
-        $repository->save($executive ?? new PauExecutive());
-        self::assertSame('Secretary', get_post_meta($id, 'executive_role_pau-executive_title', true));
+        $repository->save($executive ?? new ExecutiveFixture());
+        self::assertSame('Secretary', get_post_meta($id, 'executive_role_acme-executive_title', true));
         self::assertSame('Fixture', get_post($id)?->post_title);
     }
 
-    public function test_silverbird_shaped_rows_read_and_write_identically(): void
+    public function test_acme_shaped_rows_read_and_write_identically(): void
     {
-        $id = $this->post(self::SILVERBIRD);
-        // 0.x: set_prefix('_silverbird_movies_'); wp_media multiple = one row per ID; an array from a
+        $id = $this->post(self::MOVIES);
+        // 0.x: set_prefix('_acme_movies_'); wp_media multiple = one row per ID; an array from a
         // sanitize callback = one serialized row.
-        add_post_meta($id, '_silverbird_movies_availability', 'now_showing', true);
+        add_post_meta($id, '_acme_movies_availability', 'now_showing', true);
         foreach ([11, 12, 13] as $media) {
-            add_post_meta($id, '_silverbird_movies_gallery', $media);
+            add_post_meta($id, '_acme_movies_gallery', $media);
         }
-        add_post_meta($id, '_silverbird_movies_showtimes', ['18:00', '21:00'], true);
+        add_post_meta($id, '_acme_movies_showtimes', ['18:00', '21:00'], true);
 
-        $repository = new PostTypeRepository(SilverbirdMovie::class, new FieldTypes(), new Identity('silverbird'));
+        $repository = new PostTypeRepository(MovieFixture::class, new FieldTypes(), new Identity('acme-theme'));
         $movie = $repository->find($id);
 
         self::assertNotNull($movie);
@@ -108,19 +108,19 @@ final class DataCompatibilityTest extends TestCase
         $movie->set('gallery', [12, 14])->set('showtimes', ['20:00']);
         $repository->save($movie);
 
-        self::assertSame(['12', '14'], get_post_meta($id, '_silverbird_movies_gallery', false), 'still one row per ID');
-        self::assertSame(['20:00'], get_post_meta($id, '_silverbird_movies_showtimes', true), 'still one serialized row');
-        self::assertCount(1, get_post_meta($id, '_silverbird_movies_showtimes', false));
+        self::assertSame(['12', '14'], get_post_meta($id, '_acme_movies_gallery', false), 'still one row per ID');
+        self::assertSame(['20:00'], get_post_meta($id, '_acme_movies_showtimes', true), 'still one serialized row');
+        self::assertCount(1, get_post_meta($id, '_acme_movies_showtimes', false));
     }
 
     public function test_the_meta_box_and_the_repository_agree_on_every_key(): void
     {
-        $id = $this->post(self::SILVERBIRD);
-        $box = $this->box('movie_details', self::SILVERBIRD, SilverbirdMovie::fields($this->f))->prefix('_silverbird_movies_');
+        $id = $this->post(self::MOVIES);
+        $box = $this->box('movie_details', self::MOVIES, MovieFixture::fields($this->f))->prefix('_acme_movies_');
         $box->save($id, 'availability', 'coming_soon');
         $box->save($id, 'gallery', [5]);
 
-        $movie = (new PostTypeRepository(SilverbirdMovie::class, new FieldTypes(), new Identity('silverbird')))->find($id);
+        $movie = (new PostTypeRepository(MovieFixture::class, new FieldTypes(), new Identity('acme-theme')))->find($id);
 
         self::assertSame('coming_soon', $movie?->get('availability'));
         self::assertSame([5], $movie?->get('gallery'));

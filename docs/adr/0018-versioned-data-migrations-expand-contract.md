@@ -9,7 +9,7 @@
 
 ADR-0016 keeps 0.x's stored formats so upgrading to 1.0 needs no data change. But consumers'
 data will still need to evolve: rename a meta key, split a setting, move a high-volume post type to
-a custom table, change a serialized shape. Today every consumer does this by hand (silverbird's
+a custom table, change a serialized shape. Today every consumer does this by hand (acme-theme's
 `Contact_Form` already rewrites keys in its own code), with no record of what ran, no locking, and
 no way to resume a half-finished run on a large site.
 

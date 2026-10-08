@@ -61,7 +61,7 @@ the right time, readable right-to-left — and then `legacy/` is deleted.**
       name; omitted from `all()`, JSON, exports and REST/Ajax; password input that never echoes
       the stored value (blank keeps it); keys registered for log redaction; refused in JS
       localization; optional sodium encryption at rest
-- [x] Regression test reproducing pau's `/settings` route: the API key is absent from the response
+- [x] Regression test reproducing member-directory's `/settings` route: the API key is absent from the response
 - [x] Settings upcasters (moved from Phase 4.3b): `Settings::upcast($name, fn ($old) => …)`
 
 ### 5.5 Notices — ports `Notification`

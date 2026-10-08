@@ -22,7 +22,7 @@ use Codad5\WPToolkit\Tests\TestCase;
 
 final class SettingsTest extends TestCase
 {
-    private const SLUG = 'pau-alumni-manager';
+    private const SLUG = 'member-directory';
 
     private FakeOptions $wp;
 
@@ -45,7 +45,7 @@ final class SettingsTest extends TestCase
 
     // --- 0.x data (ADR-0016) -------------------------------------------------------------------
 
-    public function test_reads_what_0x_stored_for_pau(): void
+    public function test_reads_what_0x_stored(): void
     {
         // 0.x Settings: one option per setting, '{slug}_' . sanitize_key($key); checkbox stored as bool.
         $this->store('api_base_url', 'https://api.example.test');
@@ -53,32 +53,32 @@ final class SettingsTest extends TestCase
         $this->store('auto_refresh', '1');
         $this->store('show_unapproved', '');
 
-        $settings = $this->pau();
+        $settings = $this->settings();
 
         self::assertSame('https://api.example.test', $settings->get('api_base_url'));
         self::assertSame(20, $settings->get('items_per_page'));
         self::assertTrue($settings->get('auto_refresh'));
         self::assertFalse($settings->get('show_unapproved'), "0.x's false is '' — a value, not missing");
-        self::assertSame('pau-alumni-manager_api_key', $settings->optionKey('api_key'));
+        self::assertSame('member-directory_api_key', $settings->optionKey('api_key'));
     }
 
     public function test_missing_settings_fall_back_to_defaults(): void
     {
-        self::assertSame(20, $this->pau()->get('items_per_page'));
-        self::assertTrue($this->pau()->get('auto_refresh'));
+        self::assertSame(20, $this->settings()->get('items_per_page'));
+        self::assertTrue($this->settings()->get('auto_refresh'));
     }
 
     // --- Sensitive settings (ADR-0021) ---------------------------------------------------------
 
     /**
-     * pau commit a2d31c3: a public /settings route returned $settings->getAll(), which included the
+     * A real 0.x plugin shipped a public /settings route that returned $settings->getAll(), including the
      * API key. The same route on 1.0 cannot leak it.
      */
-    public function test_pau_settings_route_does_not_return_the_api_key(): void
+    public function test_directory_settings_route_does_not_return_the_api_key(): void
     {
         $this->store('api_base_url', 'https://api.example.test');
         $this->store('api_key', 'sk_live_123');
-        $settings = $this->pau();
+        $settings = $this->settings();
         $route = (new Route(['GET'], 'settings', static fn () => $settings->all()))->public();
 
         $response = (new Dispatcher(new Container(), new Identity(self::SLUG), new ArrayLogger()))
@@ -93,7 +93,7 @@ final class SettingsTest extends TestCase
 
     public function test_sensitive_settings_cannot_be_sent_to_the_browser(): void
     {
-        $settings = $this->pau();
+        $settings = $this->settings();
         self::assertSame(['items_per_page' => 20], $settings->forScript('items_per_page'));
 
         $this->expectException(InvalidConfigException::class);
@@ -118,7 +118,7 @@ final class SettingsTest extends TestCase
         $settings = new Settings($fields, new FieldTypes(), new Identity(self::SLUG), new SecretBox('salt-one'));
 
         self::assertSame([], $settings->set('api_key', 'sk_live_123'));
-        $stored = $this->wp->value('pau-alumni-manager_api_key');
+        $stored = $this->wp->value('member-directory_api_key');
         self::assertIsString($stored);
         self::assertStringNotContainsString('sk_live_123', $stored);
         self::assertSame('sk_live_123', $settings->get('api_key'));
@@ -144,19 +144,19 @@ final class SettingsTest extends TestCase
 
     public function test_set_validates_then_stores_sanitized_values(): void
     {
-        $settings = $this->pau();
+        $settings = $this->settings();
 
         self::assertSame(['API Base URL must be a valid http(s) URL.'], $settings->set('api_base_url', 'not a url'));
-        self::assertNull($this->wp->value('pau-alumni-manager_api_base_url'));
+        self::assertNull($this->wp->value('member-directory_api_base_url'));
 
         self::assertSame([], $settings->set('items_per_page', '50'));
-        self::assertSame(50, $this->wp->value('pau-alumni-manager_items_per_page'));
+        self::assertSame(50, $this->wp->value('member-directory_items_per_page'));
     }
 
     public function test_upcasters_turn_old_shapes_into_the_current_one(): void
     {
         $this->store('items_per_page', 'twenty');
-        $settings = $this->pau()->upcast('items_per_page', static fn (mixed $old): mixed => $old === 'twenty' ? 20 : $old);
+        $settings = $this->settings()->upcast('items_per_page', static fn (mixed $old): mixed => $old === 'twenty' ? 20 : $old);
 
         self::assertSame(20, $settings->get('items_per_page'));
     }
@@ -167,11 +167,11 @@ final class SettingsTest extends TestCase
     {
         $this->store('api_key', 'sk_live_123');
         $form = $this->form();
-        $apiKey = $this->pau()->field('api_key');
+        $apiKey = $this->settings()->field('api_key');
 
         self::assertSame('sk_live_123', $form->sanitize($apiKey, ''));
 
-        $_POST['pau-alumni-manager_settings_clear'] = ['api_key'];
+        $_POST['member-directory_settings_clear'] = ['api_key'];
         self::assertSame('', $form->sanitize($apiKey, ''));
     }
 
@@ -183,7 +183,7 @@ final class SettingsTest extends TestCase
             $errors[] = $message;
         });
 
-        $kept = $this->form()->sanitize($this->pau()->field('api_base_url'), 'javascript:alert(1)');
+        $kept = $this->form()->sanitize($this->settings()->field('api_base_url'), 'javascript:alert(1)');
 
         self::assertSame('https://old.example.test', $kept);
         self::assertSame(['API Base URL must be a valid http(s) URL.'], $errors);
@@ -194,7 +194,7 @@ final class SettingsTest extends TestCase
         $this->requireSodium();
         $sealed = (new SecretBox('k'))->seal('sk');
 
-        self::assertSame($sealed, $this->form()->sanitize($this->pau()->field('api_key'), $sealed));
+        self::assertSame($sealed, $this->form()->sanitize($this->settings()->field('api_key'), $sealed));
     }
 
     private function requireSodium(): void
@@ -205,7 +205,7 @@ final class SettingsTest extends TestCase
         }
     }
 
-    private function pau(): Settings
+    private function settings(): Settings
     {
         $f = $this->f;
 
@@ -220,7 +220,7 @@ final class SettingsTest extends TestCase
 
     private function form(): SettingsForm
     {
-        return new SettingsForm($this->pau(), new FieldTypes(), new Identity(self::SLUG));
+        return new SettingsForm($this->settings(), new FieldTypes(), new Identity(self::SLUG));
     }
 
     private function store(string $key, mixed $value): void

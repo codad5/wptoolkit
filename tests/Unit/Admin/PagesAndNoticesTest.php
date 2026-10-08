@@ -47,7 +47,7 @@ final class PagesAndNoticesTest extends TestCase
 
     // --- Pages -----------------------------------------------------------------------------------
 
-    public function test_pau_shaped_pages_register_parents_first_with_their_slugs_unchanged(): void
+    public function test_0x_shaped_pages_register_parents_first_with_their_slugs_unchanged(): void
     {
         $calls = [];
         Functions\when('add_menu_page')->alias(static function (...$args) use (&$calls) {
@@ -56,23 +56,23 @@ final class PagesAndNoticesTest extends TestCase
         });
         Functions\when('add_submenu_page')->alias(static function (...$args) use (&$calls) {
             $calls[] = ['sub', $args[4], $args[0]];
-            return 'alumni_page_' . $args[4];
+            return 'member_page_' . $args[4];
         });
 
         $pages = new Pages(new HookRegistrar());
-        $pages->add(Page::under('pau-alumni-manager', 'pau-alumni-settings', 'Settings', 'manage_options'));
-        $pages->add(Page::top('pau-alumni-manager', 'PAU Alumni Manager', 'manage_options')->icon('dashicons-groups')->position(30));
-        $pages->add(Page::postTypeList('pau-alumni-manager', 'pau-executive', 'Executives', 'manage_options'));
-        $pages->add(Page::hidden('pau-alumni-view', 'View alumnus', 'manage_options'));
+        $pages->add(Page::under('member-directory', 'member-directory-settings', 'Settings', 'manage_options'));
+        $pages->add(Page::top('member-directory', 'Member Directory', 'manage_options')->icon('dashicons-groups')->position(30));
+        $pages->add(Page::postTypeList('member-directory', 'acme-executive', 'Executives', 'manage_options'));
+        $pages->add(Page::hidden('member-directory-view', 'View member', 'manage_options'));
         $pages->addToMenu();
 
         self::assertSame([
-            ['menu', 'pau-alumni-manager', 'manage_options'],
-            ['sub', 'pau-alumni-settings', 'pau-alumni-manager'],
-            ['sub', 'edit.php?post_type=pau-executive', 'pau-alumni-manager'],
-            ['sub', 'pau-alumni-view', ''],
+            ['menu', 'member-directory', 'manage_options'],
+            ['sub', 'member-directory-settings', 'member-directory'],
+            ['sub', 'edit.php?post_type=acme-executive', 'member-directory'],
+            ['sub', 'member-directory-view', ''],
         ], $calls);
-        self::assertSame('toplevel_page_pau-alumni-manager', $pages->hookSuffix('pau-alumni-manager'));
+        self::assertSame('toplevel_page_member-directory', $pages->hookSuffix('member-directory'));
     }
 
     public function test_urls_match_0x_admin_urls(): void
@@ -81,11 +81,11 @@ final class PagesAndNoticesTest extends TestCase
         Functions\when('add_query_arg')->alias(static fn (array $args, string $url) => $url . '&' . http_build_query($args));
 
         $pages = new Pages(new HookRegistrar());
-        $pages->add(Page::hidden('pau-alumni-view', 'View', 'manage_options'));
-        $pages->add(Page::postTypeList('x', 'pau-partner', 'Partners', 'edit_posts'));
+        $pages->add(Page::hidden('member-directory-view', 'View', 'manage_options'));
+        $pages->add(Page::postTypeList('x', 'acme-partner', 'Partners', 'edit_posts'));
 
-        self::assertSame('https://example.test/wp-admin/admin.php?page=pau-alumni-view&id=4', $pages->url('pau-alumni-view', ['id' => 4]));
-        self::assertSame('https://example.test/wp-admin/edit.php?post_type=pau-partner', $pages->url('edit.php?post_type=pau-partner'));
+        self::assertSame('https://example.test/wp-admin/admin.php?page=member-directory-view&id=4', $pages->url('member-directory-view', ['id' => 4]));
+        self::assertSame('https://example.test/wp-admin/edit.php?post_type=acme-partner', $pages->url('edit.php?post_type=acme-partner'));
     }
 
     public function test_a_page_rechecks_its_capability_before_rendering(): void

@@ -7,7 +7,7 @@ they don't want.
 ## Where it stands (2026-10-07)
 
 0.x is an ambitious, unreleased, untested library (~17k lines, 20 classes, one known production
-consumer: `pau-alumni-manager`). A review scored it 50/100: good API shape, a weak foundation, three
+consumer: `member-directory`). A review scored it 50/100: good API shape, a weak foundation, three
 access-control holes. 1.0 keeps the API shape and rebuilds the foundation
 ([ADR-0001](../adr/0001-strangler-re-architecture.md)).
 

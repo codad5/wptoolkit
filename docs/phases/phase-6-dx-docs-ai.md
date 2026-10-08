@@ -57,7 +57,7 @@ plugin quickly, because the safe path is the default path and it's written down 
 
 - [x] `docs/guides/migrating-from-0x.md`: class-by-class from
       [07-migration-from-0x.md](../architecture/07-migration-from-0x.md), with before/after code
-      **taken from the real consumers** (`pau`, `silverbird-fusionintel`, `nile-distribution`),
+      **taken from the real consumers** (`member-directory`, `example-theme`, `another-theme`),
       using the Phase 1 usage inventory
 - [x] A "watch out for" section from those ports: routes that relied on the open REST default
       (now need `->public()`), Ajax actions relying on `'public' => true` by default, `__()` calls

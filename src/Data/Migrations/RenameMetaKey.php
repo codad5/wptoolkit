@@ -12,7 +12,7 @@ namespace Codad5\WPToolkit\Data\Migrations;
  * Move a post meta key to a new name on every post of a type, in batches, keeping every row (so
  * multiple fields keep all their values). Reversible.
  *
- *     new RenameMetaKey('2026_10_07_120000_rename_rating', 'silverbird_movies', '_silverbird_movies_rating', '_movie_rating')
+ *     new RenameMetaKey('2026_10_07_120000_rename_rating', 'acme_movies', '_acme_movies_rating', '_movie_rating')
  *
  * Each batch takes posts that still have the old key, so an interrupted batch repeats safely: a post
  * is rewritten from its old rows (new rows cleared first), then its old rows are deleted.

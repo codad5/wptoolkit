@@ -31,15 +31,15 @@ final class IdentityTest extends TestCase
      */
     public function test_option_and_meta_keys_match_what_0x_stored(): void
     {
-        $pau = new Identity('pau-alumni-manager');
-        self::assertSame('pau-alumni-manager_api_base_url', $pau->optionKey('api_base_url'));
-        self::assertSame('executive_role_pau-executive_title', $pau->metaKey('executive_role', 'pau-executive', 'title'));
+        $plugin = new Identity('member-directory');
+        self::assertSame('member-directory_api_base_url', $plugin->optionKey('api_base_url'));
+        self::assertSame('executive_role_acme-executive_title', $plugin->metaKey('executive_role', 'acme-executive', 'title'));
 
-        $silverbird = new Identity('silverbird-theme');
-        self::assertSame('silverbird-theme_reach_api_key', $silverbird->optionKey('reach_api_key'));
+        $theme = new Identity('acme-theme');
+        self::assertSame('acme-theme_reach_api_key', $theme->optionKey('reach_api_key'));
         self::assertSame(
-            '_silverbird_movies_availability',
-            $silverbird->metaKey('movie_details', 'silverbird_movies', 'availability', '_silverbird_movies_')
+            '_acme_movies_availability',
+            $theme->metaKey('movie_details', 'acme_movies', 'availability', '_acme_movies_')
         );
     }
 
@@ -48,7 +48,7 @@ final class IdentityTest extends TestCase
         $id = new Identity('x');
 
         self::assertSame('box_book_isbn', $id->metaKey('box', 'book', 'box_book_isbn'));
-        self::assertSame('silverbird_rating', $id->metaKey('box', 'book', 'rating', 'Silverbird_'), '0.x sanitize_key()d custom prefixes');
+        self::assertSame('acme_rating', $id->metaKey('box', 'book', 'rating', 'Acme_'), '0.x sanitize_key()d custom prefixes');
         self::assertSame('rating', $id->metaKey('box', 'book', 'rating', ''), 'an empty prefix is the bare field name, as in 0.x');
     }
 

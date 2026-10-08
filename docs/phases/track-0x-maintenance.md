@@ -14,13 +14,13 @@
 | ---- | -------------------------------------------------------------------------------------------------------- | ---------- |
 | S1 — Model search open to logged-out users | a site calls `enqueue_search_scripts()` (prints the nonce for every visitor)          | yes        |
 | S2 — metabox data readable via Ajax        | a site lets users register, or has untrusted logged-in users (contact-form submissions live in meta) | yes |
-| S3 — REST routes open by default           | a consumer adds a route returning private data without a `permission_callback`        | no — documented in pau, which already disabled `/users` and `/settings` |
+| S3 — REST routes open by default           | a consumer adds a route returning private data without a `permission_callback`        | no — documented in member-directory, which already disabled `/users` and `/settings` |
 | S4 — exception messages returned           | always, but only leaks internals when something throws                               | yes        |
 
 3. **Every 1.0 phase that replaces a 0.x module re-proves these scenarios** against the new code
    (Phases 3 and 4 list them by name).
-4. **Support ends** when the last known consumer (`pau`, `silverbird-fusionintel`,
-   `nile-distribution`) runs 1.0.
+4. **Support ends** when the last known consumer (`member-directory`, `example-theme`,
+   `another-theme`) runs 1.0.
 
 ## Parked work
 
@@ -38,6 +38,6 @@ actions, real HTTP status codes with a matching JS client fix.
 
 | Project                   | How it loads 0.x                                  | Uses                                          |
 | ------------------------- | ------------------------------------------------- | --------------------------------------------- |
-| `pau` (plugin)            | Composer, `codad5/wptoolkit: dev-main` (unpinned) | Config, Settings, Page, Notification, Debugger, RestRoute, Model, MetaBox |
-| `silverbird-fusionintel` (theme) | git clone in `wptoolkit/`                  | Ajax, EnqueueManager, Settings, Debugger, Model, MetaBox |
-| `nile-distribution` (theme) | git clone in `wptoolkit/` (different git state) | same as silverbird                            |
+| `member-directory` (plugin)            | Composer, `codad5/wptoolkit: dev-main` (unpinned) | Config, Settings, Page, Notification, Debugger, RestRoute, Model, MetaBox |
+| `example-theme` (theme) | git clone in `wptoolkit/`                  | Ajax, EnqueueManager, Settings, Debugger, Model, MetaBox |
+| `another-theme` (theme) | git clone in `wptoolkit/` (different git state) | same as acme-theme                            |

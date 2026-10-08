@@ -33,10 +33,10 @@ final class ApiClientTest extends TestCase
     {
         $this->http->respond(201, ['id' => 7]);
 
-        $response = $this->client(auth: Auth::bearer('secret-token'))->post('/alumni', ['name' => 'Ada']);
+        $response = $this->client(auth: Auth::bearer('secret-token'))->post('/member', ['name' => 'Ada']);
 
         $sent = $this->http->lastRequest();
-        self::assertSame('https://api.example.com/v1/alumni', $sent?->url);
+        self::assertSame('https://api.example.com/v1/member', $sent?->url);
         self::assertSame('Bearer secret-token', $sent->header('authorization'));
         self::assertSame('{"name":"Ada"}', $sent->encodedBody());
         self::assertSame('application/json', $sent->sentHeaders()['content-type']);

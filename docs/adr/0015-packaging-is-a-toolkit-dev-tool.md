@@ -12,9 +12,9 @@ The maintainer packages every WordPress project with a hand-copied `build-tools/
 
 | Project                     | Script                | What the shipped zip actually contains                                  |
 | --------------------------- | --------------------- | ----------------------------------------------------------------------- |
-| `pau` (plugin)              | `prepare-plugin.js`   | 8.9 MB; **~3,000 files of dev tooling in `vendor/`** — PHP_CodeSniffer, PHPStan, WPCS, Slevomat, stubs — because it zips the local `vendor/` as-is |
-| `silverbird-fusionintel` (theme) | `prepare-theme.js` | 9.6 MB, 1,121 files; **`.claude/skills/` (127 files) shipped to the client site**; WPToolkit's `sample-plugins/`; files at the zip root with no theme folder |
-| `nile-distribution` (theme) | `prepare-theme.js`    | Same script as silverbird with different exclude patterns                |
+| `member-directory` (plugin)              | `prepare-plugin.js`   | 8.9 MB; **~3,000 files of dev tooling in `vendor/`** — PHP_CodeSniffer, PHPStan, WPCS, Slevomat, stubs — because it zips the local `vendor/` as-is |
+| `example-theme` (theme) | `prepare-theme.js` | 9.6 MB, 1,121 files; **`.claude/skills/` (127 files) shipped to the client site**; WPToolkit's `sample-plugins/`; files at the zip root with no theme folder |
+| `another-theme` (theme) | `prepare-theme.js`    | Same script as acme-theme with different exclude patterns                |
 
 Three copies, three checksums: the script has already forked. Defects found:
 
