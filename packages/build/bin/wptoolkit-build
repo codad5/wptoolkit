@@ -21,7 +21,16 @@ use Codad5\WPToolkit\Build\Doctor;
 use Codad5\WPToolkit\Build\JsonConfig;
 use Codad5\WPToolkit\Build\ZipVerifier;
 
-foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php', __DIR__ . '/../../../vendor/autoload.php'] as $autoload) {
+// Composer 2.2+ tells bin scripts where its autoloader is; otherwise try where it can be: this repo,
+// a standalone codad5/wptoolkit-build install, or vendor/codad5/wptoolkit/packages/build/bin.
+$candidates = [
+    $GLOBALS['_composer_autoload_path'] ?? '',
+    __DIR__ . '/../../../vendor/autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../../../../../autoload.php',
+];
+foreach ($candidates as $autoload) {
     if (is_file($autoload)) {
         require $autoload;
         break;

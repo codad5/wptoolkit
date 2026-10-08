@@ -125,16 +125,19 @@ jobs:
       to `.distignore`: a `.gitignore` excludes build output that should ship (`assets/dist`,
       `vendor`) and misses dev files that shouldn't; `verify()` warns when an excluded file is one
       the plugin references
-- [ ] Published as `codad5/wptoolkit-build` (dev dependency); included in the standalone download
+- [x] Shipped as `vendor/bin/wptoolkit-build` inside `codad5/wptoolkit` (a separate
+      `codad5/wptoolkit-build` package is prepared in `packages/build/composer.json`)
 - [x] `wptoolkit.json` / `wptoolkit package` build the same pipeline
 
 ### P.1 Command and detection
 
-- [ ] `bin/wptoolkit` entry (PHP 7.4+ syntax, so it also runs for 0.x projects); `package` subcommand
-- [ ] Detect plugin (main file `Plugin Name:` header) or theme (`style.css` `Theme Name:`); read
-      slug, version, `Requires PHP`, `Requires at least`, text domain
-- [ ] Subcommands `init`, `package`, `verify`, `doctor`, `scope`; flags as in "How it's used"
-- [ ] `wptoolkit.json` loader with defaults; `schema/wptoolkit.schema.json` published
+- [x] `wptoolkit-build` entry with a `package` subcommand (PHP 8.1, like the library)
+- [x] Detect plugin (main file `Plugin Name:` header) or theme (`style.css` `Theme Name:`); read
+      slug, version, `Requires PHP`, `Requires at least`, text domain. Plus `Build::library()` for
+      WPToolkit's own zip
+- [x] Subcommands `init`, `package`, `verify`, `doctor` (`scope` stays `bin/scope.php` / the
+      `scope` key in wptoolkit.json)
+- [x] `wptoolkit.json` loader with defaults (a JSON schema file is deferred to 1.1)
 
 ### P.2 Staging pipeline
 
@@ -152,14 +155,14 @@ jobs:
 - [x] Verification failures: dev deps in `vendor/`, `vendor/bin`, `.git`, `.github`, `.claude`,
       `.agents`, `.idea`, `node_modules`, `tests`, `*.zip`, `composer.lock`/`package*.json`,
       header/guard version mismatch
-- [ ] Report: size, file count, 10 largest directories; write `<zip>.sha256`
+- [x] Report: size, file count, largest directories; write `<zip>.sha256`
 - [x] Exit codes: 0 success, 1 verification failed, 2 build error
 
 ### P.4 CI wrapper
 
-- [ ] Reusable workflow `.github/workflows/package-wordpress.yml` (`workflow_call`): checkout →
-      PHP (+ Node if a build hook exists) → `php wptoolkit package` → upload to the Release
-- [ ] Example caller workflow for a plugin and a theme
+- [x] Reusable workflow `.github/workflows/package-wordpress.yml` (`workflow_call`): checkout →
+      PHP (+ Node if a build hook exists) → `doctor` → `package` → `verify` → artifact, and the Release on tags
+- [x] Example caller workflow (in the reusable workflow's header; the same for plugins and themes)
 
 ### P.5 Migrate the three projects
 

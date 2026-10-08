@@ -9,13 +9,14 @@ declare(strict_types=1);
 namespace Codad5\WPToolkit\Build;
 
 /**
- * What is being built: a plugin (main file found by its `Plugin Name:` header) or a theme
- * (`style.css` with `Theme Name:`). The slug is the directory name, as WordPress uses it.
+ * What is being built: a plugin (main file found by its `Plugin Name:` header), a theme
+ * (`style.css` with `Theme Name:`) or a library (a named slug and the file holding its version).
+ * For plugins and themes the slug is the directory name, as WordPress uses it.
  */
 final class Project
 {
     /**
-     * @param 'plugin'|'theme' $type
+     * @param 'plugin'|'theme'|'library' $type
      */
     private function __construct(
         public readonly string $root,
@@ -35,6 +36,20 @@ final class Project
         }
 
         throw new BuildException(sprintf('No plugin main file (a PHP file with a "Plugin Name:" header) in %s.', $root));
+    }
+
+    /**
+     * A library such as WPToolkit itself: not installed by WordPress, so the slug is given and
+     * `$versionFile` (relative to the root) is where Version::fromConstant() looks.
+     */
+    public static function library(string $root, string $slug, string $versionFile): self
+    {
+        $root = self::normalizeRoot($root);
+        if (!is_file($root . '/' . $versionFile)) {
+            throw new BuildException(sprintf('Version file %s not found in %s.', $versionFile, $root));
+        }
+
+        return new self($root, 'library', $slug, $root . '/' . $versionFile);
     }
 
     public static function theme(string $root): self

@@ -11,3 +11,6 @@ test-results/
 playwright-report/
 .auth/
 .wp-env.override.json
+
+# Release builds (bin/build-release.php)
+/dist/

@@ -39,16 +39,19 @@
     },
     "autoload": {
         "psr-4": {
-            "Codad5\\WPToolkit\\": "src/"
+            "Codad5\\WPToolkit\\": "src/",
+            "Codad5\\WPToolkit\\Build\\": "packages/build/src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "Codad5\\WPToolkit\\Tests\\": "tests/",
-            "Codad5\\WPToolkit\\Build\\": "packages/build/src/",
             "WptkTodo\\": "examples/todo/src/"
         }
     },
+    "bin": [
+        "packages/build/bin/wptoolkit-build"
+    ],
     "config": {
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true

@@ -14,17 +14,22 @@
 
 ### 7.1 Release automation ([ADR-0011](../adr/0011-conventional-commits-semver-release-automation.md))
 
-- [ ] `release.yml`: on tag `v*` → build the export-ignored dist zip **and the standalone zip**
-      ([ADR-0014](../adr/0014-composer-is-optional.md)), generate the changelog from Conventional
-      Commits, publish the GitHub Release with both zips attached, ping Packagist
-- [ ] `Application::VERSION` bumped by the workflow, and the build fails if it doesn't match the tag
+- [x] `release.yml`: on tag `v*` → every CI gate (reused via `workflow_call`) → the standalone zip
+      ([ADR-0014](../adr/0014-composer-is-optional.md)) + `.sha256`, verified → changelog from
+      Conventional Commits (`bin/changelog.php`) → GitHub Release (pre-release for `-rc` tags).
+      Composer users get the GitHub dist archive (export-ignored) through the VCS repository, so no
+      separate dist zip and no Packagist ping
+- [x] `Application::VERSION` set by `php bin/set-version.php X.Y.Z` (also the JS client's VERSION) in
+      the release commit; the workflow fails if either doesn't match the tag
 - [ ] Packagist package registered *(maintainer)*
 
 ### 7.1b The build tool ships with 1.0 (Track P)
 
-- [ ] Track P complete: `doctor`, `verify <zip>`, `--dry-run`, reusable `package-wordpress.yml`
-- [ ] `codad5/wptoolkit-build` published from `packages/build` (split or path release), version 1.0.0
-- [ ] The release workflow builds WPToolkit's own standalone zip **with** the build tool (dogfooding)
+- [x] Track P complete: `doctor`, `verify <zip>`, `--dry-run`, reusable `package-wordpress.yml`
+- [x] The build tool ships inside `codad5/wptoolkit` as `vendor/bin/wptoolkit-build` (root `bin`);
+      `packages/build/composer.json` is ready to split out as `codad5/wptoolkit-build` later
+- [x] The release workflow builds WPToolkit's own standalone zip **with** the build tool (dogfooding:
+      `Build::library()`, `bin/build-release.php`)
 - [ ] At least one real project (pau) packaged with it — with the maintainer's go-ahead
 
 ### 7.2 Hardening

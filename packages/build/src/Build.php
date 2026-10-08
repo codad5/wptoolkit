@@ -89,6 +89,14 @@ final class Build
         return new self(Project::plugin($directory));
     }
 
+    /**
+     * @param string $versionFile Relative to `$directory`; read by Version::fromConstant().
+     */
+    public static function library(string $directory, string $slug, string $versionFile): self
+    {
+        return new self(Project::library($directory, $slug, $versionFile));
+    }
+
     public static function theme(string $directory): self
     {
         return new self(Project::theme($directory));

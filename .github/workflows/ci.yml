@@ -6,6 +6,8 @@ on:
   push:
     branches: [next, main]
   pull_request:
+  # release.yml runs the same gates before it publishes anything.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}
