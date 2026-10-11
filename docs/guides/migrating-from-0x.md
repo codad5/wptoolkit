@@ -256,6 +256,8 @@ $settings = new Settings([
 
 - **`getAll()` → `all()`, which leaves sensitive settings out.** Read a secret by name:
   `$settings->get('api_key')`. Mark API keys, tokens and webhook secrets `->sensitive()`.
+- **A custom `option_prefix`** (0.x's third argument) carries over as `optionPrefix:`, so those options
+  are read where they already are: `new Settings([...], $types, $identity, optionPrefix: 'memberdir_')`.
 - Rendering the form: `SettingsForm` (Settings API), in an admin page — see step 9.
 
 ## 9. `Page`, `Notification` and views

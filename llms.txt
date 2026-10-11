@@ -16,7 +16,7 @@ Namespace: `Codad5\WPToolkit` (or your own, if you scope the library). Package: 
 5. Declare route input with `->args(['name' => ['rules' => '…', 'type' => '…']])` and read it with `$request->input('name')`. Types: text, textarea, email, url, int, float, bool, key, slug, html, array_text, raw.
 6. Return an array or a `Response`; throw `HttpError::notFound()` / `forbidden()` / `badRequest()` for errors. Never return exception messages.
 7. For a post or its meta, check `edit_post`/`read_post` on that post and that its post type is yours.
-8. Mark API keys, tokens and passwords `->sensitive()`. Read them with `$settings->get('name')`; `all()` leaves them out. Never pass them to `with()` or `forScript()`.
+8. Mark API keys, tokens and passwords `->sensitive()`. Read them with `$settings->get('name')`; `all()` leaves them out. Never pass them to `with()` or `forScript()`. Options are `{slug}_{name}`; pass `optionPrefix:` to `Settings` only to keep option names users already have saved.
 9. Templates print through `$e` (`$e->html()`, `$e->attr()`, `$e->url()`); never `echo` a variable.
 10. Every user-facing string uses `__()`/`_e()`/`esc_html__()` with the plugin's own text domain, inside `boot()` or later.
 11. Declare assets with `AssetManager` (`->script()`, `->style()`); never call `wp_enqueue_*` yourself.

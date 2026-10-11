@@ -197,6 +197,92 @@ final class SettingsTest extends TestCase
         self::assertSame($sealed, $this->form()->sanitize($this->settings()->field('api_key'), $sealed));
     }
 
+    // --- Custom option prefix (0.x `option_prefix` parity) -------------------------------------
+
+    public function test_a_custom_prefix_reads_options_a_plugin_already_saved_under_another_name(): void
+    {
+        // 0.x: Settings::create($settings, 'member-directory', 'memberdir_') stored 'memberdir_' . sanitize_key($key).
+        $this->wp->options['memberdir_api_key'] = ['value' => 'legacy-secret', 'autoload' => true];
+        $this->wp->options['member-directory_api_key'] = ['value' => 'wrong-row', 'autoload' => true];
+
+        $settings = $this->prefixed('memberdir_');
+
+        self::assertSame('legacy-secret', $settings->get('api_key'));
+        self::assertSame('memberdir_api_key', $settings->optionKey('api_key'));
+    }
+
+    public function test_a_custom_prefix_is_used_for_writes_and_deletes_and_nothing_lands_under_the_slug(): void
+    {
+        $settings = $this->prefixed('memberdir_');
+
+        self::assertSame([], $settings->set('items_per_page', '50'));
+        self::assertSame(50, $this->wp->value('memberdir_items_per_page'));
+        self::assertNull($this->wp->value('member-directory_items_per_page'));
+
+        $settings->delete('items_per_page');
+        self::assertNull($this->wp->value('memberdir_items_per_page'));
+    }
+
+    public function test_the_settings_form_registers_the_prefixed_option_names(): void
+    {
+        $registered = [];
+        Functions\when('register_setting')->alias(static function (string $group, string $option) use (&$registered): void {
+            $registered[] = $option;
+        });
+        Functions\when('add_settings_section')->justReturn(null);
+        Functions\when('add_settings_field')->justReturn(null);
+
+        (new SettingsForm($this->prefixed('memberdir_'), new FieldTypes(), new Identity(self::SLUG)))->registerFields('page');
+
+        self::assertContains('memberdir_api_key', $registered);
+        self::assertNotContains('member-directory_api_key', $registered);
+    }
+
+    public function test_the_logger_redacts_a_sensitive_setting_under_its_prefixed_option_name(): void
+    {
+        $logger = new ArrayLogger();
+        new Settings([$this->f->text('webhook')->sensitive()], new FieldTypes(), new Identity(self::SLUG), logger: $logger, optionPrefix: 'memberdir_');
+
+        $logger->info('Saved', ['memberdir_webhook' => 'https://hooks.test/abc']);
+
+        self::assertSame('[redacted]', $logger->records[0]['context']['memberdir_webhook']);
+    }
+
+    /**
+     * @dataProvider badPrefixes
+     */
+    public function test_an_unusable_prefix_is_refused(string $prefix): void
+    {
+        $this->expectException(InvalidConfigException::class);
+        $this->prefixed($prefix);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function badPrefixes(): array
+    {
+        return ['empty' => [''], 'space' => ['my plugin_'], 'sql-ish' => ["x'; --"], 'wildcard' => ['acme_%']];
+    }
+
+    public function test_a_prefixed_name_longer_than_wordpress_allows_is_refused(): void
+    {
+        $settings = new Settings([$this->f->text('k')], new FieldTypes(), new Identity(self::SLUG), optionPrefix: str_repeat('p', 191));
+
+        $this->expectException(InvalidConfigException::class);
+        $settings->optionKey('k');
+    }
+
+    private function prefixed(string $prefix): Settings
+    {
+        $f = $this->f;
+
+        return new Settings([
+            $f->password('api_key')->label('API Key')->sensitive(),
+            $f->number('items_per_page')->default(20)->rules('min:5|max:100'),
+        ], new FieldTypes(), new Identity(self::SLUG), optionPrefix: $prefix);
+    }
+
     private function requireSodium(): void
     {
         if (!function_exists('sodium_crypto_secretbox')) {
