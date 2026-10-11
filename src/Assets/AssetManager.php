@@ -97,9 +97,22 @@ final class AssetManager
     public function enqueue(string $context, string $hookSuffix): void
     {
         foreach ($this->assets as $asset) {
-            if (!in_array($context, $asset->contexts, true) || ($asset->condition !== null && !($asset->condition)($hookSuffix))) {
+            if ($asset->onDemand || !in_array($context, $asset->contexts, true) || ($asset->condition !== null && !($asset->condition)($hookSuffix))) {
                 continue;
             }
+            $asset->type === 'script' ? $this->enqueueScript($asset) : $this->enqueueStyle($asset);
+        }
+    }
+
+    /**
+     * Enqueue named assets now — for output that only some pages have, such as a shortcode. Declare
+     * them with `->onDemand()` so they are not also loaded everywhere. Calls made before WordPress's
+     * front-end enqueue are fine (WordPress enqueues in footer for scripts printed late).
+     */
+    public function load(string ...$names): void
+    {
+        foreach ($names as $name) {
+            $asset = $this->assets[$name] ?? throw new InvalidConfigException(sprintf('Asset "%s" is not declared.', $name));
             $asset->type === 'script' ? $this->enqueueScript($asset) : $this->enqueueStyle($asset);
         }
     }

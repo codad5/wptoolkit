@@ -55,7 +55,7 @@ final class CliTest extends TestCase
     {
         $scaffolder = $this->scaffolder();
 
-        foreach (['entity' => 'Book', 'controller' => 'book', 'provider' => 'admin-tools', 'field' => 'StarRating', 'migration' => 'RenameRating'] as $kind => $name) {
+        foreach (['entity' => 'Book', 'controller' => 'book', 'provider' => 'admin-tools', 'field' => 'StarRating', 'migration' => 'RenameRating', 'shortcode' => 'CoinWidget'] as $kind => $name) {
             $path = $scaffolder->make($kind, $name);
 
             exec(escapeshellarg(PHP_BINARY) . ' -l ' . escapeshellarg($path) . ' 2>&1', $output, $code);
@@ -68,6 +68,7 @@ final class CliTest extends TestCase
         self::assertFileExists($this->dir . '/src/Http/BookController.php');
         self::assertFileExists($this->dir . '/src/AdminToolsServiceProvider.php');
         self::assertFileExists($this->dir . '/src/Fields/StarRatingFieldType.php');
+        self::assertFileExists($this->dir . '/src/Shortcodes/CoinWidgetShortcode.php');
         self::assertStringContainsString("'2026_10_08_093000_rename_rating'", (string) file_get_contents($this->dir . '/src/Migrations/RenameRating.php'));
         self::assertStringContainsString("->can('read')", (string) file_get_contents($this->dir . '/src/Http/BookController.php'), 'the example route has an access rule');
         self::assertStringContainsString("'my-plugin')", (string) file_get_contents($this->dir . '/src/Entities/Book.php'), 'strings use the plugin text domain');
@@ -123,7 +124,7 @@ final class CliTest extends TestCase
             self::assertStringNotContainsString('@subcommand', (string) $reflection->getDocComment(), $name);
             self::assertNotSame('', (new \WP_CLI\DocParser((string) $reflection->getDocComment()))->get_shortdesc(), $name . ' needs a description for `wp help`');
         }
-        self::assertSame(11, count(ToolkitCommand::SUBCOMMANDS));
+        self::assertSame(12, count(ToolkitCommand::SUBCOMMANDS));
     }
 
     // --- Inspection ----------------------------------------------------------------------------

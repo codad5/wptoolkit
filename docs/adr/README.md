@@ -55,3 +55,4 @@ Not for a naming choice, a library with no real alternative, or anything you wou
 | [0019](0019-no-translator-abstraction.md)                            | No `Translator` abstraction: library strings call WordPress i18n directly | Accepted |
 | [0020](0020-incompatible-unscoped-copies-refuse-activation.md)       | The loaded copy wins; an incompatible plugin is refused at activation      | Accepted |
 | [0021](0021-sensitive-settings-are-read-only-by-name.md)              | Sensitive settings are readable only by name and never leave the server   | Accepted |
+| [0022](0022-shortcodes-are-declared-validated-and-lazy.md)            | Shortcodes are declared, validated, access-checked and load assets lazily | Accepted |

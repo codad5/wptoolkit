@@ -28,6 +28,8 @@ final class TodoExampleTest extends TestCase
         Functions\when('plugin_basename')->justReturn('todo/todo.php');
         Functions\when('determine_locale')->justReturn('en_US');
         Functions\when('load_plugin_textdomain')->justReturn(true);
+        Functions\when('shortcode_exists')->justReturn(false);
+        Functions\when('add_shortcode')->justReturn(null);
         Functions\when('register_activation_hook')->justReturn(null);
         Functions\when('register_deactivation_hook')->justReturn(null);
         Functions\when('wp_using_ext_object_cache')->justReturn(false);
@@ -41,6 +43,8 @@ final class TodoExampleTest extends TestCase
         $routes = $app->container()->get(Router::class)->routes();
         self::assertCount(3, $routes);
         self::assertSame(['todo-board'], array_keys($app->container()->get(\Codad5\WPToolkit\Frontend\PublicPages::class)->routes()));
+        $shortcode = $app->container()->get(\Codad5\WPToolkit\Frontend\Shortcodes::class)->all()['summary'];
+        self::assertSame(['wptk_todo_summary', 'public'], [$shortcode->tag, $shortcode->accessRule()]);
         self::assertNotFalse(has_action('admin_menu'), 'the settings page');
         self::assertSame([], $app->container()->get(\Codad5\WPToolkit\Admin\Settings\Settings::class)->forScript(), 'built lazily, after init');
         foreach ($routes as $route) {

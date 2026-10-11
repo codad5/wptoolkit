@@ -20,7 +20,8 @@ Namespace: `Codad5\WPToolkit` (or your own, if you scope the library). Package: 
 9. Templates print through `$e` (`$e->html()`, `$e->attr()`, `$e->url()`); never `echo` a variable.
 10. Every user-facing string uses `__()`/`_e()`/`esc_html__()` with the plugin's own text domain, inside `boot()` or later.
 11. Declare assets with `AssetManager` (`->script()`, `->style()`); never call `wp_enqueue_*` yourself.
-12. Change stored data with a `Migration` registered via `->migrations([...])`, never with branches on a "data version".
+12. Shortcodes: `$shortcodes->add('name', $handler)` with `->public()`/`->loggedIn()`/`->can()`, `->attributes([...])` (same shape as route args), `->view()`, `->assets()`. Handlers return; never echo, and never build `[tag …]` strings from request data — call `$shortcodes->render()`.
+13. Change stored data with a `Migration` registered via `->migrations([...])`, never with branches on a "data version".
 
 ## Core API
 
@@ -28,9 +29,9 @@ Namespace: `Codad5\WPToolkit` (or your own, if you scope the library). Package: 
 - HTTP: `Http\Router` (`get/post/put/patch/delete`), `Http\Route`, `Http\Request`, `Http\Response`, `Http\HttpError`, `Http\Client\ApiClient`
 - Data: `Data\Field\FieldFactory`, `Data\MetaBox`, `Data\Entity` + `#[PostType]` `#[Taxonomy]` `#[Table]` `#[OptionStorage]`, `Data\EntityRegistrar`, `Adapters\Repository\RepositoryFactory` (`->for(Entity::class)`), `Data\Query\Query`, `Data\Search\Search`, `Data\Migrations\Migration`
 - Admin: `Admin\Settings\Settings` + `SettingsForm`, `Admin\Page` + `Pages`, `Admin\Notices`, `Admin\Column` + `Columns`
-- Front end: `View\PhpTemplateRenderer` (via `Contracts\View\Renderer`), `Assets\AssetManager`, `Frontend\PublicPages`
+- Front end: `View\PhpTemplateRenderer` (via `Contracts\View\Renderer`), `Assets\AssetManager`, `Frontend\PublicPages`, `Frontend\Shortcodes`
 - Services to inject: `Contracts\Log\Logger`, `Contracts\Cache\CacheStore`, `Contracts\Http\HttpClient`, `Contracts\Clock\Clock`
-- CLI: `wp {slug} toolkit:info | routes:list | hooks:list | migrate | migrate:status | migrate:rollback | make:entity | make:controller | make:provider | make:field | make:migration`
+- CLI: `wp {slug} toolkit:info | routes:list | hooks:list | migrate | migrate:status | migrate:rollback | make:entity | make:controller | make:provider | make:field | make:migration | make:shortcode`
 
 ## Docs
 

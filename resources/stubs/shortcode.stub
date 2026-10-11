@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}}\Shortcodes;
+
+/**
+ * Register it in a provider's boot(); a shortcode needs an access rule, and its attributes are
+ * validated before this class sees them:
+ *
+ *     $shortcodes->add('{{shortcode}}', $app->container()->get({{class}}Shortcode::class)(...))
+ *         ->public()
+ *         ->attributes(['count' => ['type' => 'int', 'default' => 5, 'rules' => 'integer|min:1|max:50']])
+ *         ->view('front/{{shortcode}}');
+ *
+ * Return data for the view (it escapes late); return a string only when there is no view.
+ */
+final class {{class}}Shortcode
+{
+    /**
+     * @param array<string, mixed> $attributes Declared attributes, validated and typed.
+     * @return array<string, mixed>
+     */
+    public function __invoke(array $attributes, string $content = ''): array
+    {
+        return ['count' => $attributes['count'] ?? 5];
+    }
+}

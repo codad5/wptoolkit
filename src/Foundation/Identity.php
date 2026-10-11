@@ -62,6 +62,16 @@ final class Identity
     }
 
     /**
+     * A shortcode tag: `my_plugin_widget`.
+     *
+     * @return non-empty-string
+     */
+    public function shortcodeTag(string $name): string
+    {
+        return $this->underscored . '_' . $this->clean($name, '_');
+    }
+
+    /**
      * A public query variable (rewrite rules): `my_plugin_page`.
      *
      * @return non-empty-string
