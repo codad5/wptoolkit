@@ -94,6 +94,9 @@ final class Scaffolder
         $template = (string) file_get_contents($this->stubDir . '/' . $stub);
         $code = strtr($template, [
             '{{namespace}}' => $this->namespace,
+            // This copy's root namespace: scoping renames __NAMESPACE__, so generated files load
+            // in a plugin that bundles a scoped copy too.
+            '{{toolkit}}' => substr(__NAMESPACE__, 0, -strlen('\\Cli')),
             '{{class}}' => $class,
             '{{label}}' => trim((string) preg_replace('/(?<!^)[A-Z]/', ' $0', $base)),
             '{{post_type}}' => substr($this->snake($base), 0, 20),

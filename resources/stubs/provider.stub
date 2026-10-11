@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace {{namespace}};
 
-use Codad5\WPToolkit\Foundation\ServiceProvider;
+use {{toolkit}}\Foundation\ServiceProvider;
 
 /**
  * Add it to the application: `->providers([{{class}}ServiceProvider::class])`.

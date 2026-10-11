@@ -112,6 +112,58 @@ spl_autoload_register(static function (string $class): void {
 PHP);
 fwrite(STDOUT, "built wptk-todo (examples/todo, composer layout)\n");
 
+// The same example, packaged the documented way for a Composer-based plugin:
+// `Build::plugin()->scope()->zip()`. The plugin's code is written against Codad5\WPToolkit; the
+// build must rename the library, the plugin's references and Composer's autoload map together, or
+// the packaged plugin cannot load. Uses the real packager and the real `composer dump-autoload`.
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'Codad5\\WPToolkit\\Build\\';
+    if (strncmp($class, $prefix, strlen($prefix)) === 0) {
+        require $root . '/packages/build/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    }
+});
+
+$source = sys_get_temp_dir() . '/wptk-e2e-' . bin2hex(random_bytes(4)) . '/wptk-todo-scoped';
+copy_directory($root . '/examples/todo', $source);
+foreach (['src', 'bootstrap', 'languages', 'resources', 'bin'] as $folder) {
+    copy_directory($root . '/' . $folder, $source . '/vendor/codad5/wptoolkit/' . $folder);
+}
+copy($root . '/composer.json', $source . '/vendor/codad5/wptoolkit/composer.json');
+// What `composer install` records about the package; dump-autoload builds the autoloader from it.
+mkdir($source . '/vendor/composer', 0777, true);
+file_put_contents($source . '/vendor/composer/installed.json', json_encode([
+    'packages' => [[
+        'name' => 'codad5/wptoolkit',
+        'version' => '1.0.0',
+        'version_normalized' => '1.0.0.0',
+        'type' => 'library',
+        'install-path' => '../codad5/wptoolkit',
+        'autoload' => ['psr-4' => ['Codad5\\WPToolkit\\' => 'src/']],
+    ]],
+    'dev' => false,
+    'dev-package-names' => [],
+]));
+// Two copies of the example can't be active together; the scoped one gets its own plugin name.
+$main = (string) file_get_contents($source . '/todo.php');
+file_put_contents($source . '/todo.php', str_replace('WPToolkit Todo example', 'WPToolkit Todo example (scoped build)', $main));
+
+$zip = dirname($source) . '/scoped.zip';
+\Codad5\WPToolkit\Build\Build::plugin($source)
+    ->scope('WptkTodo\\Lib\\WPToolkit')
+    ->withOutput(static function (string $line): void {
+        fwrite(STDOUT, '  ' . $line . "\n");
+    })
+    ->zip($zip);
+
+$archive = new ZipArchive();
+if ($archive->open($zip) !== true || !$archive->extractTo($build)) {
+    fwrite(STDERR, "Could not unpack {$zip}\n");
+    exit(1);
+}
+$archive->close();
+remove_directory(dirname($source));
+fwrite(STDOUT, "built wptk-todo-scoped (examples/todo, packaged with Build::scope())\n");
+
 function copy_directory(string $from, string $to): void
 {
     if (!is_dir($to)) {

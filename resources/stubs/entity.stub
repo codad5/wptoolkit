@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace {{namespace}}\Entities;
 
-use Codad5\WPToolkit\Data\Attributes\PostType;
-use Codad5\WPToolkit\Data\Entity;
-use Codad5\WPToolkit\Data\Field\FieldFactory;
+use {{toolkit}}\Data\Attributes\PostType;
+use {{toolkit}}\Data\Entity;
+use {{toolkit}}\Data\Field\FieldFactory;
 
 /**
  * {{class}}, stored as the `{{post_type}}` post type. Fields not mapped to a post column are post

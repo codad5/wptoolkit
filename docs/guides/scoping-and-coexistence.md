@@ -52,7 +52,39 @@ it never crashes ([ADR-0020](../adr/0020-incompatible-unscoped-copies-refuse-act
    ])->providers([...])->boot();
    ```
 
-## Path B — with Composer and Strauss
+## Path B — with Composer, scoped when you package
+
+Develop against `Codad5\WPToolkit` as installed by Composer, and let the packager scope the copy that
+ships:
+
+```php
+// build.php
+Build::plugin(__DIR__)
+    ->composer(noDev: true)                    // before scope(): a reinstall afterwards would undo it
+    ->scope('MyPlugin\Lib\WPToolkit')
+    ->zip();
+```
+
+In the staged copy only (your working files are never edited), `scope()`:
+
+1. renames the library with its own `bin/scope.php`;
+2. renames your plugin's references to it — `use Codad5\WPToolkit\…` in your `src/`, views and main file;
+3. renames the package's prefix in Composer's metadata and runs `composer dump-autoload`, so the
+   autoloader matches;
+4. loads the scoped `Application` through `vendor/autoload.php` and fails the build if it doesn't load.
+
+Limits ([ADR-0024](../adr/0024-the-packager-scopes-the-consumers-code-too.md)):
+
+- Class names written as **strings** (`'Codad5\\WPToolkit\\Http\\Router'`) are not renamed; the build
+  warns and names the file. Use `Router::class`.
+- Other packages in `vendor/` are not touched. If one of your dependencies itself requires WPToolkit,
+  use Strauss (Path C).
+- The site you develop on runs the unscoped copy. Test the built zip — on a site with another
+  WPToolkit plugin if you can.
+
+The same step works for a standalone copy in `lib/wptoolkit` that you have *not* scoped by hand.
+
+## Path C — with Composer and Strauss
 
 [Strauss](https://github.com/BrianHenryIE/strauss) copies your dependencies into a folder and
 prefixes their namespaces. A typical configuration in your plugin's `composer.json`:

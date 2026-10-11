@@ -144,7 +144,9 @@ jobs:
 - [x] Copy to a temp staging dir; never mutate the working tree
 - [x] Optional build hook from config (`npm run build`) run **before** staging
 - [x] `composer install --no-dev --optimize-autoloader` in staging when `composer.json` exists
-- [x] Scope the bundled toolkit when configured (Strauss for Composer, `bin/scope.php` for standalone)
+- [x] Scope the bundled toolkit when configured: the library with `bin/scope.php`, plus the project's own
+      references and, for Composer, the autoload map (ADR-0024; corrected 2026-10-11 — the original
+      tick claimed a Strauss path that was never built, and the Composer flow produced a zip that could not load)
 - [x] Optional `wp i18n make-pot`
 - [x] `.distignore` (WP-CLI format) + built-in defaults; globs relative to the root
 - [ ] `php -l` every PHP file in staging

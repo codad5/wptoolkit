@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace {{namespace}}\Fields;
 
-use Codad5\WPToolkit\Data\Field\Field;
-use Codad5\WPToolkit\Data\Field\FieldType;
+use {{toolkit}}\Data\Field\Field;
+use {{toolkit}}\Data\Field\FieldType;
 
 /**
  * A custom field type. Register it before use: `$fieldTypes->register('{{id}}', new {{class}}FieldType());`

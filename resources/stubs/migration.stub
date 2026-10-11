@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace {{namespace}}\Migrations;
 
-use Codad5\WPToolkit\Data\Migrations\Migration;
+use {{toolkit}}\Data\Migrations\Migration;
 
 /**
  * Add it to the application: `->migrations([{{class}}::class])`. It runs once, on activation or
