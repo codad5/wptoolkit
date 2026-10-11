@@ -47,3 +47,7 @@ One dated entry per working session: what landed, what was learned, what's next.
 - **Next (maintainer):** soak the release candidate on a real site, then `1.0.0`.
 - **Also landed:** `Settings` accepts `optionPrefix:` (ADR-0023), restoring 0.x's `option_prefix` so plugins with
   existing option names upgrade without a data migration.
+- **Fixed (reported by a consumer mid-migration):** `Build::scope()` left a Composer-based plugin's own code and
+  autoload map on the unscoped namespace, so the zip could not load; and scaffolding stubs named the
+  unscoped library. Both fixed with ADR-0024, a load check in the build, and an E2E test that boots a
+  plugin packaged that way. **Learned:** a ticked box is not evidence — that path had no test that loaded its output.

@@ -60,6 +60,8 @@ final class Build
     /** @var list<BuildStep> */
     private array $steps = [];
 
+    private string $composerBinary = 'composer';
+
     /** @var list<string|PatternSource> */
     private array $excludes = [];
 
@@ -130,12 +132,24 @@ final class Build
      */
     public function composer(bool $noDev = true, string $binary = 'composer'): self
     {
+        foreach ($this->steps as $step) {
+            if ($step instanceof ScopeToolkit) {
+                throw new BuildException('Call composer() before scope(): reinstalling dependencies after scoping would put the unscoped library back.');
+            }
+        }
+        $this->composerBinary = $binary;
+
         return $this->step(new ComposerInstall($noDev, $binary));
     }
 
+    /**
+     * Move the bundled WPToolkit into your own namespace (ADR-0005), together with your project's
+     * references to it and, for a Composer install, the autoloader — so you keep writing against
+     * `Codad5\WPToolkit` and ship a copy no other plugin can collide with.
+     */
     public function scope(string $namespace, ?string $toolkitPath = null): self
     {
-        return $this->step(new ScopeToolkit($namespace, $toolkitPath));
+        return $this->step(new ScopeToolkit($namespace, $toolkitPath, $this->composerBinary));
     }
 
     public function makePot(?string $domain = null): self

@@ -11,6 +11,7 @@ namespace Codad5\WPToolkit\Build\Steps;
 use Codad5\WPToolkit\Build\BuildContext;
 use Codad5\WPToolkit\Build\BuildException;
 use Codad5\WPToolkit\Build\BuildStep;
+use Codad5\WPToolkit\Build\NamespaceRewriter;
 use Codad5\WPToolkit\Build\Patterns\PatternSet;
 use Codad5\WPToolkit\Build\Phase;
 use Codad5\WPToolkit\Build\Project;
@@ -22,6 +23,8 @@ use Codad5\WPToolkit\Build\Project;
  * Built-in refusals (from real zips: a plugin shipped ~3,000 files of PHPUnit/PHPStan/PHPCS, a theme
  * shipped `.claude/`): dev dependencies in vendor/, VCS and editor folders, agent config,
  * node_modules, nested zips, env files, and a `Version:` header that differs from the build version.
+ * It also refuses a project whose code still names the unscoped library while the bundled copy has
+ * been scoped to another namespace: that package is a fatal error on the first request.
  */
 final class Verify implements BuildStep
 {
@@ -94,6 +97,8 @@ final class Verify implements BuildStep
             ));
         }
 
+        $this->refuseNamespaceMismatch($context);
+
         $header = Project::readHeader($context->staged($context->project->relativeHeaderFile()), 'Version');
         if ($header !== null && $header !== $context->version) {
             throw BuildException::inStep($this->name(), sprintf(
@@ -105,6 +110,39 @@ final class Verify implements BuildStep
 
         if ($this->maxSizeMb !== null && $bytes > $this->maxSizeMb * 1024 * 1024) {
             throw BuildException::inStep($this->name(), sprintf('Package is %.1f MB; the limit is %d MB.', $bytes / 1048576, $this->maxSizeMb));
+        }
+    }
+
+    private function refuseNamespaceMismatch(BuildContext $context): void
+    {
+        $path = ScopeToolkit::find($context->staging);
+        if ($path === null) {
+            return;
+        }
+
+        $source = (string) file_get_contents($context->staged($path . '/src/Foundation/Application.php'));
+        $namespace = preg_match('/^namespace\s+(.+)\\\\Foundation;/m', $source, $m) === 1 ? trim($m[1]) : NamespaceRewriter::ORIGINAL;
+        if ($namespace === NamespaceRewriter::ORIGINAL) {
+            return;
+        }
+
+        $rewriter = new NamespaceRewriter($namespace);
+        $stale = [];
+        foreach (ScopeToolkit::consumerFiles($context->staging, $path) as $file) {
+            if ($rewriter->remaining((string) file_get_contents($file)) > 0) {
+                $stale[] = substr(str_replace('\\', '/', $file), strlen($context->staging) + 1);
+            }
+        }
+
+        if ($stale !== []) {
+            throw BuildException::inStep($this->name(), sprintf(
+                "The bundled WPToolkit is scoped to %s, but %d file(s) still use %s, e.g.:\n  - %s\n"
+                    . 'Use scope() in the build, or write that code against the scoped namespace.',
+                $namespace,
+                count($stale),
+                NamespaceRewriter::ORIGINAL,
+                implode("\n  - ", array_slice($stale, 0, 8))
+            ));
         }
     }
 }
