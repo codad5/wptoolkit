@@ -22,11 +22,13 @@ use Codad5\WPToolkit\Foundation\HookRegistrar;
 use Codad5\WPToolkit\Foundation\Identity;
 use Codad5\WPToolkit\Foundation\ServiceProvider;
 use Codad5\WPToolkit\Frontend\PublicPages;
+use Codad5\WPToolkit\Frontend\Shortcodes;
 use Codad5\WPToolkit\Http\Router;
 
 /**
  * Wires the todo list: the post type and its edit screen, list-table columns, a settings page, a
- * logged-in board on the front end, and the API. Every route and page states who may use it.
+ * logged-in board on the front end, a shortcode, and the API. Every route, page and shortcode
+ * states who may use it.
  */
 final class TodoServiceProvider extends ServiceProvider
 {
@@ -55,6 +57,7 @@ final class TodoServiceProvider extends ServiceProvider
         Router $router,
         Pages $pages,
         PublicPages $public,
+        Shortcodes $shortcodes,
         AssetManager $assets,
         Settings $settings,
         FieldTypes $types,
@@ -85,6 +88,17 @@ final class TodoServiceProvider extends ServiceProvider
         ])->loggedIn();
         $assets->style('board', 'assets/board.css')
             ->when(static fn (): bool => get_query_var($identity->queryVar('page')) === 'todo-board');
+
+        // [wptk_todo_summary limit="3"]: the next todos, for any visitor of a page that embeds it. The
+        // attribute is validated (a bad value falls back to 5) and the stylesheet loads only there.
+        $assets->style('summary', 'assets/summary.css')->onDemand();
+        $shortcodes->add('summary', static fn (array $attributes): array => [
+            'todos' => $todos->query(Query::create()->orderBy('due_date')->perPage($attributes['limit'])),
+        ])
+            ->public()
+            ->attributes(['limit' => ['type' => 'int', 'default' => 5, 'rules' => 'integer|min:1|max:20']])
+            ->view('front/summary')
+            ->assets('summary');
 
         // One controller, both transports: /wp-json/wptk-todo/v1/todos and admin-ajax.
         $router->get('todos', [TodoController::class, 'index'])

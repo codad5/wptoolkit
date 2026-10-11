@@ -35,3 +35,13 @@ One dated entry per working session: what landed, what was learned, what's next.
 - **Next (maintainer):** tag the last 0.x and pin member-directory; review and merge the `next` → `main` PR; then
   `php bin/set-version.php 1.0.0-rc.1` → tag → staging soak with member-directory → `1.0.0`.
 
+
+## 2026-10-11
+
+- **Landed:** `Frontend\Shortcodes` (ADR-0022): prefixed or explicit tags, attributes validated like
+  route args, a required access rule, view rendering, on-demand assets (`Asset::onDemand()`,
+  `AssetManager::load()`), `make:shortcode`; the todo example gained `[wptk_todo_summary]` with an E2E test.
+- **Learned:** the E2E job failed intermittently at login in global setup on a cold WordPress (also on
+  `main`); setup now warms the site and retries. Tests for the shortcode controls were mutation-checked
+  (17 deliberate faults, all caught).
+- **Next (maintainer):** soak the release candidate on a real site, then `1.0.0`.

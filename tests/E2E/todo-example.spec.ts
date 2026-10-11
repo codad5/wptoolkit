@@ -83,6 +83,34 @@ test.describe.serial('the todo example (Phase 5 DoD)', () => {
         await context.close();
     });
 
+    test('the shortcode renders for visitors, validates its attribute and loads its stylesheet only there', async ({ browser }) => {
+        createByCli('Second todo');
+        createByCli('Third todo');
+        // limit="1" is honoured; onmouseover is undeclared and must never reach the output.
+        const one = wp('post', 'create', '--post_type=page', '--post_status=publish', '--post_title=One', '--post_name=sc-one', '--porcelain',
+            '--post_content=[wptk_todo_summary limit="1" onmouseover="alert(1)"]').output.trim();
+        // limit="9999" is out of range: falls back to the default of 5, so all three show.
+        const bad = wp('post', 'create', '--post_type=page', '--post_status=publish', '--post_title=Bad', '--post_name=sc-bad', '--porcelain',
+            '--post_content=[wptk_todo_summary limit="9999"]').output.trim();
+        const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+        const page = await context.newPage();
+
+        await page.goto('/sc-one/');
+        await expect(page.locator('ul.wptk-todo-summary li')).toHaveCount(1);
+        expect(await page.content()).not.toContain('onmouseover');
+        await expect(page.locator('link#wptk-todo-summary-css')).toHaveAttribute('href', /assets\/summary\.css/);
+
+        await page.goto('/sc-bad/');
+        await expect(page.locator('ul.wptk-todo-summary li')).toHaveCount(3);
+
+        await page.goto('/');
+        await expect(page.locator('link#wptk-todo-summary-css'), 'no shortcode on this page, so no stylesheet').toHaveCount(0);
+
+        await context.close();
+        wp('post', 'delete', one, bad, '--force');
+        expect(problems(takeDebugLog())).toEqual([]);
+    });
+
     test('Arabic: screens mirror right to left and use the example’s translations', async ({ page }) => {
         expect(wp('language', 'core', 'install', 'ar').code).toBe(0);
         expect(wp('site', 'switch-language', 'ar').code).toBe(0);
@@ -140,6 +168,10 @@ test.describe.serial('the todo example (Phase 5 DoD)', () => {
         });
     }
 });
+
+function createByCli(title: string): void {
+    expect(wp('post', 'create', '--post_type=wptk_todo', '--post_status=publish', `--post_title=${title}`).code).toBe(0);
+}
 
 function listTodos(): string[] {
     const out = wp('post', 'list', '--post_type=wptk_todo', '--post_status=any', '--format=ids').output.trim();
