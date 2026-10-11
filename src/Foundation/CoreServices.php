@@ -33,6 +33,7 @@ use Codad5\WPToolkit\Data\Migrations\MigrationRunner;
 use Codad5\WPToolkit\Data\Migrations\Migrator;
 use Codad5\WPToolkit\Data\Field\FieldTypes;
 use Codad5\WPToolkit\Frontend\PublicPages;
+use Codad5\WPToolkit\Frontend\Shortcodes;
 use Codad5\WPToolkit\Http\Dispatcher;
 use Codad5\WPToolkit\Http\Router;
 use Codad5\WPToolkit\Http\Transport\AjaxTransport;
@@ -137,6 +138,17 @@ final class CoreServices
             $public = new PublicPages($app->identity(), $app->hooks(), $c->get(Dispatcher::class), $c->get(Renderer::class), $c->get(ClientIp::class));
             $public->register();
             return $public;
+        });
+        $container->singleton(Shortcodes::class, static function (Container $c) use ($app): Shortcodes {
+            $shortcodes = new Shortcodes(
+                $app->identity(),
+                $c->get(Renderer::class),
+                $c->get(AssetManager::class),
+                $c->get(Logger::class),
+                $app->isDevelopment()
+            );
+            $app->onBooted(static fn () => $shortcodes->verify());
+            return $shortcodes;
         });
         $container->singleton(Notices::class, static function () use ($app): Notices {
             $notices = new Notices($app->identity(), $app->hooks());

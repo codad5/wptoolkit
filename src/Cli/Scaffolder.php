@@ -24,6 +24,7 @@ final class Scaffolder
         'provider' => ['provider.stub', 'src', 'ServiceProvider'],
         'field' => ['field.stub', 'src/Fields', 'FieldType'],
         'migration' => ['migration.stub', 'src/Migrations', ''],
+        'shortcode' => ['shortcode.stub', 'src/Shortcodes', 'Shortcode'],
     ];
 
     public function __construct(
@@ -96,6 +97,7 @@ final class Scaffolder
             '{{class}}' => $class,
             '{{label}}' => trim((string) preg_replace('/(?<!^)[A-Z]/', ' $0', $base)),
             '{{post_type}}' => substr($this->snake($base), 0, 20),
+            '{{shortcode}}' => str_replace('_', '-', $this->snake($base)),
             '{{route}}' => str_replace('_', '-', $this->snake($base)) . 's',
             '{{id}}' => $id,
             '{{slug}}' => $this->slug,

@@ -112,3 +112,35 @@ $public->page('library', __('Library', 'my-books'), 'front/library', fn () => [
 Each one is a router route with a rewrite rule: same access rules, validation and rate limits as the
 API. Rules flush only when they change. The view renders inside the theme (classic or block), with the
 page title and a body class.
+
+## Shortcodes
+
+```php
+public function boot(Shortcodes $shortcodes, AssetManager $assets, CoinService $coins): void
+{
+    $assets->script('widget', 'build/widget.js')->onDemand();      // not loaded on every page
+
+    $shortcodes->add('widget', fn (array $a): array => ['coins' => $coins->top($a['count'])])
+        ->public()
+        ->attributes(['count' => ['type' => 'int', 'default' => 10, 'rules' => 'integer|min:1|max:50']])
+        ->view('front/widget')
+        ->assets('widget');                                         // enqueued only where it renders
+}
+```
+
+This registers `[my_books_widget count="5"]`. What you get over a bare `add_shortcode()`:
+
+- **A prefixed tag** from your slug. A plugin that already ships a tag (it is saved in users' posts) keeps it:
+  `$shortcodes->add('widget', $handler, tag: 'ucwp_widget')`. A tag someone else registered is refused.
+- **Declared attributes**, validated and typed like route args; anything undeclared never reaches your
+  handler. A bad value falls back to its default and is logged by attribute name (a visitor can't fix a post).
+- **An access rule you must state** — `->public()`, `->loggedIn()` or `->can('cap')`. Without one the
+  shortcode prints nothing, and in development it fails when the app boots.
+- **Return, don't echo.** With `->view()` return the view's data (escaped in the template); without a
+  view return an HTML string you have escaped. Enclosed content arrives as the second argument, raw.
+- **Lazy assets** with `->assets()` on assets declared `->onDemand()`.
+- **No white screen:** a handler that throws prints nothing and is logged (rethrown in development).
+
+To get a shortcode's output in code, call `$shortcodes->render('widget', ['count' => 5])`. Never build a
+`[tag attr=…]` string from request data and run it with `do_shortcode()` — that lets a visitor run any
+shortcode on the site. `wp my-books make:shortcode Widget` writes a handler class to start from.

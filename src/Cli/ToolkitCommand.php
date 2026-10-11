@@ -35,6 +35,7 @@ final class ToolkitCommand
         'make:provider' => 'makeProvider',
         'make:field' => 'makeField',
         'make:migration' => 'makeMigration',
+        'make:shortcode' => 'makeShortcode',
     ];
 
     public function __construct(
@@ -306,6 +307,25 @@ final class ToolkitCommand
     public function makeField(array $args, array $assoc): void
     {
         $this->make('field', $args, $assoc);
+    }
+
+    /**
+     * Creates a shortcode handler class.
+     *
+     * ## OPTIONS
+     *
+     * <name>
+     * : Name, e.g. Widget (creates WidgetShortcode).
+     *
+     * [--force]
+     * : Replace an existing file.
+     *
+     * @param list<string> $args
+     * @param array<string, string|bool> $assoc
+     */
+    public function makeShortcode(array $args, array $assoc): void
+    {
+        $this->make('shortcode', $args, $assoc);
     }
 
     /**

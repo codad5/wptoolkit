@@ -41,6 +41,8 @@ final class Asset
 
     public string $media = 'all';
 
+    public bool $onDemand = false;
+
     /**
      * @param 'script'|'style' $type
      * @param string $src A path relative to the plugin's directory, or a full URL.
@@ -112,6 +114,17 @@ final class Asset
     public function inHeader(): self
     {
         $this->inFooter = false;
+
+        return $this;
+    }
+
+    /**
+     * Skip the automatic enqueue hooks; the asset loads only when code asks for it with
+     * `AssetManager::load()` — what a shortcode's `->assets()` does when it renders.
+     */
+    public function onDemand(): self
+    {
+        $this->onDemand = true;
 
         return $this;
     }
