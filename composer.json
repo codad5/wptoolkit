@@ -8,7 +8,16 @@
         "plugin",
         "theme",
         "framework",
-        "toolkit"
+        "toolkit",
+        "wordpress-plugin",
+        "rest-api",
+        "ajax",
+        "custom-post-type",
+        "meta-box",
+        "settings",
+        "shortcode",
+        "migrations",
+        "wp-cli"
     ],
     "authors": [
         {
