@@ -15,7 +15,7 @@
 (function (root) {
     'use strict';
 
-    var VERSION = '1.0.0-rc.3';
+    var VERSION = '1.0.0-rc.4';
 
     // The shared namespace is locked: no script can replace it; entries stay writable.
     if (!Object.prototype.hasOwnProperty.call(root, 'wptoolkit')) {
