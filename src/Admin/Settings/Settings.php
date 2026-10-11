@@ -23,6 +23,11 @@ use Codad5\WPToolkit\Support\Validation\Rules;
  * A plugin's settings, built from fields (ports 0.x `Settings`). Storage is 0.x's (ADR-0016): one
  * option per setting, `{slug}_{sanitize_key(name)}`.
  *
+ * A plugin whose users already have options saved under another prefix (0.x's `option_prefix`, or
+ * names from before it used WPToolkit) passes `optionPrefix: 'acmeforms_'` to keep reading and
+ * writing those rows as they are. New plugins should leave it out: the slug prefix is what keeps
+ * two plugins' options apart.
+ *
  * **Sensitive fields** (`->sensitive()`, ADR-0021) are readable only by name: `get('api_key')`
  * returns it; `all()` — and so every export, REST or Ajax response built from it — leaves it out,
  * `forScript()` refuses it, and the logger is told to redact it. Add `->with('encrypt', true)` to
@@ -36,6 +41,9 @@ final class Settings
 {
     private const MISSING = "\0wptoolkit-missing";
 
+    /** The length of wp_options.option_name. */
+    private const MAX_OPTION_LENGTH = 191;
+
     /** @var array<string, Field> */
     private array $fields = [];
 
@@ -48,14 +56,24 @@ final class Settings
     /**
      * @param list<Field> $fields
      * @param SecretBox|null $box Required when any field has `->with('encrypt', true)`.
+     * @param string|null $optionPrefix Use this instead of `{slug}_` in option names — only to keep names
+     *        that already exist in users' databases. Letters, digits, "-" and "_".
      */
     public function __construct(
         array $fields,
         private readonly FieldTypes $types,
         private readonly Identity $identity,
         private readonly ?SecretBox $box = null,
-        ?Logger $logger = null
+        ?Logger $logger = null,
+        private readonly ?string $optionPrefix = null
     ) {
+        if ($optionPrefix !== null && preg_match('/^[A-Za-z0-9_\-]+$/', $optionPrefix) !== 1) {
+            throw new InvalidConfigException(sprintf(
+                'Option prefix "%s" may contain only letters, digits, "-" and "_", and cannot be empty.',
+                $optionPrefix
+            ));
+        }
+
         foreach ($fields as $field) {
             $types->get($field->type);
             if ($this->encrypts($field) && $box === null) {
@@ -186,9 +204,26 @@ final class Settings
         return array_keys(array_filter($this->fields, static fn (Field $f): bool => $f->isSensitive()));
     }
 
+    /**
+     * The option a setting is stored in: `{slug}_{name}`, or `{optionPrefix}{name}` when a prefix was given.
+     */
     public function optionKey(string $name): string
     {
-        return $this->identity->optionKey($name);
+        if ($this->optionPrefix === null) {
+            return $this->identity->optionKey($name);
+        }
+
+        $option = $this->optionPrefix . sanitize_key($name);
+        if (strlen($option) > self::MAX_OPTION_LENGTH) {
+            throw new InvalidConfigException(sprintf(
+                'Option name "%s" is %d characters; WordPress allows %d.',
+                $option,
+                strlen($option),
+                self::MAX_OPTION_LENGTH
+            ));
+        }
+
+        return $option;
     }
 
     public function field(string $name): Field

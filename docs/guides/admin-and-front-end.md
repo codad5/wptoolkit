@@ -17,6 +17,16 @@ $settings->get('api_key');      // a secret only moves when code names it
 
 One option per setting under `{slug}_{name}`.
 
+**Keeping option names that already exist.** If your users already have settings saved under another
+prefix, pass it and nothing in the database has to move:
+
+```php
+$settings = new Settings([...], $fieldTypes, $identity, optionPrefix: 'acmeforms_');   // acmeforms_api_key
+```
+
+Use it only for names that are already in users' databases; a new plugin should leave it out, because
+the slug prefix is what keeps two plugins' options apart ([ADR-0023](../adr/0023-settings-may-keep-a-legacy-option-prefix.md)).
+
 **Sensitive fields** ([ADR-0021](../adr/0021-sensitive-settings-are-read-only-by-name.md)):
 - they are left out of `all()`, so out of every response built from it;
 - `forScript()` refuses them;

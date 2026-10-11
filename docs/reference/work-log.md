@@ -45,3 +45,5 @@ One dated entry per working session: what landed, what was learned, what's next.
   `main`); setup now warms the site and retries. Tests for the shortcode controls were mutation-checked
   (17 deliberate faults, all caught).
 - **Next (maintainer):** soak the release candidate on a real site, then `1.0.0`.
+- **Also landed:** `Settings` accepts `optionPrefix:` (ADR-0023), restoring 0.x's `option_prefix` so plugins with
+  existing option names upgrade without a data migration.
