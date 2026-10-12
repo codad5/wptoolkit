@@ -4,7 +4,7 @@
 /**
  * wptoolkit-build — package a WordPress plugin or theme from wptoolkit.json (or defaults).
  *
- *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH | --dir=PATH] [--dry-run] [--verbose] [--quiet]
+ *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH | --dir=PATH] [--dry-run] [--verbose] [--quiet] [--plain] [--wait=SECONDS]
  *   vendor/bin/wptoolkit-build verify  FILE.zip
  *   vendor/bin/wptoolkit-build doctor  [--project=DIR]
  *   vendor/bin/wptoolkit-build init    [--project=DIR]
@@ -63,6 +63,12 @@ try {
             if (in_array('--quiet', $argv, true)) {
                 $build->quiet();
             }
+            if (in_array('--plain', $argv, true)) {
+                $build->plain();
+            }
+            if (isset($options['wait'])) {
+                $build->waitForLock((int) $options['wait']);
+            }
             if (isset($options['dir'])) {
                 $build->toDirectory($options['dir']);
                 exit(0);
@@ -108,10 +114,12 @@ try {
 
         default:
             fwrite(STDOUT, "Usage:\n"
-                . "  wptoolkit-build package [--project=DIR] [--zip=PATH | --dir=PATH] [--dry-run] [--verbose] [--quiet]\n"
+                . "  wptoolkit-build package [--project=DIR] [--zip=PATH | --dir=PATH] [--dry-run] [--verbose] [--quiet] [--plain] [--wait=SECONDS]\n"
                 . "      --dir=PATH  write a folder instead of a zip (replaced if it is an earlier build)\n"
                 . "      --verbose   print the output of every command as it runs\n"
                 . "      --quiet     print only warnings and errors\n"
+                . "      --plain     no spinner, even on an interactive terminal\n"
+                . "      --wait=N    if another build of this project is running, wait up to N seconds\n"
                 . "  wptoolkit-build verify FILE.zip\n"
                 . "  wptoolkit-build doctor [--project=DIR]\n"
                 . "  wptoolkit-build init [--project=DIR]\n");

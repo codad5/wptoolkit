@@ -1,0 +1,40 @@
+/* WPToolkit multiple-choice picker. A plain checkbox list needs only the first rules. */
+.wptoolkit-picker { border: 0; margin: 0; padding: 0; min-width: 0; position: relative; }
+.wptoolkit-picker > label,
+.wptoolkit-picker__panel > label { display: block; margin: 0 0 4px; }
+
+.wptoolkit-picker[data-wptoolkit-ready] .wptoolkit-picker__control {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px; box-sizing: border-box;
+    min-height: 30px; max-width: 25em; padding: 2px 6px; background: #fff; cursor: text;
+    border: 1px solid #8c8f94; border-radius: 4px;
+}
+.wptoolkit-picker.is-open .wptoolkit-picker__control {
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #2271b1);
+}
+.wptoolkit-picker__chips { display: contents; list-style: none; margin: 0; padding: 0; }
+.wptoolkit-picker__chip {
+    display: inline-flex; align-items: center; gap: 2px; margin: 0; padding: 1px 2px 1px 8px;
+    background: #f0f0f1; border: 1px solid #c3c4c7; border-radius: 3px; line-height: 1.6;
+}
+.wptoolkit-picker__remove {
+    all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 3px; cursor: pointer; font-size: 16px; line-height: 1; color: #50575e;
+}
+.wptoolkit-picker__remove:hover { background: #dcdcde; color: #1d2327; }
+.wptoolkit-picker__remove:focus-visible { outline: 2px solid var(--wp-admin-theme-color, #2271b1); outline-offset: 0; }
+.wptoolkit-picker .wptoolkit-picker__search {
+    flex: 1 1 8em; min-width: 6em; margin: 0; padding: 0 2px; border: 0; background: transparent; box-shadow: none; min-height: 26px;
+}
+.wptoolkit-picker .wptoolkit-picker__search:focus { outline: 0; box-shadow: none; }
+
+.wptoolkit-picker[data-wptoolkit-ready] .wptoolkit-picker__panel {
+    display: none; position: absolute; inset-inline-start: 0; z-index: 1000; box-sizing: border-box;
+    width: 100%; max-width: 25em; max-height: 14em; overflow: auto; margin-top: 2px; padding: 4px 0;
+    background: #fff; border: 1px solid #8c8f94; border-radius: 4px; box-shadow: 0 3px 8px rgba(0, 0, 0, .15);
+}
+.wptoolkit-picker.is-open .wptoolkit-picker__panel { display: block; }
+.wptoolkit-picker[data-wptoolkit-ready] .wptoolkit-picker__panel > label { margin: 0; padding: 4px 10px; }
+.wptoolkit-picker[data-wptoolkit-ready] .wptoolkit-picker__panel > label:hover { background: #f0f6fc; }
+.wptoolkit-picker__panel > label[hidden], .wptoolkit-picker__empty[hidden] { display: none; }
+.wptoolkit-picker__empty { margin: 0; padding: 6px 10px; color: #646970; }

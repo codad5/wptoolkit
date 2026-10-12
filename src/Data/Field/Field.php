@@ -79,6 +79,20 @@ final class Field
     }
 
     /**
+     * How a multiple-choice field looks: 'checkboxes' (a plain list), 'tokens' (chips with search; the
+     * checkboxes are enhanced with JavaScript) or 'native' (the browser's `<select multiple>`). Left
+     * out, a short list is checkboxes and a long one is tokens.
+     */
+    public function display(string $display): self
+    {
+        if (!in_array($display, ['checkboxes', 'tokens', 'native'], true)) {
+            throw new InvalidConfigException(sprintf('Unknown display "%s" for "%s"; use checkboxes, tokens or native.', $display, $this->name));
+        }
+
+        return $this->with('display', $display);
+    }
+
+    /**
      * A secret (API key, token): never in bulk reads, JSON or HTML (ADR-0021).
      */
     public function sensitive(bool $sensitive = true): self

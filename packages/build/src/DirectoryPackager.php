@@ -11,6 +11,7 @@ namespace Codad5\WPToolkit\Build;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Throwable;
 
 /**
  * Writes a staged project as a folder (`Build::toDirectory()`): for rsync or SVN deploys, or to
@@ -66,19 +67,56 @@ final class DirectoryPackager
         $target = self::normalize($target);
         $this->assertSafe($context->project, $target);
 
-        self::empty($target);
+        // Written beside the target and swapped in when complete: a build that fails or is stopped
+        // while copying leaves the previous folder as it was.
+        $suffix = bin2hex(random_bytes(4));
+        $incoming = $target . '.tmp-' . $suffix;
+        $outgoing = $target . '.old-' . $suffix;
         $staged = StagedFiles::of($context->staging);
-        foreach ($staged->files as $relative => $absolute) {
-            $destination = $target . '/' . $relative;
-            if (!is_dir(dirname($destination)) && !mkdir(dirname($destination), 0777, true) && !is_dir(dirname($destination))) {
-                throw new BuildException(sprintf('Cannot create %s.', dirname($destination)));
+
+        try {
+            self::makeDirectory($incoming);
+            foreach ($staged->files as $relative => $absolute) {
+                $context->checkpoint();
+                $destination = $incoming . '/' . $relative;
+                self::makeDirectory(dirname($destination));
+                if (!copy($absolute, $destination)) {
+                    throw new BuildException(sprintf('Cannot write %s.', $destination));
+                }
             }
-            if (!copy($absolute, $destination)) {
-                throw new BuildException(sprintf('Cannot write %s.', $destination));
-            }
+            $this->swap($target, $incoming, $outgoing);
+        } catch (Throwable $failure) {
+            self::remove($incoming);
+            throw $failure;
         }
 
         return new BuildReport('', '', $context->version, $staged->bytes, array_keys($staged->files), $staged->sizes, $context->warnings, $target);
+    }
+
+    /**
+     * Put the finished folder in place of the previous one, and put the previous one back if that
+     * can't be done (on Windows a folder with a file open in another program can't be renamed).
+     */
+    private function swap(string $target, string $incoming, string $outgoing): void
+    {
+        $hadPrevious = is_dir($target);
+        if ($hadPrevious && !@rename($target, $outgoing)) {
+            throw new BuildException(sprintf('Cannot replace %s (is a file in it open in another program?). It was left as it was.', $target));
+        }
+        if (!@rename($incoming, $target)) {
+            if ($hadPrevious) {
+                @rename($outgoing, $target);
+            }
+            throw new BuildException(sprintf('Cannot write %s. It was left as it was.', $target));
+        }
+        self::remove($outgoing);
+    }
+
+    private static function makeDirectory(string $directory): void
+    {
+        if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            throw new BuildException(sprintf('Cannot create %s.', $directory));
+        }
     }
 
     /**
@@ -104,10 +142,9 @@ final class DirectoryPackager
         return rtrim($prefix . implode('/', $segments), '/');
     }
 
-    private static function empty(string $directory): void
+    private static function remove(string $directory): void
     {
         if (!is_dir($directory)) {
-            mkdir($directory, 0777, true);
             return;
         }
 
@@ -116,7 +153,8 @@ final class DirectoryPackager
             RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($items as $item) {
-            $item->isDir() && !$item->isLink() ? rmdir($item->getPathname()) : unlink($item->getPathname());
+            $item->isDir() && !$item->isLink() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
         }
+        @rmdir($directory);
     }
 }

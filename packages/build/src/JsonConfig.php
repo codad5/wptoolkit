@@ -53,6 +53,12 @@ final class JsonConfig
         if (!empty($config['quiet'])) {
             $build->quiet();
         }
+        if (($config['progress'] ?? true) === false) {
+            $build->plain();
+        }
+        if (isset($config['waitForLock'])) {
+            $build->waitForLock((int) $config['waitForLock']);
+        }
         if (isset($config['version'])) {
             $build->version(self::versionSource((string) $config['version']));
         }

@@ -61,3 +61,10 @@ One dated entry per working session: what landed, what was learned, what's next.
 - **Landed:** `Build::toDirectory()` (`--dir`) and `Build::quiet()` (`--quiet`); packaging moved out of `Build` into
   `ZipPackager` / `DirectoryPackager`. **Learned:** a folder target compared as a string let `.` and a
   different letter case through as "not the project" — paths are now resolved and compared without case.
+- **Landed (rc.8):** build lock, atomic zip/directory output, Ctrl+C cleanup with a sweep of abandoned staging, a spinner
+  with step timings (ADR-0026); multiple-choice fields as checkboxes with a chip picker and an empty marker so a
+  selection can be cleared (ADR-0027). **Learned:** `proc_open` with a file descriptor lost the child's output
+  after certain earlier tests in the same PHP process (cause not pinned down); the shell now does the redirect.
+  The packager tests also run clean on Linux (WSL), including a real SIGINT.
+- **Noticed, not fixed:** the `media` field renders `data-wptoolkit-media` for an admin script that does not exist
+  yet, so its "Choose media" button does nothing.

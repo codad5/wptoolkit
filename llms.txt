@@ -21,7 +21,8 @@ Namespace: `Codad5\WPToolkit` (or your own, if you scope the library). Package: 
 10. Every user-facing string uses `__()`/`_e()`/`esc_html__()` with the plugin's own text domain, inside `boot()` or later.
 11. Declare assets with `AssetManager` (`->script()`, `->style()`); never call `wp_enqueue_*` yourself.
 12. Shortcodes: `$shortcodes->add('name', $handler)` with `->public()`/`->loggedIn()`/`->can()`, `->attributes([...])` (same shape as route args), `->view()`, `->assets()`. Handlers return; never echo, and never build `[tag …]` strings from request data — call `$shortcodes->render()`.
-13. Change stored data with a `Migration` registered via `->migrations([...])`, never with branches on a "data version".
+13. A multiple-choice field (`select` + `->multiple()`) renders as checkboxes, or a chip picker above 6 options; `->display('checkboxes'|'tokens'|'native')` overrides. Do not hand-write a `<select multiple>`.
+14. Change stored data with a `Migration` registered via `->migrations([...])`, never with branches on a "data version".
 
 ## Core API
 

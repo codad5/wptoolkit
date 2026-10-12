@@ -34,6 +34,17 @@ final class Todo extends Entity
                 'high' => __('High', 'wptk-todo'),
                 'urgent' => __('Urgent', 'wptk-todo'),
             ])->label(__('Priority', 'wptk-todo'))->default('medium')->required(),
+            // More than six options, so it renders as the searchable chip picker.
+            $f->select('labels', [
+                'home' => __('Home', 'wptk-todo'),
+                'work' => __('Work', 'wptk-todo'),
+                'errand' => __('Errand', 'wptk-todo'),
+                'finance' => __('Finance', 'wptk-todo'),
+                'health' => __('Health', 'wptk-todo'),
+                'learning' => __('Learning', 'wptk-todo'),
+                'travel' => __('Travel', 'wptk-todo'),
+                'urgent-call' => __('Urgent call', 'wptk-todo'),
+            ])->label(__('Labels', 'wptk-todo'))->multiple(),
             $f->select('status', [
                 'pending' => __('Pending', 'wptk-todo'),
                 'in_progress' => __('In progress', 'wptk-todo'),

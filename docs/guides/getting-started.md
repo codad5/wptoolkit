@@ -136,6 +136,14 @@ $files = Build::plugin(__DIR__)->dryRun();                           // what the
   commit to SVN, to mount the built plugin in a test site, or to inspect what ships. The folder is
   **replaced**, so it must be for output only: the project itself, a folder above it, or an existing
   folder that is neither empty nor an earlier build of this project is refused.
+- **Safe to run twice, and to stop.** One build per project runs at a time: a second one fails with who holds
+  the lock, or waits with `->waitForLock(60)` / `--wait=60`. Output is written under a temporary name
+  and moved into place when complete, so a failed or stopped build leaves the previous zip (or folder)
+  whole. Ctrl+C stops the running command and what it started and removes the temporary copy.
+  ([ADR-0026](../adr/0026-builds-lock-write-atomically-and-clean-up-after-themselves.md))
+- **Progress.** Every step ends with its duration. On an interactive terminal a step running a quiet
+  command also shows a spinner; in CI, a pipe, a file, with `NO_COLOR`, `->quiet()`, `->withOutput()`,
+  `->plain()` or `--plain` you get plain lines only.
 - `dryRun()` (`--dry-run`) runs no commands and no verification, so files that steps create (built
   assets, `vendor/`) are not in its list. For "what exactly ships", use `toDirectory()`.
 

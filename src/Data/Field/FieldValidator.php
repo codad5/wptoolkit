@@ -27,6 +27,12 @@ final class FieldValidator
     {
         $label = $field->labelText();
 
+        // A multiple-choice form sends an empty entry so that "nothing ticked" still arrives; it is
+        // not a choice.
+        if ($field->isMultiple() && is_array($value)) {
+            $value = array_values(array_filter($value, static fn (mixed $item): bool => $item !== '' && $item !== null));
+        }
+
         if ($field->isRequired() && Rules::isEmpty($value)) {
             return [Rules::required()->message($label)];
         }
