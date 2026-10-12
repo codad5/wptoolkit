@@ -207,6 +207,109 @@ final class GuardTest extends TestCase
         self::assertFalse($booted);
     }
 
+    // --- 'namespaces': the plugin's own classes, without Composer (ADR-0014) ---------------------
+
+    public function test_namespaces_autoloads_the_plugins_own_classes(): void
+    {
+        $ns = $this->pluginNamespace();
+        $this->pluginClass('src/Greeter.php', $ns, 'Greeter');
+        $this->pluginClass('src/Http/Deep/Controller.php', $ns . '\\Http\\Deep', 'Controller');
+        $found = [];
+
+        $result = $this->guard()($this->pluginFile(), ['autoload' => false, 'namespaces' => [$ns . '\\' => $this->tmp . '/plugin/src']], function () use (&$found, $ns) {
+            $found = [class_exists($ns . '\\Greeter'), class_exists($ns . '\\Http\\Deep\\Controller'), class_exists($ns . '\\Missing')];
+        });
+
+        self::assertTrue($result);
+        self::assertSame([true, true, false], $found);
+    }
+
+    public function test_a_prefix_without_a_trailing_backslash_and_a_directory_with_one_both_work(): void
+    {
+        $ns = $this->pluginNamespace();
+        $this->pluginClass('src/Greeter.php', $ns, 'Greeter');
+
+        $this->guard()($this->pluginFile(), ['autoload' => false, 'namespaces' => [$ns => $this->tmp . '/plugin/src/']], static fn () => null);
+
+        self::assertTrue(class_exists($ns . '\\Greeter'));
+    }
+
+    public function test_the_longest_matching_prefix_is_tried_first(): void
+    {
+        $ns = $this->pluginNamespace();
+        $this->pluginClass('src/Admin/Page.php', $ns . '\\Admin', 'Page', 'general');
+        $this->pluginClass('admin/Page.php', $ns . '\\Admin', 'Page', 'specific');
+
+        $this->guard()($this->pluginFile(), ['autoload' => false, 'namespaces' => [
+            $ns . '\\' => $this->tmp . '/plugin/src',
+            $ns . '\\Admin\\' => $this->tmp . '/plugin/admin',
+        ]], static fn () => null);
+
+        self::assertSame('specific', constant($ns . '\\Admin\\Page::FROM'));
+    }
+
+    public function test_namespaces_work_next_to_composers_autoloader(): void
+    {
+        $ns = $this->pluginNamespace();
+        $this->pluginClass('src/Greeter.php', $ns, 'Greeter');
+        mkdir($this->tmp . '/plugin/vendor');
+        file_put_contents($this->tmp . '/plugin/vendor/autoload.php', "<?php \$GLOBALS['guard_test_loaded'] = 'composer';");
+
+        self::assertTrue($this->guard()($this->pluginFile(), ['namespaces' => [$ns . '\\' => $this->tmp . '/plugin/src']], static fn () => null));
+        self::assertSame('composer', $GLOBALS['guard_test_loaded'] ?? null);
+        self::assertTrue(class_exists($ns . '\\Greeter'));
+    }
+
+    public function test_a_missing_namespace_directory_pauses_the_plugin_and_names_the_folder(): void
+    {
+        $booted = false;
+
+        $result = $this->guard()($this->pluginFile(), ['autoload' => false, 'namespaces' => ['Acme\\Forms\\' => $this->tmp . '/plugin/scr']], function () use (&$booted) {
+            $booted = true;
+        });
+
+        self::assertFalse($result);
+        self::assertFalse($booted);
+        self::assertStringContainsString('plugin/scr', $this->renderNotice());
+        self::assertStringContainsString('Acme\\Forms', $this->renderNotice());
+    }
+
+    /**
+     * @dataProvider malformedNamespaces
+     */
+    public function test_malformed_namespaces_pause_the_plugin_instead_of_guessing(mixed $namespaces): void
+    {
+        self::assertFalse($this->guard()($this->pluginFile(), ['autoload' => false, 'namespaces' => $namespaces], static fn () => null));
+        self::assertStringContainsString('namespaces', $this->renderNotice());
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function malformedNamespaces(): array
+    {
+        return [
+            'not an array' => ['Acme\\'],
+            'a list, not prefix => directory' => [[sys_get_temp_dir()]],
+            'an empty prefix would claim every class' => [['' => sys_get_temp_dir()]],
+            'only backslashes' => [['\\' => sys_get_temp_dir()]],
+            'a directory that is not a string' => [['Acme\\' => ['src']]],
+        ];
+    }
+
+    public function test_a_class_name_cannot_walk_out_of_the_namespace_directory(): void
+    {
+        $ns = $this->pluginNamespace();
+        mkdir($this->tmp . '/plugin/src', 0777, true);
+        file_put_contents($this->tmp . '/plugin/secret.php', "<?php \$GLOBALS['guard_test_loaded'] = 'escaped';");
+
+        $this->guard()($this->pluginFile(), ['autoload' => false, 'namespaces' => [$ns . '\\' => $this->tmp . '/plugin/src']], static fn () => null);
+        class_exists($ns . '\\..\\secret');
+        class_exists($ns . '\\../secret');
+
+        self::assertArrayNotHasKey('guard_test_loaded', $GLOBALS);
+    }
+
     public function test_the_guard_leaks_no_variables_into_the_including_scope(): void
     {
         $before = array_keys(get_defined_vars());
@@ -225,6 +328,21 @@ final class GuardTest extends TestCase
     private function pluginFile(): string
     {
         return $this->tmp . '/plugin/plugin.php';
+    }
+
+    /** A namespace no other test has used: registered loaders outlive a test. */
+    private function pluginNamespace(): string
+    {
+        return 'GuardNs' . bin2hex(random_bytes(5));
+    }
+
+    private function pluginClass(string $relative, string $namespace, string $class, string $from = 'plugin'): void
+    {
+        $path = $this->tmp . '/plugin/' . $relative;
+        if (!is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+        file_put_contents($path, "<?php\nnamespace {$namespace};\nfinal class {$class} { public const FROM = '{$from}'; }\n");
     }
 
     /**

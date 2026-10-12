@@ -32,6 +32,10 @@ $config = Config::plugin('member-directory', __FILE__, ['text_domain' => 'member
 Registry::registerApp($config);
 ```
 
+Without Composer, `Autoloader::init([...])` becomes the guard option
+`'namespaces' => array('MemberDirectory\\' => __DIR__ . '/src')`; with Composer, declare the namespace
+under `autoload.psr-4` in `composer.json` and drop it.
+
 **1.0:** the main file goes through the guard (it parses on PHP 5.6, so an old server shows a notice
 instead of crashing), then builds one `Application` with service providers.
 

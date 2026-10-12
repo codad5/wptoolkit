@@ -51,3 +51,8 @@ One dated entry per working session: what landed, what was learned, what's next.
   autoload map on the unscoped namespace, so the zip could not load; and scaffolding stubs named the
   unscoped library. Both fixed with ADR-0024, a load check in the build, and an E2E test that boots a
   plugin packaged that way. **Learned:** a ticked box is not evidence — that path had no test that loaded its output.
+
+## 2026-10-12
+
+- **Landed:** the guard's `namespaces` option (ADR-0025): PSR-4 loading of a standalone plugin's own classes,
+  which ADR-0014 promised and 0.x's `Autoloader::init()` used to do. The E2E fixtures now rely on it.

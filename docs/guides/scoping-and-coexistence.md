@@ -38,10 +38,17 @@ it never crashes ([ADR-0020](../adr/0020-incompatible-unscoped-copies-refuse-act
        'wp'       => '6.4',
        'toolkit'  => '^1.0',
        'autoload' => 'standalone',
+       'namespaces' => array('MyPlugin\\' => __DIR__ . '/src'),   // your own classes, PSR-4
    ), function () {
        require __DIR__ . '/src/boot.php';
    });
    ```
+
+   `namespaces` replaces 0.x's `Autoloader::init()`: `MyPlugin\Http\BookController` loads from
+   `src/Http/BookController.php`. Several prefixes are allowed and the longest match is tried first. A
+   folder that doesn't exist pauses the plugin with a notice naming it, instead of a "class not found"
+   later. With Composer you don't need it — Composer loads your classes
+   ([ADR-0025](../adr/0025-the-guard-can-autoload-the-plugins-own-namespaces.md)).
 
 4. In `src/boot.php` use your scoped namespace:
 
