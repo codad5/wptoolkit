@@ -111,10 +111,15 @@ final class FieldTest extends TestCase
 
     public function test_multiple_select_submits_an_array(): void
     {
-        $html = $this->types->get('select')->render($this->f->select('tags', ['a' => 'A'])->multiple(), 'tags', 'tags', ['a']);
+        $field = $this->f->select('tags', ['a' => 'A'])->multiple();
 
-        self::assertStringContainsString('name="tags[]"', $html);
-        self::assertStringContainsString(' multiple', $html);
+        $default = $this->types->get('select')->render($field, 'tags', 'tags', ['a']);
+        self::assertStringContainsString('name="tags[]"', $default);
+        self::assertStringContainsString('type="checkbox"', $default, 'multiple choices are checkboxes by default');
+
+        $native = $this->types->get('select')->render($field->display('native'), 'tags', 'tags', ['a']);
+        self::assertStringContainsString('name="tags[]"', $native);
+        self::assertStringContainsString(' multiple', $native);
     }
 
     public function test_custom_types_plug_in_without_changing_the_library(): void

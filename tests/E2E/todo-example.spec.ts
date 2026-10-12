@@ -111,6 +111,59 @@ test.describe.serial('the todo example (Phase 5 DoD)', () => {
         expect(problems(takeDebugLog())).toEqual([]);
     });
 
+    test('a long multiple-choice field is a chip picker: search, pick, remove, save, clear', async ({ page }) => {
+        const pageErrors: string[] = [];
+        page.on('pageerror', (error) => pageErrors.push(error.message));
+        const key = 'todo_details_wptk_todo_labels';
+
+        await page.goto(NEW_TODO);
+        await page.fill('#title', 'Picker todo');
+        const picker = page.locator('[data-wptoolkit-picker="tokens"]');
+        await expect(picker).toHaveAttribute('data-wptoolkit-ready', '1');
+        const search = picker.getByRole('textbox', { name: 'Search…' });
+        const panel = picker.locator('.wptoolkit-picker__panel');
+        const chips = picker.locator('.wptoolkit-picker__chip span');
+
+        await expect(panel, 'closed until the search box is used').toBeHidden();
+        await search.click();
+        await expect(panel).toBeVisible();
+
+        await search.fill('fin');
+        await expect(panel.locator('label:visible')).toHaveCount(1);
+        await page.keyboard.press('Enter'); // picks the first match instead of submitting the form
+        await search.fill('tra');
+        await page.keyboard.press('Enter');
+        await search.fill('zzz');
+        await expect(picker.locator('.wptoolkit-picker__empty')).toBeVisible();
+        await search.fill('');
+        await expect(chips).toHaveText(['Finance', 'Travel']);
+
+        await picker.getByRole('button', { name: 'Remove Travel' }).click();
+        await expect(chips).toHaveText(['Finance']);
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+
+        await page.click('#publish');
+        await expect(page.locator('#message')).toBeVisible();
+        const postId = new URL(page.url()).searchParams.get('post') ?? '';
+        expect(postId).not.toBe('');
+
+        // Saved exactly as before: one serialized row holding the chosen values.
+        expect(wp('post', 'meta', 'get', postId, key, '--format=json').output.trim()).toBe('["finance"]');
+        expect(wp('post', 'meta', 'list', postId, `--keys=${key}`, '--format=count').output.trim()).toBe('1');
+        await expect(chips).toHaveText(['Finance']);
+
+        // Removing the last choice and saving must clear it (an empty selection is still sent).
+        await picker.getByRole('button', { name: 'Remove Finance' }).click();
+        await page.click('#publish');
+        await expect(page.locator('#message')).toBeVisible();
+        expect(wp('post', 'meta', 'list', postId, `--keys=${key}`, '--format=count').output.trim()).toBe('0');
+        await expect(picker.locator('.wptoolkit-picker__chip')).toHaveCount(0);
+
+        expect(pageErrors).toEqual([]);
+        expect(problems(takeDebugLog())).toEqual([]);
+    });
+
     test('Arabic: screens mirror right to left and use the example’s translations', async ({ page }) => {
         expect(wp('language', 'core', 'install', 'ar').code).toBe(0);
         expect(wp('site', 'switch-language', 'ar').code).toBe(0);

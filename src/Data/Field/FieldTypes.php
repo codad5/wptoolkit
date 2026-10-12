@@ -11,6 +11,7 @@ namespace Codad5\WPToolkit\Data\Field;
 use Codad5\WPToolkit\Data\Field\Types\ChoiceType;
 use Codad5\WPToolkit\Data\Field\Types\InputType;
 use Codad5\WPToolkit\Data\Field\Types\OtherTypes;
+use Codad5\WPToolkit\Data\Field\Types\ChoicePickerAssets;
 use Codad5\WPToolkit\Exceptions\InvalidConfigException;
 
 /**
@@ -37,7 +38,7 @@ final class FieldTypes
             'hidden' => new InputType('hidden'),
             'password' => new InputType('password', 'raw'),
             'textarea' => OtherTypes::textarea(),
-            'select' => new ChoiceType('select'),
+            'select' => new ChoiceType('select', new ChoicePickerAssets()),
             'radio' => new ChoiceType('radio'),
             'checkbox' => OtherTypes::checkbox(),
             'media' => OtherTypes::media(),

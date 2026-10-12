@@ -168,6 +168,29 @@ final class MetaBoxTest extends TestCase
         self::assertSame(['sk_live'], $this->wp->meta[5]['d_book_api_key']);
     }
 
+    public function test_deselecting_every_choice_clears_a_multiple_field(): void
+    {
+        // The form sends the empty marker even with nothing ticked; without it, the key is absent,
+        // the field is "not on this form", and the old selection could never be removed.
+        $this->wp->meta[5] = ['d_book_tags' => [['a', 'b']]];
+        $box = $this->box('d', 'book', [$this->f->select('tags', ['a' => 'A', 'b' => 'B'])->multiple()]);
+        $_POST = [$box->nonceName() => 'n', 'd_book_tags' => ['']];
+
+        $box->handleSave(5, $this->post(5, 'book'));
+
+        self::assertArrayNotHasKey('d_book_tags', $this->wp->meta[5]);
+    }
+
+    public function test_the_empty_marker_does_not_disturb_a_real_selection(): void
+    {
+        $box = $this->box('d', 'book', [$this->f->select('tags', ['a' => 'A', 'b' => 'B'])->multiple()]);
+        $_POST = [$box->nonceName() => 'n', 'd_book_tags' => ['', 'b']];
+
+        $box->handleSave(5, $this->post(5, 'book'));
+
+        self::assertSame([['b']], $this->wp->meta[5]['d_book_tags']);
+    }
+
     public function test_fields_missing_from_the_form_are_left_alone(): void
     {
         $this->wp->meta[5] = ['d_book_title' => ['Kept']];

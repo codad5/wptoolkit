@@ -20,6 +20,22 @@ Types: `text`, `textarea`, `email`, `url`, `tel`, `number`, `date`, `color`, `hi
 the library: implement `FieldType` (or `wp {slug} make:field StarRating`) and
 `$fieldTypes->register('stars', new StarRatingFieldType())`.
 
+### Choosing several values
+
+`$f->select('labels', $options)->multiple()` renders as **real checkboxes**, not the browser's
+`<select multiple>` (which selects one item per click and cannot be cleared once something is saved):
+
+- up to 6 options: a plain list of labelled checkboxes;
+- more: a searchable **chip picker**. Type to filter, Enter picks the first match, Backspace removes the
+  last chip, Escape closes, every chip has a remove button. It is a small piece of plain JavaScript
+  (no jQuery, no library) that enhances the checkboxes, so keyboard and screen-reader use work the
+  same, and without JavaScript the list is still usable.
+
+Choose a look with `->display('checkboxes' | 'tokens' | 'native')`; `native` keeps the old select.
+The form always sends an empty marker, so unticking everything is saved as "nothing chosen". What is
+stored is unchanged: one serialized array row, as 0.x stored it
+([ADR-0027](../adr/0027-multiple-choice-fields-render-as-checkboxes-with-an-optional-picker.md)).
+
 ## Meta boxes
 
 ```php
