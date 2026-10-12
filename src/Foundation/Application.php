@@ -30,7 +30,7 @@ use Codad5\WPToolkit\Exceptions\LifecycleException;
  */
 final class Application
 {
-    public const VERSION = '1.0.0-rc.5';
+    public const VERSION = '1.0.0-rc.6';
 
     private Container $container;
 
