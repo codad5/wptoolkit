@@ -147,20 +147,14 @@ file_put_contents($source . '/vendor/composer/installed.json', json_encode([
 $main = (string) file_get_contents($source . '/todo.php');
 file_put_contents($source . '/todo.php', str_replace('WPToolkit Todo example', 'WPToolkit Todo example (scoped build)', $main));
 
-$zip = dirname($source) . '/scoped.zip';
+// Straight into the folder wp-env mounts: the same steps and verification as a zip.
 \Codad5\WPToolkit\Build\Build::plugin($source)
     ->scope('WptkTodo\\Lib\\WPToolkit')
     ->withOutput(static function (string $line): void {
         fwrite(STDOUT, '  ' . $line . "\n");
     })
-    ->zip($zip);
+    ->toDirectory($build . '/wptk-todo-scoped');
 
-$archive = new ZipArchive();
-if ($archive->open($zip) !== true || !$archive->extractTo($build)) {
-    fwrite(STDERR, "Could not unpack {$zip}\n");
-    exit(1);
-}
-$archive->close();
 remove_directory(dirname($source));
 fwrite(STDOUT, "built wptk-todo-scoped (examples/todo, packaged with Build::scope())\n");
 

@@ -65,7 +65,9 @@ php wptoolkit/bin/wptoolkit package       # standalone install (no Composer)
 Flags override config: `--out`, `--zip-name`, `--no-build`, `--no-composer`, `--no-scope`, `--pot`,
 `--json` (machine-readable report for CI). `--verbose` (added 2026-10-12) prints each command's
 output as it runs; `"verbose": true` and `Build::verbose()` / `runVerbose()` do the same from config
-and from a build script.
+and from a build script. `--quiet` / `Build::quiet()` print only warnings. `--dir=PATH` /
+`Build::toDirectory()` (added 2026-10-12) write a folder instead of a zip, with the same steps and
+verification; the target is replaced only if it is empty or an earlier build of the same project.
 
 **Configuration** is one optional `wptoolkit.json` at the project root. It's JSON so PHP reads it
 without dependencies, and it has a JSON Schema so editors autocomplete it:

@@ -4,7 +4,7 @@
 /**
  * wptoolkit-build — package a WordPress plugin or theme from wptoolkit.json (or defaults).
  *
- *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run] [--verbose]
+ *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH | --dir=PATH] [--dry-run] [--verbose] [--quiet]
  *   vendor/bin/wptoolkit-build verify  FILE.zip
  *   vendor/bin/wptoolkit-build doctor  [--project=DIR]
  *   vendor/bin/wptoolkit-build init    [--project=DIR]
@@ -60,6 +60,13 @@ try {
             if (in_array('--verbose', $argv, true)) {
                 $build->verbose();
             }
+            if (in_array('--quiet', $argv, true)) {
+                $build->quiet();
+            }
+            if (isset($options['dir'])) {
+                $build->toDirectory($options['dir']);
+                exit(0);
+            }
             $build->zip($options['zip'] ?? $zip);
             exit(0);
 
@@ -101,8 +108,10 @@ try {
 
         default:
             fwrite(STDOUT, "Usage:\n"
-                . "  wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run] [--verbose]\n"
-                . "      --verbose  print the output of every command as it runs\n"
+                . "  wptoolkit-build package [--project=DIR] [--zip=PATH | --dir=PATH] [--dry-run] [--verbose] [--quiet]\n"
+                . "      --dir=PATH  write a folder instead of a zip (replaced if it is an earlier build)\n"
+                . "      --verbose   print the output of every command as it runs\n"
+                . "      --quiet     print only warnings and errors\n"
                 . "  wptoolkit-build verify FILE.zip\n"
                 . "  wptoolkit-build doctor [--project=DIR]\n"
                 . "  wptoolkit-build init [--project=DIR]\n");

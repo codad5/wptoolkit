@@ -27,7 +27,8 @@ final class BuildContext
         public readonly string $version,
         public readonly CommandRunner $runner,
         private readonly Closure $output,
-        public readonly bool $verbose = false
+        public readonly bool $verbose = false,
+        public readonly bool $quiet = false
     ) {
     }
 
@@ -83,15 +84,23 @@ final class BuildContext
         return $output === '' ? [] : explode("\n", $output);
     }
 
+    /**
+     * Progress output. Nothing is printed for a quiet build.
+     */
     public function say(string $line): void
     {
-        ($this->output)($line);
+        if (!$this->quiet) {
+            ($this->output)($line);
+        }
     }
 
+    /**
+     * Something a person should read. Recorded on the report and printed even for a quiet build.
+     */
     public function warn(string $line): void
     {
         $this->warnings[] = $line;
-        $this->say('  ! ' . $line);
+        ($this->output)('  ! ' . $line);
     }
 
     /**

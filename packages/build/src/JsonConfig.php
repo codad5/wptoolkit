@@ -50,6 +50,9 @@ final class JsonConfig
         if (!empty($config['verbose'])) {
             $build->verbose();
         }
+        if (!empty($config['quiet'])) {
+            $build->quiet();
+        }
         if (isset($config['version'])) {
             $build->version(self::versionSource((string) $config['version']));
         }
