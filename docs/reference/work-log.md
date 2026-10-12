@@ -58,3 +58,6 @@ One dated entry per working session: what landed, what was learned, what's next.
   which ADR-0014 promised and 0.x's `Autoloader::init()` used to do. The E2E fixtures now rely on it.
 - **Landed:** `Build::verbose()`, `runVerbose()`, `--verbose` and `"verbose": true`: command output streamed as it
   runs (`StreamingCommandRunner`); a failure after streaming repeats only the last 20 lines.
+- **Landed:** `Build::toDirectory()` (`--dir`) and `Build::quiet()` (`--quiet`); packaging moved out of `Build` into
+  `ZipPackager` / `DirectoryPackager`. **Learned:** a folder target compared as a string let `.` and a
+  different letter case through as "not the project" — paths are now resolved and compared without case.

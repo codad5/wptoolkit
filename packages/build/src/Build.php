@@ -41,9 +41,6 @@ use ZipArchive;
  */
 final class Build
 {
-    /** 1980-01-01, the earliest time a zip entry can hold. */
-    private const FIXED_MTIME = 315532800;
-
     /** Never copied into staging. */
     private const NEVER_STAGED = ['.git', 'node_modules', '.svn'];
 
@@ -66,6 +63,8 @@ final class Build
     private string $composerBinary = 'composer';
 
     private bool $verbose = false;
+
+    private bool $quiet = false;
 
     /** @var list<string|PatternSource> */
     private array $excludes = [];
@@ -147,6 +146,17 @@ final class Build
     public function verbose(bool $verbose = true): self
     {
         $this->verbose = $verbose;
+
+        return $this;
+    }
+
+    /**
+     * Print nothing but warnings: no progress lines and no summary. The report is still returned,
+     * and a failure is still an exception. Wins over verbose().
+     */
+    public function quiet(bool $quiet = true): self
+    {
+        $this->quiet = $quiet;
 
         return $this;
     }
@@ -240,7 +250,8 @@ final class Build
 
     /**
      * Run the build and write the zip. `{slug}` and `{version}` are replaced; a relative path is
-     * relative to the project. A `.sha256` file is written next to it.
+     * relative to the project. A `.sha256` file is written next to it. The summary is printed for
+     * you (see quiet()); the returned report is for scripts that need the numbers.
      */
     public function zip(string $target = 'dist/{slug}-{version}.zip'): BuildReport
     {
@@ -248,21 +259,60 @@ final class Build
             throw new BuildException('The PHP zip extension is required to build packages.');
         }
 
-        $version = ($this->version ?? Version::fromHeader())->resolve($this->project, $this->runner);
+        $version = $this->resolveVersion();
         $zip = $this->absolute(strtr($target, ['{slug}' => $this->project->slug, '{version}' => $version]));
-        $staging = sys_get_temp_dir() . '/wptoolkit-build-' . bin2hex(random_bytes(6)) . '/' . $this->project->slug;
 
-        $context = new BuildContext($this->project, $staging, $version, $this->runner, $this->output, $this->verbose);
+        return $this->produce($version, [dirname($zip)], static fn (BuildContext $context): BuildReport => (new ZipPackager())->write($context, $zip));
+    }
+
+    /**
+     * Run the same build and verification, and write the result as a folder instead of a zip — to
+     * rsync or commit to SVN, to mount in a test site, or to look at exactly what ships.
+     *
+     * The folder is replaced, so it must be for output only: a target that is the project or a
+     * folder above it is refused, and so is an existing folder that is neither empty nor an
+     * earlier build of this project. Nothing is written if a step or verification fails.
+     */
+    public function toDirectory(string $target = 'dist/{slug}'): BuildReport
+    {
+        $version = $this->resolveVersion();
+        $directory = DirectoryPackager::normalize($this->absolute(strtr($target, ['{slug}' => $this->project->slug, '{version}' => $version])));
+        $packager = new DirectoryPackager();
+        $packager->assertSafe($this->project, $directory); // before any command runs
+
+        $skip = [$directory];
+        if (dirname($directory) !== $this->project->root) {
+            $skip[] = dirname($directory); // e.g. dist/, which may hold earlier zips and builds
+        }
+
+        return $this->produce($version, $skip, static fn (BuildContext $context): BuildReport => $packager->write($context, $directory));
+    }
+
+    private function resolveVersion(): string
+    {
+        return ($this->version ?? Version::fromHeader())->resolve($this->project, $this->runner);
+    }
+
+    /**
+     * The pipeline both outputs share: Prepare → stage → Transform → prune → Verify → write.
+     *
+     * @param list<string> $notStaged Absolute paths left out of the staging copy (the output's own location).
+     * @param Closure(BuildContext): BuildReport $write
+     */
+    private function produce(string $version, array $notStaged, Closure $write): BuildReport
+    {
+        $staging = sys_get_temp_dir() . '/wptoolkit-build-' . bin2hex(random_bytes(6)) . '/' . $this->project->slug;
+        $context = new BuildContext($this->project, $staging, $version, $this->runner, $this->output, $this->verbose, $this->quiet);
         $context->say(sprintf('Building %s %s (%s)', $this->project->slug, $version, $this->project->type));
 
         try {
             $this->runPhase(Phase::Prepare, $context);
-            $this->stage($staging, $zip);
+            $this->stage($staging, $notStaged);
             $this->runPhase(Phase::Transform, $context);
             $this->prune($staging);
             $this->runPhase(Phase::Verify, $context, [new Verify($this->forbid, $this->maxSizeMb)]);
 
-            $report = $this->package($context, $zip);
+            $report = $write($context);
             $context->say($report->summary());
 
             return $report;
@@ -282,7 +332,7 @@ final class Build
         $staging = sys_get_temp_dir() . '/wptoolkit-dryrun-' . bin2hex(random_bytes(6)) . '/' . $this->project->slug;
 
         try {
-            $this->stage($staging, $this->project->root . '/dist/.dry-run.zip');
+            $this->stage($staging, [$this->project->root . '/dist']);
             $this->prune($staging);
 
             $files = [];
@@ -324,18 +374,21 @@ final class Build
         }
     }
 
-    private function stage(string $staging, string $zip): void
+    /**
+     * @param list<string> $notStaged Absolute paths to leave out.
+     */
+    private function stage(string $staging, array $notStaged): void
     {
         $root = $this->project->root;
-        $outputDirectory = str_replace('\\', '/', dirname($zip));
+        $skipped = array_map(static fn (string $path): string => rtrim(str_replace('\\', '/', $path), '/'), $notStaged);
         mkdir($staging, 0777, true);
 
         $items = new RecursiveIteratorIterator(
             new \RecursiveCallbackFilterIterator(
                 new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
-                static function (\SplFileInfo $item) use ($outputDirectory): bool {
+                static function (\SplFileInfo $item) use ($skipped): bool {
                     $path = str_replace('\\', '/', $item->getPathname());
-                    return !in_array($item->getFilename(), self::NEVER_STAGED, true) && $path !== $outputDirectory;
+                    return !in_array($item->getFilename(), self::NEVER_STAGED, true) && !in_array($path, $skipped, true);
                 }
             ),
             RecursiveIteratorIterator::SELF_FIRST
@@ -385,61 +438,6 @@ final class Build
         }
 
         return $expanded;
-    }
-
-    private function package(BuildContext $context, string $zipPath): BuildReport
-    {
-        if (!is_dir(dirname($zipPath))) {
-            mkdir(dirname($zipPath), 0777, true);
-        }
-        if (is_file($zipPath)) {
-            unlink($zipPath);
-        }
-
-        $files = [];
-        $sizes = [];
-        $total = 0;
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($context->staging, FilesystemIterator::SKIP_DOTS));
-        foreach ($iterator as $file) {
-            $relative = substr(str_replace('\\', '/', $file->getPathname()), strlen($context->staging) + 1);
-            $files[$relative] = $file->getPathname();
-            $top = explode('/', $relative)[0] . (str_contains($relative, '/') ? '/' : '');
-            $sizes[$top] = ($sizes[$top] ?? 0) + $file->getSize();
-            $total += $file->getSize();
-        }
-        ksort($files, SORT_STRING); // deterministic order
-
-        $archive = new ZipArchive();
-        if ($archive->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new BuildException(sprintf('Cannot write %s.', $zipPath));
-        }
-
-        // A single folder named after the slug, the way WordPress expects plugin/theme zips.
-        // Fixed timestamps and permissions: the same sources produce the same bytes, so a checksum
-        // proves what was released. libzip also reads the file's own mtime, hence the touch().
-        $prefix = $this->project->slug . '/';
-        foreach ($files as $relative => $absolute) {
-            $name = $prefix . $relative;
-            touch($absolute, self::FIXED_MTIME);
-            $archive->addFile($absolute, $name);
-            $archive->setMtimeName($name, self::FIXED_MTIME);
-            $archive->setExternalAttributesName($name, ZipArchive::OPSYS_UNIX, 0100644 << 16);
-        }
-        $archive->close();
-
-        $sha256 = (string) hash_file('sha256', $zipPath);
-        file_put_contents($zipPath . '.sha256', $sha256 . '  ' . basename($zipPath) . PHP_EOL);
-        arsort($sizes);
-
-        return new BuildReport(
-            $zipPath,
-            $sha256,
-            $context->version,
-            $total,
-            array_map(static fn (string $f): string => $prefix . $f, array_keys($files)),
-            $sizes,
-            $context->warnings
-        );
     }
 
     private function absolute(string $path): string

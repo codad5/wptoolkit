@@ -121,5 +121,23 @@ Commands the build runs (`npm run build`, Composer) are silent unless they fail.
 `--verbose` (`wptoolkit-build package --verbose`), set `"verbose": true` in `wptoolkit.json`, or in a
 `build.php` call `->verbose()` for every command or `->runVerbose('npm run build')` for one.
 
+A `build.php` gives you the rest:
+
+```php
+Build::plugin(__DIR__)->run('npm run build')->zip();                 // dist/{slug}-{version}.zip + .sha256
+Build::plugin(__DIR__)->run('npm run build')->toDirectory('dist/{slug}');   // the same build, as a folder
+$files = Build::plugin(__DIR__)->dryRun();                           // what the exclude rules leave; runs nothing
+```
+
+- `zip()` and `toDirectory()` **print the summary themselves**; don't `echo $report->summary()` as well.
+  The returned report is for scripts that need the numbers (`$report->sha256`, `->bytes`, `->files`).
+- `->quiet()` (`--quiet`, `"quiet": true`) prints only warnings; failures are still exceptions.
+- `toDirectory()` (`--dir=PATH`) runs every step and the same verification as `zip()`. Use it to rsync or
+  commit to SVN, to mount the built plugin in a test site, or to inspect what ships. The folder is
+  **replaced**, so it must be for output only: the project itself, a folder above it, or an existing
+  folder that is neither empty nor an earlier build of this project is refused.
+- `dryRun()` (`--dry-run`) runs no commands and no verification, so files that steps create (built
+  assets, `vendor/`) are not in its list. For "what exactly ships", use `toDirectory()`.
+
 Next: [routes and security](routes-and-security.md), [data](data.md),
 [admin and front end](admin-and-front-end.md).
