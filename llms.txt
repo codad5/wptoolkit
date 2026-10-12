@@ -9,7 +9,7 @@ Namespace: `Codad5\WPToolkit` (or your own, if you scope the library). Package: 
 
 ## Rules for code that uses WPToolkit
 
-1. The plugin's main file stays PHP 5.6 syntax and boots through `vendor/codad5/wptoolkit/bootstrap/guard.php`; real code goes in classes under `src/`.
+1. The plugin's main file stays PHP 5.6 syntax and boots through `vendor/codad5/wptoolkit/bootstrap/guard.php`; real code goes in classes under `src/`. Without Composer, pass the guard `'namespaces' => array('MyPlugin\\' => __DIR__ . '/src')` to autoload your own classes (PSR-4).
 2. One `Application::create(__FILE__, ['slug' => '…'])->providers([...])->boot()` per plugin. The slug prefixes every option, hook, handle and REST namespace — never change it after release.
 3. Put wiring in a `ServiceProvider`: bind services in `register()` (no WordPress calls, no translation), use them in `boot()` — its parameters are injected. Never use a global registry.
 4. Every route has an access rule: `->public()`, `->loggedIn()`, `->can('capability')` or `->authorize(fn (Request $r) => …)`. Public routes that write get `->rateLimit()`.

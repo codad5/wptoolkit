@@ -26,6 +26,8 @@
  *   name          display name (default: the plugin's folder name)
  *   autoload      'auto' (default: vendor/autoload.php if present, else the bundled standalone
  *                 loader), 'composer', 'standalone', a file path, or false
+ *   namespaces    your own classes, without Composer: array('MyPlugin\\' => __DIR__ . '/src').
+ *                 PSR-4; a missing folder pauses the plugin with a notice. Not needed with Composer.
  *   rethrow       rethrow boot errors instead of containing them (default: WP_DEBUG on a
  *                 'local' or 'development' environment)
  *   toolkit_path  the WPToolkit copy to inspect and load (default: the package this file is in)
@@ -152,6 +154,27 @@ return function ($pluginFile, $needs, $boot) {
         $problems[] = array('toolkit', (string) $needs['toolkit'], $loadedVersion, $loadedFrom);
     }
 
+    // The plugin's own PSR-4 prefixes. Checked here, registered only once everything else passed.
+    $namespaces = array();
+    if (isset($needs['namespaces'])) {
+        if (!is_array($needs['namespaces'])) {
+            $problems[] = array('namespaces');
+        } else {
+            foreach ($needs['namespaces'] as $prefix => $directory) {
+                $prefix = is_string($prefix) ? trim($prefix, '\\') : '';
+                if ($prefix === '' || !is_string($directory)) {
+                    $problems[] = array('namespaces');
+                    break;
+                }
+                if (!is_dir($directory)) {
+                    $problems[] = array('namespace_directory', $prefix, $directory);
+                    continue;
+                }
+                $namespaces[$prefix . '\\'] = rtrim($directory, '/\\');
+            }
+        }
+    }
+
     // --- Messages are built only when shown (after init), so translating can't fire early ---------
     $relative = function ($path) {
         $path = str_replace('\\', '/', $path);
@@ -189,6 +212,12 @@ return function ($pluginFile, $needs, $boot) {
             case 'autoload':
                 /* translators: %s: path of the missing autoloader file */
                 return sprintf(__('Its class loader is missing (%s). Reinstall the plugin.', 'wptoolkit'), $relative($problem[1]));
+            case 'namespace_directory':
+                /* translators: 1: PHP namespace, 2: path of the missing folder */
+                $missing = __('The folder for its %1$s classes is missing (%2$s). Reinstall the plugin.', 'wptoolkit');
+                return sprintf($missing, $problem[1], $relative($problem[2]));
+            case 'namespaces':
+                return __('Its "namespaces" setting is not valid. Developers: pass an array of namespace prefix => folder.', 'wptoolkit');
         }
         return '';
     };
@@ -278,9 +307,19 @@ return function ($pluginFile, $needs, $boot) {
         return false;
     }
 
+    // Sits next to this file (it names no WPToolkit class, so any copy's will do).
+    $namespaceLoader = __DIR__ . '/namespaces.php';
+    if (!empty($namespaces) && !is_readable($namespaceLoader)) {
+        $stayInert(array(array('autoload', $namespaceLoader)));
+        return false;
+    }
+
     try {
         if ($loader !== '') {
             require_once $loader;
+        }
+        if (!empty($namespaces)) {
+            call_user_func(require $namespaceLoader, $namespaces);
         }
 
         call_user_func($boot);

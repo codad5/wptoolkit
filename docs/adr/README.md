@@ -58,3 +58,4 @@ Not for a naming choice, a library with no real alternative, or anything you wou
 | [0022](0022-shortcodes-are-declared-validated-and-lazy.md)            | Shortcodes are declared, validated, access-checked and load assets lazily | Accepted |
 | [0023](0023-settings-may-keep-a-legacy-option-prefix.md)              | Settings may keep an option prefix that already exists in users' data      | Accepted |
 | [0024](0024-the-packager-scopes-the-consumers-code-too.md)             | The packager scopes the consumer's code and autoloader, not only the library | Accepted |
+| [0025](0025-the-guard-can-autoload-the-plugins-own-namespaces.md)     | The guard can autoload the plugin's own namespaces (completes ADR-0014)   | Accepted |
