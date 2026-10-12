@@ -66,6 +66,14 @@ final class Build
 
     private bool $quiet = false;
 
+    private bool $plain = false;
+
+    private bool $ownOutput = false;
+
+    private int $waitForLock = 0;
+
+    private ?Interruption $interruption = null;
+
     /** @var list<string|PatternSource> */
     private array $excludes = [];
 
@@ -146,6 +154,38 @@ final class Build
     public function verbose(bool $verbose = true): self
     {
         $this->verbose = $verbose;
+
+        return $this;
+    }
+
+    /**
+     * Plain lines only: no spinner, even on an interactive terminal. (Output that isn't a terminal
+     * — a file, a pipe, CI — and a build with its own withOutput() handler are always plain.)
+     */
+    public function plain(bool $plain = true): self
+    {
+        $this->plain = $plain;
+
+        return $this;
+    }
+
+    /**
+     * If another build of this project is running, wait up to this long for it instead of failing
+     * at once.
+     */
+    public function waitForLock(int $seconds): self
+    {
+        $this->waitForLock = max(0, $seconds);
+
+        return $this;
+    }
+
+    /**
+     * Stop the build on your own condition (`Interruption::when(...)`), in addition to Ctrl+C.
+     */
+    public function withInterruption(Interruption $interruption): self
+    {
+        $this->interruption = $interruption;
 
         return $this;
     }
@@ -244,6 +284,7 @@ final class Build
     public function withOutput(Closure $output): self
     {
         $this->output = $output;
+        $this->ownOutput = true;
 
         return $this;
     }
@@ -301,12 +342,20 @@ final class Build
      */
     private function produce(string $version, array $notStaged, Closure $write): BuildReport
     {
+        $interruption = $this->interruption ?? new Interruption();
+        $progress = $this->progress();
         $staging = sys_get_temp_dir() . '/wptoolkit-build-' . bin2hex(random_bytes(6)) . '/' . $this->project->slug;
-        $context = new BuildContext($this->project, $staging, $version, $this->runner, $this->output, $this->verbose, $this->quiet);
-        $context->say(sprintf('Building %s %s (%s)', $this->project->slug, $version, $this->project->type));
+        $context = new BuildContext($this->project, $staging, $version, $this->runner, $this->output, $this->verbose, $this->quiet, $progress, $interruption);
 
+        $interruption->install();
+        $lock = null;
         try {
+            $lock = $this->lock($context, $interruption);
+            self::sweepAbandonedStaging();
+            $context->say(sprintf('Building %s %s (%s)', $this->project->slug, $version, $this->project->type));
+
             $this->runPhase(Phase::Prepare, $context);
+            $context->checkpoint();
             $this->stage($staging, $notStaged);
             $this->runPhase(Phase::Transform, $context);
             $this->prune($staging);
@@ -318,6 +367,62 @@ final class Build
             return $report;
         } finally {
             self::removeDirectory(dirname($staging));
+            $lock?->release();
+            $interruption->uninstall();
+        }
+    }
+
+    /**
+     * One build per project at a time: a second one would run its commands in the same folder and
+     * write the same output.
+     */
+    private function lock(BuildContext $context, Interruption $interruption): BuildLock
+    {
+        try {
+            return BuildLock::acquire($this->project);
+        } catch (BuildException $busy) {
+            if ($this->waitForLock === 0) {
+                throw $busy;
+            }
+        }
+
+        $context->say(sprintf('Another build of this project is running; waiting up to %d seconds…', $this->waitForLock));
+
+        return BuildLock::acquire($this->project, $this->waitForLock, static fn () => $interruption->check());
+    }
+
+    /**
+     * A spinner only where it can be drawn and erased: our own output, on an interactive terminal.
+     */
+    private function progress(): Progress
+    {
+        $interactive = !$this->plain && !$this->quiet && !$this->ownOutput
+            && defined('STDOUT') && stream_isatty(STDOUT)
+            && getenv('CI') === false && getenv('NO_COLOR') === false && getenv('TERM') !== 'dumb'
+            // Windows consoles need escape-sequence processing switched on; without it, stay plain.
+            && (PHP_OS_FAMILY !== 'Windows' || (function_exists('sapi_windows_vt100_support') && sapi_windows_vt100_support(STDOUT, true)));
+
+        // Braille spinner frames don't render in the legacy Windows console; Windows Terminal is fine.
+        $unicode = PHP_OS_FAMILY !== 'Windows' || getenv('WT_SESSION') !== false;
+
+        return new Progress($this->output, $interactive ? STDOUT : null, $unicode, $this->quiet);
+    }
+
+    /**
+     * Staging copies left in the temp directory by builds that were killed before they could clean
+     * up. Only old ones: a recent one may belong to a build that is running now.
+     */
+    private static function sweepAbandonedStaging(): void
+    {
+        $olderThan = time() - 6 * 3600;
+        $found = array_merge(
+            glob(sys_get_temp_dir() . '/wptoolkit-build-*', GLOB_ONLYDIR) ?: [],
+            glob(sys_get_temp_dir() . '/wptoolkit-dryrun-*', GLOB_ONLYDIR) ?: []
+        );
+        foreach ($found as $directory) {
+            if (preg_match('/wptoolkit-(build|dryrun)-[0-9a-f]{12}$/', $directory) === 1 && (int) @filemtime($directory) < $olderThan) {
+                self::removeDirectory($directory);
+            }
         }
     }
 
@@ -363,12 +468,16 @@ final class Build
                 continue;
             }
 
-            $context->say('→ ' . $step->name());
+            $context->checkpoint();
+            $context->progress()->stepStarted($step->name());
             try {
                 $step->run($context);
+                $context->progress()->stepFinished();
             } catch (BuildException $failure) {
+                $context->progress()->stepFailed();
                 throw $failure;
             } catch (\Throwable $error) {
+                $context->progress()->stepFailed();
                 throw BuildException::inStep($step->name(), $error->getMessage());
             }
         }

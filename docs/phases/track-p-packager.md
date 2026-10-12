@@ -68,6 +68,8 @@ output as it runs; `"verbose": true` and `Build::verbose()` / `runVerbose()` do 
 and from a build script. `--quiet` / `Build::quiet()` print only warnings. `--dir=PATH` /
 `Build::toDirectory()` (added 2026-10-12) write a folder instead of a zip, with the same steps and
 verification; the target is replaced only if it is empty or an earlier build of the same project.
+`--plain`, `--wait=N` and the build lock, atomic output, interruption cleanup and the spinner (added
+2026-10-12, ADR-0026) complete the robustness items below.
 
 **Configuration** is one optional `wptoolkit.json` at the project root. It's JSON so PHP reads it
 without dependencies, and it has a JSON Schema so editors autocomplete it:
