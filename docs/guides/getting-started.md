@@ -117,5 +117,9 @@ Build a release zip with `wptoolkit-build` (`wptoolkit-build init`, then `wptool
 If your plugin might share a site with another WPToolkit plugin, scope your copy first — see
 [scoping and coexistence](scoping-and-coexistence.md).
 
+Commands the build runs (`npm run build`, Composer) are silent unless they fail. To watch them, add
+`--verbose` (`wptoolkit-build package --verbose`), set `"verbose": true` in `wptoolkit.json`, or in a
+`build.php` call `->verbose()` for every command or `->runVerbose('npm run build')` for one.
+
 Next: [routes and security](routes-and-security.md), [data](data.md),
 [admin and front end](admin-and-front-end.md).

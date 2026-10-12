@@ -56,3 +56,5 @@ One dated entry per working session: what landed, what was learned, what's next.
 
 - **Landed:** the guard's `namespaces` option (ADR-0025): PSR-4 loading of a standalone plugin's own classes,
   which ADR-0014 promised and 0.x's `Autoloader::init()` used to do. The E2E fixtures now rely on it.
+- **Landed:** `Build::verbose()`, `runVerbose()`, `--verbose` and `"verbose": true`: command output streamed as it
+  runs (`StreamingCommandRunner`); a failure after streaming repeats only the last 20 lines.
