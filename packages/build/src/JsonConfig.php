@@ -47,6 +47,9 @@ final class JsonConfig
         $type = $config['type'] ?? (is_file($projectDirectory . '/style.css') ? 'theme' : 'plugin');
         $build = $type === 'theme' ? Build::theme($projectDirectory) : Build::plugin($projectDirectory);
 
+        if (!empty($config['verbose'])) {
+            $build->verbose();
+        }
         if (isset($config['version'])) {
             $build->version(self::versionSource((string) $config['version']));
         }

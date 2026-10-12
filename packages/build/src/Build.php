@@ -35,6 +35,9 @@ use ZipArchive;
  *
  * Phases: Prepare (in your project) → stage (copy to a temp directory) → Transform → prune
  * (excludes) → Verify (always) → zip. Your working tree is never modified.
+ *
+ * Commands are silent unless they fail; `->verbose()` prints their output as they run, and
+ * `->runVerbose(...)` does so for chosen commands only.
  */
 final class Build
 {
@@ -61,6 +64,8 @@ final class Build
     private array $steps = [];
 
     private string $composerBinary = 'composer';
+
+    private bool $verbose = false;
 
     /** @var list<string|PatternSource> */
     private array $excludes = [];
@@ -125,6 +130,25 @@ final class Build
     public function run(string ...$commands): self
     {
         return $this->step(new RunCommands(...$commands));
+    }
+
+    /**
+     * Like run(), but these commands' output is printed as they run even when the build is not verbose.
+     */
+    public function runVerbose(string ...$commands): self
+    {
+        return $this->step(RunCommands::streamed(...$commands));
+    }
+
+    /**
+     * Print the output of every command the build runs (run(), composer(), scope(), make-pot) as it
+     * is produced, instead of only when a command fails. Useful in CI logs and for slow asset builds.
+     */
+    public function verbose(bool $verbose = true): self
+    {
+        $this->verbose = $verbose;
+
+        return $this;
     }
 
     /**
@@ -228,7 +252,7 @@ final class Build
         $zip = $this->absolute(strtr($target, ['{slug}' => $this->project->slug, '{version}' => $version]));
         $staging = sys_get_temp_dir() . '/wptoolkit-build-' . bin2hex(random_bytes(6)) . '/' . $this->project->slug;
 
-        $context = new BuildContext($this->project, $staging, $version, $this->runner, $this->output);
+        $context = new BuildContext($this->project, $staging, $version, $this->runner, $this->output, $this->verbose);
         $context->say(sprintf('Building %s %s (%s)', $this->project->slug, $version, $this->project->type));
 
         try {

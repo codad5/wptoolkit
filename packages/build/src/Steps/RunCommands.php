@@ -20,9 +20,23 @@ final class RunCommands implements BuildStep
     /** @var list<string> */
     private readonly array $commands;
 
+    /** True: always print these commands' output as they run. Null: follow `Build::verbose()`. */
+    private ?bool $stream = null;
+
     public function __construct(string ...$commands)
     {
         $this->commands = array_values($commands);
+    }
+
+    /**
+     * Commands whose output is printed as they run, whether or not the build is verbose.
+     */
+    public static function streamed(string ...$commands): self
+    {
+        $step = new self(...$commands);
+        $step->stream = true;
+
+        return $step;
     }
 
     public function name(): string
@@ -38,7 +52,7 @@ final class RunCommands implements BuildStep
     public function run(BuildContext $context): void
     {
         foreach ($this->commands as $command) {
-            $context->exec($this->name(), $command, $context->project->root);
+            $context->exec($this->name(), $command, $context->project->root, $this->stream);
         }
     }
 }

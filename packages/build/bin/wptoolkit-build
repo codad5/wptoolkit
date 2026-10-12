@@ -4,7 +4,7 @@
 /**
  * wptoolkit-build — package a WordPress plugin or theme from wptoolkit.json (or defaults).
  *
- *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run]
+ *   vendor/bin/wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run] [--verbose]
  *   vendor/bin/wptoolkit-build verify  FILE.zip
  *   vendor/bin/wptoolkit-build doctor  [--project=DIR]
  *   vendor/bin/wptoolkit-build init    [--project=DIR]
@@ -57,6 +57,9 @@ try {
                 fwrite(STDOUT, "(dry run: commands, composer, scope and make-pot were not run)\n");
                 exit(0);
             }
+            if (in_array('--verbose', $argv, true)) {
+                $build->verbose();
+            }
             $build->zip($options['zip'] ?? $zip);
             exit(0);
 
@@ -98,7 +101,8 @@ try {
 
         default:
             fwrite(STDOUT, "Usage:\n"
-                . "  wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run]\n"
+                . "  wptoolkit-build package [--project=DIR] [--zip=PATH] [--dry-run] [--verbose]\n"
+                . "      --verbose  print the output of every command as it runs\n"
                 . "  wptoolkit-build verify FILE.zip\n"
                 . "  wptoolkit-build doctor [--project=DIR]\n"
                 . "  wptoolkit-build init [--project=DIR]\n");
