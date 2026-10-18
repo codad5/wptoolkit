@@ -1,0 +1,13 @@
+{
+    "output": "docs/api",
+    "layers": ["Foundation", "Http"],
+    "first": {
+        "Foundation": ["Application", "ServiceProvider", "Identity", "Config", "HookRegistrar", "Container"],
+        "Http": ["Router", "Route", "Request", "Response", "HttpError", "Dispatcher"]
+    },
+    "volatile": ["Codad5\\WPToolkit\\Foundation\\Application::VERSION"],
+    "summaries": {
+        "Foundation": "The kernel: one Application per plugin, its container and providers, the hooks it adds, and the prefixed names (Identity) everything else is built from.",
+        "Http": "One pipeline for REST, admin-ajax and public pages: the router and its fluent routes, requests and responses, and the dispatcher that enforces access, validation and rate limits."
+    }
+}

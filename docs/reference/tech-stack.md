@@ -35,6 +35,7 @@ Every dev dependency has a one-line justification. **Runtime dependencies: none*
 | `@wordpress/env`        | _tbd_   | Local and CI WordPress in Docker         |
 | `@wordpress/scripts`    | _tbd_   | Build toolkit JS, asset manifests        |
 | `@playwright/test`      | _tbd_   | E2E                                      |
+| `gray-matter`           | 4.0.3   | Parses the API reference's front matter in `tests/docs` (ADR-0028). Dev only. `npm audit` flags it only through `js-yaml`, which `@wordpress/env` already brings; it reads our own generated files |
 | `vitest`                | _tbd_   | JS unit tests                            |
 | WP-CLI `i18n` command   | _tbd_   | `make-pot`, `make-json`                  |
 | Strauss                 | _tbd_   | Scoping for Composer consumers (documented, used in fixtures) |

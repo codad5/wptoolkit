@@ -26,6 +26,10 @@ order it gets built in, **reference/** holds facts that change. Agent rules live
 
 [Plan, timeline, dependency graph →](phases/README.md) · live progress in [STATUS.md](../STATUS.md)
 
+## api/
+
+[The API reference](api/index.md): one generated page per public class, in reading order, with machine-readable front matter ([ADR-0028](adr/0028-the-api-reference-is-generated-from-the-source.md)). `composer docs` regenerates it.
+
 ## reference/
 
 [Open decisions](reference/open-decisions.md) · [Tech stack](reference/tech-stack.md) · [Work log](reference/work-log.md)

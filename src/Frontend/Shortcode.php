@@ -21,6 +21,8 @@ use Codad5\WPToolkit\Support\Validation\Sanitizer;
  *         ->attributes(['count' => ['type' => 'int', 'default' => 10, 'rules' => 'integer|min:1|max:50']])
  *         ->view('front/widget')
  *         ->assets('widget');
+ *
+ * @since 1.0.0-rc.2
  */
 final class Shortcode
 {

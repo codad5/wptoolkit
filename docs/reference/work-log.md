@@ -68,3 +68,11 @@ One dated entry per working session: what landed, what was learned, what's next.
   The packager tests also run clean on Linux (WSL), including a real SIGINT.
 - **Noticed, not fixed:** the `media` field renders `data-wptoolkit-media` for an admin script that does not exist
   yet, so its "Choose media" button does nothing.
+
+## 2026-10-18
+
+- **Landed:** the generated API reference (ADR-0028): `composer docs` writes `docs/api/` (Foundation and Http first) with
+  YAML front matter, one reading-order chain with previous/up/next, and `index.json`; `composer docs:check` and a CI job keep
+  it current, and gray-matter parses it in a Node test. **Learned:** linking by class name returned the path instead of the
+  class, so `implements`/`extends` were never links until a test with a fixture caught it.
+- **Next:** review the remaining namespaces' docblocks, mark wiring `@internal`, and add them to `tools/apidocs/config.json`.
