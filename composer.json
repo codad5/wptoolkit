@@ -55,6 +55,7 @@
     "autoload-dev": {
         "psr-4": {
             "Codad5\\WPToolkit\\Tests\\": "tests/",
+            "Codad5\\WPToolkit\\Tools\\ApiDocs\\": "tools/apidocs/src/",
             "WptkTodo\\": "examples/todo/src/"
         }
     },
@@ -71,7 +72,7 @@
         "sort-packages": true
     },
     "scripts": {
-        "lint": "@php bin/lint.php src tests bin bootstrap examples",
+        "lint": "@php bin/lint.php src tests bin bootstrap examples packages tools",
         "cs": "phpcs",
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": "phpunit",
@@ -81,8 +82,11 @@
             "@cs",
             "@analyse",
             "@test",
-            "@i18n"
+            "@i18n",
+            "@docs:check"
         ],
+        "docs": "@php bin/generate-api-docs.php",
+        "docs:check": "@php bin/generate-api-docs.php --check",
         "i18n": "wp i18n make-pot . languages/wptoolkit.pot --slug=wptoolkit --domain=wptoolkit --package-name=WPToolkit --include=src,bootstrap",
         "test:integration": "npx wp-env run tests-cli --env-cwd=wp-content/plugins/wptoolkit vendor/bin/phpunit -c phpunit.integration.xml.dist"
     },

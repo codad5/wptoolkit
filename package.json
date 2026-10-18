@@ -11,6 +11,7 @@
     },
     "devDependencies": {
         "@playwright/test": "^1.63.0",
-        "@wordpress/env": "^11.17.0"
+        "@wordpress/env": "^11.17.0",
+        "gray-matter": "4.0.3"
     }
 }

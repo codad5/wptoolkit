@@ -24,6 +24,8 @@ use Throwable;
  * Shortcodes done safely (ADR-0022): a prefixed tag, declared and validated attributes, an explicit
  * access rule, a view or a returned string (never an echo), assets that load only where the
  * shortcode appears, and a handler that cannot take the page down.
+ *
+ * @since 1.0.0-rc.2
  */
 final class Shortcodes
 {

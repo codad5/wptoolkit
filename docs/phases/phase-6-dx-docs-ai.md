@@ -25,8 +25,10 @@ plugin quickly, because the safe path is the default path and it's written down 
 
 ### 6.2 Documentation
 
-- [ ] API reference generated from docblocks (phpDocumentor) in CI — **deferred to 1.1**: the guides
-      and `llms.txt` cover the public API; phpDocumentor adds a large toolchain for little gain now
+- [ ] API reference generated from docblocks — **in progress** (started 2026-10-18), without phpDocumentor
+      ([ADR-0028](../adr/0028-the-api-reference-is-generated-from-the-source.md)): `composer docs` writes
+      `docs/api/` with machine-readable front matter, `composer docs:check` and a CI job keep it current.
+      Foundation and Http are published; the other namespaces follow as their docblocks are reviewed.
 - [x] Guides: [getting started](../guides/getting-started.md), [routes and security](../guides/routes-and-security.md),
       [data](../guides/data.md), [admin and front end](../guides/admin-and-front-end.md) (views,
       assets and localization), [scoping and coexistence](../guides/scoping-and-coexistence.md).

@@ -119,6 +119,29 @@ jobs:
       - run: node --check resources/js/client.js
       - run: node --test tests/js/*.test.mjs
 
+  api-reference:
+    # ADR-0028: docs/api is generated from src/ and committed. It must match the source, and real
+    # front-matter tooling (gray-matter) must be able to read and follow it.
+    name: API reference
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Reference matches the source
+        run: composer docs:check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # Only the front-matter parser is needed here, not Playwright or wp-env's lifecycle scripts.
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/docs/api-reference.test.mjs
+
   integration:
     # Adapters against a real WordPress + MySQL (wp-env tests container), PHPUnit 10 with a
     # wp-load.php bootstrap (ADR-0010 amendment).

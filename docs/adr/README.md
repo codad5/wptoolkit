@@ -58,6 +58,7 @@ Not for a naming choice, a library with no real alternative, or anything you wou
 | [0022](0022-shortcodes-are-declared-validated-and-lazy.md)            | Shortcodes are declared, validated, access-checked and load assets lazily | Accepted |
 | [0023](0023-settings-may-keep-a-legacy-option-prefix.md)              | Settings may keep an option prefix that already exists in users' data      | Accepted |
 | [0024](0024-the-packager-scopes-the-consumers-code-too.md)             | The packager scopes the consumer's code and autoloader, not only the library | Accepted |
+| [0028](0028-the-api-reference-is-generated-from-the-source.md) | The API reference is generated from the source, with machine-readable front matter | Accepted |
 | [0027](0027-multiple-choice-fields-render-as-checkboxes-with-an-optional-picker.md) | Multiple-choice fields are checkboxes, with an optional chip picker | Accepted |
 | [0026](0026-builds-lock-write-atomically-and-clean-up-after-themselves.md) | Builds take a lock, write atomically and clean up after themselves | Accepted |
 | [0025](0025-the-guard-can-autoload-the-plugins-own-namespaces.md)     | The guard can autoload the plugin's own namespaces (completes ADR-0014)   | Accepted |

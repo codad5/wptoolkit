@@ -6,6 +6,7 @@ parameters:
     paths:
         - src
         - packages/build/src
+        - tools/apidocs/src
         - examples/todo/src
     tmpDir: .phpstan.cache
     # WP-CLI's helper functions (src/Cli) live in a file Composer doesn't autoload.
